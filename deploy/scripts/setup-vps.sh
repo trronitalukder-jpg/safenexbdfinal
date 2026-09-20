@@ -71,3 +71,4 @@ echo ""
 echo "5. Issue SSL Certificate with Certbot:"
 echo "   sudo certbot --nginx -d safnexbd.com -d www.safnexbd.com"
 echo "=========================================================="
+
