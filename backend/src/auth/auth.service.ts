@@ -164,12 +164,14 @@ export class AuthService {
   async login(dto: LoginDto) {
     const identifier = dto.identifier.trim();
 
-    // Find strictly by email or phone number (uniqueUserId username login is disabled)
+    // Find by email, phone number, or uniqueUserId
+    const cleanIdentifier = identifier.replace(/^@/, '');
     const user = await this.prisma.user.findFirst({
       where: {
         OR: [
           { email: identifier.toLowerCase() },
           { phone: identifier },
+          { uniqueUserId: cleanIdentifier },
         ],
       },
       include: {
