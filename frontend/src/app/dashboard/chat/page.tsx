@@ -1043,7 +1043,7 @@ function MessengerChatContent() {
           LEFT PANE: Messages & People Discovery (Messenger Style)
       ========================================================================= */}
       <div
-        className={`flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 w-full md:w-[380px] lg:w-[420px] shrink-0 transition-all duration-200 ${
+        className={`flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 w-full md:w-[280px] lg:w-[320px] xl:w-[360px] shrink-0 transition-all duration-200 ${
           mobileView === 'chat' ? 'hidden md:flex' : 'flex'
         }`}
       >
@@ -1375,11 +1375,11 @@ function MessengerChatContent() {
           <>
             {/* Chat Header */}
             <div className="h-16 px-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between shrink-0 shadow-sm">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0">
                 {/* Back Button (Mobile) */}
                 <button
                   onClick={() => setMobileView('list')}
-                  className="md:hidden p-2 -ml-1 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"
+                  className="md:hidden p-2 -ml-1 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full shrink-0"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
@@ -1387,33 +1387,33 @@ function MessengerChatContent() {
                 {/* Counterpart Profile Trigger */}
                 <div
                   onClick={() => setShowProfileModal(activeConversation.otherUser)}
-                  className="flex items-center gap-3 cursor-pointer group hover:opacity-90 transition-opacity"
+                  className="flex items-center gap-2 sm:gap-3 cursor-pointer group hover:opacity-90 transition-opacity min-w-0"
                 >
-                  <div className="relative">
+                  <div className="relative shrink-0">
                     {activeConversation.otherUser?.avatarUrl ? (
                       <img
                         src={getImageUrl(activeConversation.otherUser.avatarUrl)}
                         alt={getUserDisplayName(activeConversation.otherUser)}
-                        className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-bold flex items-center justify-center text-sm">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-bold flex items-center justify-center text-sm">
                         {getUserDisplayName(activeConversation.otherUser).charAt(0)}
                       </div>
                     )}
                     <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" />
                   </div>
 
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <h2 className="font-bold text-sm text-slate-900 dark:text-white leading-tight group-hover:text-emerald-600 transition-colors">
+                      <h2 className="font-bold text-sm text-slate-900 dark:text-white leading-tight group-hover:text-emerald-600 transition-colors truncate">
                         {getUserDisplayName(activeConversation.otherUser)}
                       </h2>
                       {activeConversation.otherUser?.isVerified && (
-                        <Shield className="w-3.5 h-3.5 text-blue-500" />
+                        <Shield className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">
                       {activeConversation.otherUser?.uniqueUserId ||
                         'TBD' + (activeConversation.otherUser?.id?.slice(0, 5).toUpperCase() || '')}{' '}
                       • <span className="text-emerald-600 dark:text-emerald-400 font-sans font-medium">Online</span>
@@ -1422,31 +1422,33 @@ function MessengerChatContent() {
                 </div>
               </div>
 
-              {/* Center / Right: 4 Header Navigation Tabs (Desktop only) */}
-              <div className="flex items-center gap-1 sm:gap-2">
+              {/* Center / Right: 4 Header Navigation Tabs (Compact on md/lg, full text on xl) */}
+              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                 <div className="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
                   <button
                     onClick={() => setActiveHeaderTab('chat')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    title="Chat"
+                    className={`flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                       activeHeaderTab === 'chat'
                         ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
-                    <span>Chat</span>
+                    <span className="hidden xl:inline">Chat</span>
                   </button>
 
                   <button
                     onClick={() => setActiveHeaderTab('transaction')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    title="Transaction"
+                    className={`flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                       activeHeaderTab === 'transaction'
                         ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <Wallet className="w-3.5 h-3.5" />
-                    <span>Transaction</span>
+                    <span className="hidden xl:inline">Transaction</span>
                     {conversationTransactions.length > 0 && (
                       <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 font-bold">
                         {conversationTransactions.length}
@@ -1456,26 +1458,28 @@ function MessengerChatContent() {
 
                   <button
                     onClick={() => setActiveHeaderTab('rules')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    title="Rules"
+                    className={`flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                       activeHeaderTab === 'rules'
                         ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <FileText className="w-3.5 h-3.5" />
-                    <span>Rules</span>
+                    <span className="hidden xl:inline">Rules</span>
                   </button>
 
                   <button
                     onClick={() => setActiveHeaderTab('admin_calling')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all relative ${
+                    title="Admin Calling"
+                    className={`flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all relative ${
                       activeHeaderTab === 'admin_calling'
                         ? 'bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 shadow-sm'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Admin Calling</span>
+                    <span className="hidden xl:inline">Admin Calling</span>
                     {hasDispute && (
                       <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping absolute -top-0.5 -right-0.5" />
                     )}

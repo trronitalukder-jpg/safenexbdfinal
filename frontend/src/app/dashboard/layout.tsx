@@ -91,7 +91,7 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       {/* 1. Desktop Fixed Left Sidebar */}
-      <div className="hidden md:block flex-shrink-0 h-screen">
+      <div className={`flex-shrink-0 h-screen ${pathname === '/dashboard/chat' ? 'hidden xl:block' : 'hidden md:block'}`}>
         <DashboardSidebar />
       </div>
 
@@ -225,8 +225,13 @@ export default function DashboardLayout({
             </button>
 
             <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-              <span className="font-extrabold text-xs sm:text-base text-slate-900 dark:text-white truncate">
+              {/* On desktop/tablet (sm+): show Workspace / ড্যাশবোর্ড */}
+              <span className="hidden sm:inline-block font-extrabold text-xs sm:text-base text-slate-900 dark:text-white truncate">
                 {lang === 'bn' ? 'ড্যাশবোর্ড' : 'Workspace'}
+              </span>
+              {/* On phone (< sm): show user's name */}
+              <span className="sm:hidden font-extrabold text-sm text-slate-900 dark:text-white truncate">
+                {user.firstName} {user.lastName}
               </span>
               <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
                 Safe Escrow
@@ -236,10 +241,10 @@ export default function DashboardLayout({
 
           {/* Right: Balance Pill, Browse Marketplace, and User Avatar */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-            {/* Available Balance Pill */}
+            {/* Available Balance Pill (hidden on phone view < sm, visible on sm+) */}
             <Link
               href="/dashboard/wallet"
-              className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 transition shadow-xs"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 transition shadow-xs"
               title={lang === 'bn' ? 'ওয়ালেট ব্যালেন্স' : 'Available Balance'}
             >
               <Wallet className="w-3.5 h-3.5 shrink-0" />
@@ -359,7 +364,7 @@ export default function DashboardLayout({
             {children}
           </main>
         ) : (
-          <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 pb-24 md:pb-8 bg-slate-50/70 dark:bg-slate-950/70">
+          <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 pb-6 md:pb-8 bg-slate-50/70 dark:bg-slate-950/70">
             <div className="w-full max-w-[1680px] mx-auto space-y-6">
               {children}
 
@@ -389,76 +394,14 @@ export default function DashboardLayout({
                           ? '✓ অ্যাপ ইনস্টলড'
                           : '✓ App Installed'
                         : lang === 'bn'
-                        ? 'অ্যাপ ইনস্টল করুন (Install App)'
-                        : 'Install App'}
+                          ? 'অ্যাপ ইনস্টল করুন (Install App)'
+                          : 'Install App'}
                     </span>
                   </button>
                 </div>
               </footer>
             </div>
           </main>
-        )}
-
-        {/* Mobile Bottom Navigation Dock (Visible only on mobile screens < md, hidden in full chat view) */}
-        {pathname !== '/dashboard/chat' && (
-          <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex items-center justify-around py-1.5 px-2 shadow-2xl safe-area-bottom">
-            <Link
-              href="/dashboard"
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition ${
-                pathname === '/dashboard'
-                  ? 'text-sky-600 dark:text-sky-400 font-bold'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              <LayoutDashboard className={`w-5 h-5 ${pathname === '/dashboard' ? 'stroke-[2.5]' : ''}`} />
-              <span className="text-[10px] mt-0.5 font-medium">{lang === 'bn' ? 'ওভারভিউ' : 'Overview'}</span>
-            </Link>
-
-            <Link
-              href="/dashboard/wallet"
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition ${
-                pathname === '/dashboard/wallet'
-                  ? 'text-sky-600 dark:text-sky-400 font-bold'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              <Wallet className={`w-5 h-5 ${pathname === '/dashboard/wallet' ? 'stroke-[2.5]' : ''}`} />
-              <span className="text-[10px] mt-0.5 font-medium">{lang === 'bn' ? 'ওয়ালেট' : 'Wallet'}</span>
-            </Link>
-
-            <Link
-              href="/dashboard/chat"
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition relative ${
-                pathname === '/dashboard/chat'
-                  ? 'text-sky-600 dark:text-sky-400 font-bold'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              <MessageSquare className={`w-5 h-5 ${pathname === '/dashboard/chat' ? 'stroke-[2.5]' : ''}`} />
-              <span className="text-[10px] mt-0.5 font-medium">{lang === 'bn' ? 'চ্যাট' : 'Chat'}</span>
-            </Link>
-
-            <Link
-              href="/dashboard/transactions"
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition ${
-                pathname === '/dashboard/transactions'
-                  ? 'text-sky-600 dark:text-sky-400 font-bold'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              <ArrowLeftRight className={`w-5 h-5 ${pathname === '/dashboard/transactions' ? 'stroke-[2.5]' : ''}`} />
-              <span className="text-[10px] mt-0.5 font-medium">{lang === 'bn' ? 'লেনদেন' : 'Deals'}</span>
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => setMobileDrawerOpen(true)}
-              className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition"
-            >
-              <Menu className="w-5 h-5" />
-              <span className="text-[10px] mt-0.5 font-medium">{lang === 'bn' ? 'মেনু' : 'Menu'}</span>
-            </button>
-          </nav>
         )}
       </div>
     </div>

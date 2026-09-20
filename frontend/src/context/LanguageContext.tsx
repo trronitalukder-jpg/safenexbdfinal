@@ -59,14 +59,14 @@ const translations: Record<string, { bn: string; en: string }> = {
 };
 
 const LanguageContext = createContext<LanguageContextType>({
-  lang: 'bn',
+  lang: 'en',
   setLang: () => {},
   toggleLang: () => {},
   t: (key: string) => key,
 });
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [lang, setLang] = useState<Language>('bn');
+  const [lang, setLang] = useState<Language>('en');
 
   useEffect(() => {
     const saved = (localStorage.getItem('safnexbd_lang') || localStorage.getItem('safnexbd_lang')) as Language;
