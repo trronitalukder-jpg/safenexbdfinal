@@ -457,9 +457,9 @@ export default function AdminSettingsPage() {
     },
     {
       id: 'performance' as const,
-      label: lang === 'bn' ? 'স্পিড ও লিমিট কন্ট্রোল' : 'Speed & Limits Control',
+      label: lang === 'bn' ? '⚡ স্পিড ও লিমিট' : '⚡ Speed & Limits',
       icon: Zap,
-      desc: lang === 'bn' ? 'ইমেজ কম্প্রেশন, এপিআই/ওটিপি রেট লিমিট ও ডাটা ক্লিনআপ' : 'Image compression, rate limits, OTP limits & cleanup',
+      desc: lang === 'bn' ? 'ইমেজ কম্প্রেশন, রেট লিমিট ও ক্লিনআপ' : 'Image compression, rate limits & cleanup',
     },
   ];
 
@@ -551,7 +551,7 @@ export default function AdminSettingsPage() {
       )}
 
       {/* Tabs Navigation */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 bg-slate-100 dark:bg-slate-900/60 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2 bg-slate-100 dark:bg-slate-900/60 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
