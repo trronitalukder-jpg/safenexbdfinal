@@ -42,6 +42,8 @@ import {
   BookOpen,
   Scale,
   PhoneCall,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguage } from '@/context/LanguageContext';
@@ -69,6 +71,7 @@ function MessengerChatContent() {
   const [activeConversation, setActiveConversation] = useState<any>(null);
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
   const [activeHeaderTab, setActiveHeaderTab] = useState<'chat' | 'transaction' | 'rules' | 'admin_calling'>('chat');
+  const [isUserListCollapsed, setIsUserListCollapsed] = useState(false);
 
   // Conversations & People
   const [conversations, setConversations] = useState<any[]>([]);
@@ -1044,7 +1047,7 @@ function MessengerChatContent() {
       ========================================================================= */}
       <div
         className={`flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 w-full md:w-[280px] lg:w-[320px] xl:w-[360px] shrink-0 transition-all duration-200 ${
-          mobileView === 'chat' ? 'hidden md:flex' : 'flex'
+          isUserListCollapsed ? 'hidden' : (mobileView === 'chat' ? 'hidden md:flex' : 'flex')
         }`}
       >
         {/* Header */}
@@ -1058,10 +1061,22 @@ function MessengerChatContent() {
             )}
           </div>
 
-          {/* User Available Balance Tag */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 dark:bg-slate-800 text-xs text-slate-600 dark:text-slate-300 font-medium">
-            <Wallet className="w-3.5 h-3.5 text-emerald-500" />
-            <span>৳{wallet?.availableBalance?.toLocaleString() ?? '0'}</span>
+          <div className="flex items-center gap-2">
+            {/* User Available Balance Tag */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 dark:bg-slate-800 text-xs text-slate-600 dark:text-slate-300 font-medium">
+              <Wallet className="w-3.5 h-3.5 text-emerald-500" />
+              <span>৳{wallet?.availableBalance?.toLocaleString() ?? '0'}</span>
+            </div>
+
+            {/* Collapse button for tablet & laptop */}
+            <button
+              type="button"
+              onClick={() => setIsUserListCollapsed(true)}
+              title={lang === 'bn' ? 'ইউজার তালিকা লুকান' : 'Hide User List'}
+              className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <PanelLeftClose className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
@@ -1383,6 +1398,19 @@ function MessengerChatContent() {
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
+
+                {/* Expand User List Button (Tablet & Desktop, visible when user list is collapsed) */}
+                {isUserListCollapsed && (
+                  <button
+                    type="button"
+                    onClick={() => setIsUserListCollapsed(false)}
+                    title={lang === 'bn' ? 'ইউজার তালিকা খুলুন' : 'Show User List'}
+                    className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-emerald-600 transition-colors border border-slate-200 dark:border-slate-700 shrink-0 text-xs font-semibold"
+                  >
+                    <PanelLeftOpen className="w-4 h-4 text-emerald-500" />
+                    <span className="hidden sm:inline">{lang === 'bn' ? 'চ্যাট তালিকা' : 'User List'}</span>
+                  </button>
+                )}
 
                 {/* Counterpart Profile Trigger */}
                 <div
@@ -3108,6 +3136,16 @@ function MessengerChatContent() {
     ) : (
           /* Empty State */
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50 dark:bg-slate-950">
+            {isUserListCollapsed && (
+              <button
+                type="button"
+                onClick={() => setIsUserListCollapsed(false)}
+                className="mb-4 hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition"
+              >
+                <PanelLeftOpen className="w-4 h-4" />
+                <span>{lang === 'bn' ? 'ইউজার তালিকা খুলুন' : 'Show User List'}</span>
+              </button>
+            )}
             <div className="w-20 h-20 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center mb-4 shadow-inner">
               <MessageSquare className="w-9 h-9" />
             </div>
