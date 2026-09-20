@@ -101,12 +101,22 @@ export async function purgeOrScrubUser(
   }
 
   // Fallback / SCRUB: If user has financial history, scrub all credentials so they are instantly freed
+  // MySQL limits: phone is VarChar(30), uniqueUserId is VarChar(50), email is VarChar(191)
   const timestamp = Date.now();
-  const scrubbedEmail = user.email.includes('_deleted_') ? user.email : `${user.email}_deleted_${timestamp}`;
-  const scrubbedPhone = user.phone.includes('_deleted_') ? user.phone : `${user.phone}_deleted_${timestamp}`;
-  const scrubbedUniqueId = user.uniqueUserId.includes('_del_')
+  const idShort = user.id.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
+  const timeShort = timestamp.toString().slice(-8);
+
+  const scrubbedEmail = user.email.includes('_deleted_')
+    ? user.email
+    : `${user.email.slice(0, 150)}_deleted_${timestamp}`;
+
+  const scrubbedPhone = user.phone.startsWith('del_')
+    ? user.phone
+    : `del_${idShort}_${timeShort}`; // Exactly 23 chars (<= 30)
+
+  const scrubbedUniqueId = user.uniqueUserId.startsWith('del_')
     ? user.uniqueUserId
-    : `${user.uniqueUserId}_del_${timestamp}`;
+    : `del_${idShort}_${timeShort}`; // Exactly 23 chars (<= 50)
 
   await prisma.user.update({
     where: { id: userId },

@@ -36,7 +36,7 @@ export class EmployeesService implements OnModuleInit {
           deletedAt: { not: null },
           OR: [
             { email: { not: { contains: '_deleted_' } } },
-            { phone: { not: { contains: '_deleted_' } } },
+            { phone: { not: { startsWith: 'del_' } } },
             { isEmployee: true },
           ],
         },
