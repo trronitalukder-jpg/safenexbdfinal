@@ -48,6 +48,10 @@ import {
   MapPin,
   Briefcase,
   GraduationCap,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguage } from '@/context/LanguageContext';
@@ -62,6 +66,49 @@ function unwrap<T = any>(res: any): T {
   }
   return res;
 }
+
+const bannerThemeStyles: Record<string, { bg: string; border: string; badge: string; text: string; link: string; iconBg: string }> = {
+  amber: {
+    bg: 'bg-amber-500/8 dark:bg-amber-950/20',
+    border: 'border-amber-500/30 dark:border-amber-500/20',
+    badge: 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/20',
+    text: 'text-amber-900 dark:text-amber-200',
+    link: 'text-amber-700 dark:text-amber-400 hover:text-amber-800',
+    iconBg: 'bg-amber-500/10 text-amber-600',
+  },
+  emerald: {
+    bg: 'bg-emerald-500/8 dark:bg-emerald-950/20',
+    border: 'border-emerald-500/30 dark:border-emerald-500/20',
+    badge: 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/20',
+    text: 'text-emerald-900 dark:text-emerald-200',
+    link: 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-800',
+    iconBg: 'bg-emerald-500/10 text-emerald-600',
+  },
+  blue: {
+    bg: 'bg-blue-500/8 dark:bg-blue-950/20',
+    border: 'border-blue-500/30 dark:border-blue-500/20',
+    badge: 'bg-blue-500/15 text-blue-800 dark:text-blue-300 border-blue-500/20',
+    text: 'text-blue-900 dark:text-blue-200',
+    link: 'text-blue-700 dark:text-blue-400 hover:text-blue-800',
+    iconBg: 'bg-blue-500/10 text-blue-600',
+  },
+  purple: {
+    bg: 'bg-purple-500/8 dark:bg-purple-950/20',
+    border: 'border-purple-500/30 dark:border-purple-500/20',
+    badge: 'bg-purple-500/15 text-purple-800 dark:text-purple-300 border-purple-500/20',
+    text: 'text-purple-900 dark:text-purple-200',
+    link: 'text-purple-700 dark:text-purple-400 hover:text-purple-800',
+    iconBg: 'bg-purple-500/10 text-purple-600',
+  },
+  rose: {
+    bg: 'bg-rose-500/8 dark:bg-rose-950/20',
+    border: 'border-rose-500/30 dark:border-rose-500/20',
+    badge: 'bg-rose-500/15 text-rose-800 dark:text-rose-300 border-rose-500/20',
+    text: 'text-rose-900 dark:text-rose-200',
+    link: 'text-rose-700 dark:text-rose-400 hover:text-rose-800',
+    iconBg: 'bg-rose-500/10 text-rose-600',
+  },
+};
 
 function MessengerChatContent() {
   const searchParams = useSearchParams();
@@ -96,6 +143,105 @@ function MessengerChatContent() {
   const [copiedTracking, setCopiedTracking] = useState(false);
   const [isConvLocked, setIsConvLocked] = useState(false);
   const [convLockReason, setConvLockReason] = useState<string | null>(null);
+
+  // Chat Safety Rules & Quick Message Templates State
+  const [chatRulesConfig, setChatRulesConfig] = useState<any>({
+    isEnabled: true,
+    banner: {
+      title: 'SafnexBD অফিসিয়াল সুরক্ষা ও লেনদেন গাইডলাইন',
+      subtitle: 'প্রতারণা এড়াতে এবং আপনার লেনদেন শতভাগ নিরাপদ রাখতে নিচের নিয়মগুলো মনোযোগ দিয়ে পড়ুন:',
+      theme: 'amber',
+      badgeText: 'অফিসিয়াল সিকিউরিটি রুলস',
+      rules: [
+        {
+          id: '1',
+          icon: '🛡️',
+          title: 'প্ল্যাটফর্মের বাইরে কোনো লেনদেন করবেন না',
+          desc: 'ব্যক্তিগত বিকাশ/নগদ বা অফলাইনে লেনদেন করলে SafnexBD কোনো দায়ভার বহন করবে না।',
+        },
+        {
+          id: '2',
+          icon: '🔒',
+          title: 'এসক্রো সিস্টেমে টাকা ১০০% নিরাপদ',
+          desc: 'লেনদেনের টাকা প্ল্যাটফর্মের হোল্ডে সুরক্ষিত থাকে, কাজ বা পণ্য বুঝে পাওয়ার পরেই কেবল টাকা রিলিজ হবে।',
+        },
+        {
+          id: '3',
+          icon: '📦',
+          title: 'কাজের প্রমাণ ও ডেলিভারি নিশ্চিত করুন',
+          desc: 'সবকিছু সঠিকভাবে সম্পন্ন হলে পেমেন্ট রিলিজ করবেন, কোনো সমস্যা বা অমিল থাকলে সাথে সাথে ডিসপ্যুট ওপেন করুন।',
+        },
+        {
+          id: '4',
+          icon: '⚠️',
+          title: 'গোপনীয় তথ্য কখনোই শেয়ার করবেন না',
+          desc: 'আপনার অ্যাকাউন্ট পাসওয়ার্ড, পিন কোড, ওটিপি বা ব্যাংক সিকিউরিটি তথ্য কারো সাথে শেয়ার করবেন না।',
+        },
+      ],
+    },
+    templates: [
+      {
+        id: '1',
+        target: 'ALL',
+        icon: '👋',
+        title: 'সালাম ও কুশল',
+        text: 'আসসালামু আলাইকুম, কেমন আছেন? আপনার পণ্য বা সার্ভিস সম্পর্কে কিছু তথ্য জানতে চাচ্ছিলাম।',
+      },
+      {
+        id: '2',
+        target: 'BUYER',
+        icon: '🛍️',
+        title: 'স্টক যাচাই',
+        text: 'পণ্যটি কি এখনো অ্যাভেইলেবল আছে? আমি কিনতে আগ্রহী।',
+      },
+      {
+        id: '3',
+        target: 'BUYER',
+        icon: '💰',
+        title: 'দাম আলোচনা',
+        text: 'পণ্যটির শেষ বা ফিক্সড প্রাইস কত রাখা যাবে? কিছু ডিসকাউন্ট দেওয়া সম্ভব কি?',
+      },
+      {
+        id: '4',
+        target: 'BUYER',
+        icon: '⏳',
+        title: 'ডেলিভারি সময়',
+        text: 'অর্ডার কনফার্ম করার পর কতক্ষণের মধ্যে ডেলিভারি বা কাজ হস্তান্তর করতে পারবেন?',
+      },
+      {
+        id: '5',
+        target: 'SELLER',
+        icon: '✅',
+        title: 'প্রোডাক্ট প্রস্তুত',
+        text: 'জি, পণ্যটি সম্পূর্ণ প্রস্তুত আছে। আপনি এখনই এসক্রো পেমেন্ট রিকোয়েস্ট একসেপ্ট করতে পারেন।',
+      },
+      {
+        id: '6',
+        target: 'SELLER',
+        icon: '💳',
+        title: 'পেমেন্ট রিকোয়েস্ট',
+        text: 'আমি চ্যাটে অফিসিয়াল পেমেন্ট রিকোয়েস্ট পাঠিয়েছি, অনুগ্রহ করে একসেপ্ট করে টাকা হোল্ডে রাখুন।',
+      },
+      {
+        id: '7',
+        target: 'SELLER',
+        icon: '🚀',
+        title: 'কাজ সম্পন্ন',
+        text: 'আপনার কাজটি সফলভাবে সম্পন্ন হয়েছে এবং প্রয়োজনীয় ফাইল পাঠানো হয়েছে। অনুগ্রহ করে চেক করে পেমেন্ট রিলিজ করুন।',
+      },
+      {
+        id: '8',
+        target: 'ALL',
+        icon: '🤝',
+        title: 'ধন্যবাদ',
+        text: 'আপনার চমৎকার সহযোগিতার জন্য ধন্যবাদ। আশা করি আবার লেনদেন হবে!',
+      },
+    ],
+  });
+  const [isRulesExpanded, setIsRulesExpanded] = useState(false);
+  const [templateAudienceFilter, setTemplateAudienceFilter] = useState<'ALL' | 'BUYER' | 'SELLER'>('ALL');
+  const [showTemplatesBar, setShowTemplatesBar] = useState(true);
+  const textInputRef = useRef<HTMLInputElement>(null);
 
   // Wallet
   const [wallet, setWallet] = useState<{ availableBalance: number; holdBalance: number } | null>(null);
@@ -245,6 +391,25 @@ function MessengerChatContent() {
 
     return () => clearTimeout(timer);
   }, [payAmount, txCommissionSetting, isTxCommActive, txRateVal, txRateType, txMinFee, txMaxFee]);
+
+  // ---------------------------------------------------------------------------
+  // Load Chat Safety Rules & Quick Message Templates
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    api.get('/chat/rules-and-templates')
+      .then((res: any) => {
+        const data = unwrap(res);
+        if (data && typeof data === 'object') {
+          setChatRulesConfig((prev: any) => ({
+            ...prev,
+            ...data,
+            banner: { ...prev.banner, ...(data.banner || {}) },
+            templates: Array.isArray(data.templates) ? data.templates : prev.templates,
+          }));
+        }
+      })
+      .catch((err) => console.error('Failed to load chat rules:', err));
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Load Conversations & People
@@ -1811,6 +1976,96 @@ function MessengerChatContent() {
             ========================================================================= */}
             {activeHeaderTab === 'chat' && (
               <>
+                {/* Top Safety Awareness Banner */}
+                {chatRulesConfig?.isEnabled && (
+                  <div className="px-3 sm:px-4 pt-2.5 pb-1 shrink-0">
+                    <div
+                      className={`rounded-2xl border transition-all duration-300 overflow-hidden shadow-xs ${
+                        (bannerThemeStyles[chatRulesConfig.banner?.theme] || bannerThemeStyles.amber).bg
+                      } ${
+                        (bannerThemeStyles[chatRulesConfig.banner?.theme] || bannerThemeStyles.amber).border
+                      }`}
+                    >
+                      {/* Clickable Header Bar */}
+                      <div
+                        onClick={() => setIsRulesExpanded(!isRulesExpanded)}
+                        className="px-3.5 py-2 sm:py-2.5 flex items-center justify-between gap-2 cursor-pointer select-none hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className="text-base sm:text-lg shrink-0">🛡️</span>
+                          <div className="flex items-center gap-2 flex-wrap min-w-0">
+                            {chatRulesConfig.banner?.badgeText && (
+                              <span
+                                className={`text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                                  (bannerThemeStyles[chatRulesConfig.banner?.theme] || bannerThemeStyles.amber).badge
+                                }`}
+                              >
+                                {chatRulesConfig.banner.badgeText}
+                              </span>
+                            )}
+                            <span className="text-xs sm:text-xs md:text-sm font-bold text-slate-900 dark:text-white truncate">
+                              {chatRulesConfig.banner?.title || 'SafnexBD অফিসিয়াল সুরক্ষা ও লেনদেন গাইডলাইন'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsRulesExpanded(!isRulesExpanded);
+                          }}
+                          className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg transition shrink-0 ${
+                            (bannerThemeStyles[chatRulesConfig.banner?.theme] || bannerThemeStyles.amber).link
+                          }`}
+                        >
+                          <span className="hidden xs:inline">
+                            {isRulesExpanded
+                              ? (lang === 'bn' ? 'সংক্ষিপ্ত করুন' : 'Collapse')
+                              : (lang === 'bn' ? 'নিয়মগুলো দেখুন' : 'View Rules')}
+                          </span>
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                              isRulesExpanded ? 'rotate-180' : ''
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Expandable Body */}
+                      {isRulesExpanded && (
+                        <div className="px-3.5 pb-3 sm:pb-3.5 pt-1 border-t border-black/5 dark:border-white/5 space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                          {chatRulesConfig.banner?.subtitle && (
+                            <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                              {chatRulesConfig.banner.subtitle}
+                            </p>
+                          )}
+
+                          {/* Rules Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5">
+                            {(chatRulesConfig.banner?.rules || []).map((rule: any, idx: number) => (
+                              <div
+                                key={rule.id || idx}
+                                className="p-2.5 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-start gap-2.5"
+                              >
+                                <span className="text-lg sm:text-xl shrink-0 mt-0.5">{rule.icon || '🛡️'}</span>
+                                <div className="min-w-0 flex-1">
+                                  <h5 className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
+                                    {rule.title}
+                                  </h5>
+                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                                    {rule.desc}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Chat Feed */}
                 <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 sm:py-4 space-y-3 sm:space-y-4 min-h-0">
               {loadingMessages ? (
@@ -2617,6 +2872,92 @@ function MessengerChatContent() {
                 </div>
               )}
 
+              {/* Quick Message Templates Chips Bar */}
+              {!isConvLocked && Array.isArray(chatRulesConfig?.templates) && chatRulesConfig.templates.length > 0 && (
+                showTemplatesBar ? (
+                  <div className="mb-2 pb-1.5 border-b border-slate-100 dark:border-slate-800/80 space-y-1.5">
+                    {/* Filter Tabs & Close */}
+                    <div className="flex items-center justify-between gap-2 px-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] sm:text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" />
+                          <span>{lang === 'bn' ? 'কুইক মেসেজ:' : 'Quick Replies:'}</span>
+                        </span>
+
+                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
+                          {(['ALL', 'BUYER', 'SELLER'] as const).map((filter) => (
+                            <button
+                              key={filter}
+                              type="button"
+                              onClick={() => setTemplateAudienceFilter(filter)}
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition ${
+                                templateAudienceFilter === filter
+                                  ? 'bg-amber-500 text-slate-950 shadow-xs'
+                                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                              }`}
+                            >
+                              {filter === 'ALL'
+                                ? (lang === 'bn' ? 'সব' : 'All')
+                                : filter === 'BUYER'
+                                ? (lang === 'bn' ? 'বায়ার' : 'Buyer')
+                                : (lang === 'bn' ? 'সেলার' : 'Seller')}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Minimize / Hide Button */}
+                      <button
+                        type="button"
+                        onClick={() => setShowTemplatesBar(false)}
+                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition"
+                        title={lang === 'bn' ? 'কুইক মেসেজ লুকান' : 'Hide Quick Replies'}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Chips Horizontal Carousel */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none no-scrollbar">
+                      {chatRulesConfig.templates
+                        .filter(
+                          (t: any) =>
+                            templateAudienceFilter === 'ALL' ||
+                            t.target === 'ALL' ||
+                            t.target === templateAudienceFilter,
+                        )
+                        .map((t: any) => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => {
+                              setMessageInput((prev) => (prev ? `${prev} ${t.text}` : t.text));
+                              textInputRef.current?.focus();
+                            }}
+                            className="px-2.5 py-1 sm:px-3 sm:py-1 rounded-full bg-slate-100 hover:bg-amber-50 dark:bg-slate-800 dark:hover:bg-amber-950/40 text-slate-700 dark:text-slate-200 hover:text-amber-800 dark:hover:text-amber-300 border border-slate-200/80 dark:border-slate-700/80 hover:border-amber-400/50 text-xs font-medium whitespace-nowrap flex items-center gap-1.5 transition shrink-0 active:scale-95 shadow-2xs cursor-pointer"
+                            title={t.text}
+                          >
+                            <span>{t.icon || '💬'}</span>
+                            <span>{t.title}</span>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                ) : (
+                  /* Collapsed trigger button */
+                  <div className="mb-1 flex items-center justify-between px-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowTemplatesBar(true)}
+                      className="px-2.5 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 rounded-full flex items-center gap-1 transition"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>{lang === 'bn' ? '⚡ কুইক মেসেজ চিপস দেখান' : '⚡ Show Quick Replies'}</span>
+                    </button>
+                  </div>
+                )
+              )}
+
               {isConvLocked ? (
                 <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 flex items-center gap-3 text-rose-700 dark:text-rose-400">
                   <Lock className="w-5 h-5 text-rose-600 shrink-0" />
@@ -2675,6 +3016,7 @@ function MessengerChatContent() {
 
                   {/* Text Input */}
                   <input
+                    ref={textInputRef}
                     type="text"
                     value={messageInput}
                     onChange={handleInputChange}

@@ -42,6 +42,7 @@ import {
   Gauge,
   AlertTriangle,
   Flame,
+  Plus,
 } from 'lucide-react';
 
 const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -80,7 +81,7 @@ export default function AdminSettingsPage() {
   const { lang } = useLanguage();
   const { refreshSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<
-    'general' | 'seo' | 'tracking' | 'localization' | 'footer' | 'system' | 'withdrawal' | 'operations' | 'performance'
+    'general' | 'seo' | 'tracking' | 'localization' | 'footer' | 'system' | 'withdrawal' | 'operations' | 'performance' | 'chat_rules'
   >('general');
 
   const [loading, setLoading] = useState(true);
@@ -95,6 +96,103 @@ export default function AdminSettingsPage() {
   const [loadingStats, setLoadingStats] = useState(false);
   const [cleaningAction, setCleaningAction] = useState<string | null>(null);
   const [cleanupMessage, setCleanupMessage] = useState('');
+
+  // Chat Rules & Quick Templates State
+  const [chatConfig, setChatConfig] = useState<any>({
+    isEnabled: true,
+    banner: {
+      title: 'SafnexBD অফিসিয়াল সুরক্ষা ও লেনদেন গাইডলাইন',
+      subtitle: 'প্রতারণা এড়াতে এবং আপনার লেনদেন শতভাগ নিরাপদ রাখতে নিচের নিয়মগুলো মনোযোগ দিয়ে পড়ুন:',
+      theme: 'amber',
+      badgeText: 'অফিসিয়াল সিকিউরিটি রুলস',
+      rules: [
+        {
+          id: '1',
+          icon: '🛡️',
+          title: 'প্ল্যাটফর্মের বাইরে কোনো লেনদেন করবেন না',
+          desc: 'ব্যক্তিগত বিকাশ/নগদ বা অফলাইনে লেনদেন করলে SafnexBD কোনো দায়ভার বহন করবে না।',
+        },
+        {
+          id: '2',
+          icon: '🔒',
+          title: 'এসক্রো সিস্টেমে টাকা ১০০% নিরাপদ',
+          desc: 'লেনদেনের টাকা প্ল্যাটফর্মের হোল্ডে সুরক্ষিত থাকে, কাজ বা পণ্য বুঝে পাওয়ার পরেই কেবল টাকা রিলিজ হবে।',
+        },
+        {
+          id: '3',
+          icon: '📦',
+          title: 'কাজের প্রমাণ ও ডেলিভারি নিশ্চিত করুন',
+          desc: 'সবকিছু সঠিকভাবে সম্পন্ন হলে পেমেন্ট রিলিজ করবেন, কোনো সমস্যা বা অমিল থাকলে সাথে সাথে ডিসপ্যুট ওপেন করুন।',
+        },
+        {
+          id: '4',
+          icon: '⚠️',
+          title: 'গোপনীয় তথ্য কখনোই শেয়ার করবেন না',
+          desc: 'আপনার অ্যাকাউন্ট পাসওয়ার্ড, পিন কোড, ওটিপি বা ব্যাংক সিকিউরিটি তথ্য কারো সাথে শেয়ার করবেন না।',
+        },
+      ],
+    },
+    templates: [
+      {
+        id: '1',
+        target: 'ALL',
+        icon: '👋',
+        title: 'সালাম ও কুশল',
+        text: 'আসসালামু আলাইকুম, কেমন আছেন? আপনার পণ্য বা সার্ভিস সম্পর্কে কিছু তথ্য জানতে চাচ্ছিলাম।',
+      },
+      {
+        id: '2',
+        target: 'BUYER',
+        icon: '🛍️',
+        title: 'স্টক যাচাই',
+        text: 'পণ্যটি কি এখনো অ্যাভেইলেবল আছে? আমি কিনতে আগ্রহী।',
+      },
+      {
+        id: '3',
+        target: 'BUYER',
+        icon: '💰',
+        title: 'দাম আলোচনা',
+        text: 'পণ্যটির শেষ বা ফিক্সড প্রাইস কত রাখা যাবে? কিছু ডিসকাউন্ট দেওয়া সম্ভব কি?',
+      },
+      {
+        id: '4',
+        target: 'BUYER',
+        icon: '⏳',
+        title: 'ডেলিভারি সময়',
+        text: 'অর্ডার কনফার্ম করার পর কতক্ষণের মধ্যে ডেলিভারি বা কাজ হস্তান্তর করতে পারবেন?',
+      },
+      {
+        id: '5',
+        target: 'SELLER',
+        icon: '✅',
+        title: 'প্রোডাক্ট প্রস্তুত',
+        text: 'জি, পণ্যটি সম্পূর্ণ প্রস্তুত আছে। আপনি এখনই এসক্রো পেমেন্ট রিকোয়েস্ট একসেপ্ট করতে পারেন।',
+      },
+      {
+        id: '6',
+        target: 'SELLER',
+        icon: '💳',
+        title: 'পেমেন্ট রিকোয়েস্ট',
+        text: 'আমি চ্যাটে অফিসিয়াল পেমেন্ট রিকোয়েস্ট পাঠিয়েছি, অনুগ্রহ করে একসেপ্ট করে টাকা হোল্ডে রাখুন।',
+      },
+      {
+        id: '7',
+        target: 'SELLER',
+        icon: '🚀',
+        title: 'কাজ সম্পন্ন',
+        text: 'আপনার কাজটি সফলভাবে সম্পন্ন হয়েছে এবং প্রয়োজনীয় ফাইল পাঠানো হয়েছে। অনুগ্রহ করে চেক করে পেমেন্ট রিলিজ করুন।',
+      },
+      {
+        id: '8',
+        target: 'ALL',
+        icon: '🤝',
+        title: 'ধন্যবাদ',
+        text: 'আপনার চমৎকার সহযোগিতার জন্য ধন্যবাদ। আশা করি আবার লেনদেন হবে!',
+      },
+    ],
+  });
+  const [chatConfigSaving, setChatConfigSaving] = useState(false);
+  const [chatConfigSuccess, setChatConfigSuccess] = useState(false);
 
   // Settings State
   const [settings, setSettings] = useState<any>({
@@ -231,6 +329,15 @@ export default function AdminSettingsPage() {
           performance: { ...prev.performance, ...(data.performance || {}) },
         }));
       }
+      try {
+        const chatRes: any = await api.get('/chat/admin/rules-and-templates');
+        const chatData = chatRes?.data !== undefined ? chatRes.data : chatRes;
+        if (chatData && typeof chatData === 'object') {
+          setChatConfig(chatData);
+        }
+      } catch (e) {
+        console.error('Failed to load chat rules:', e);
+      }
     } catch (err: any) {
       console.error('Failed to load settings:', err);
       setErrorMessage(
@@ -253,6 +360,29 @@ export default function AdminSettingsPage() {
       console.error('Failed to load maintenance stats:', err);
     } finally {
       setLoadingStats(false);
+    }
+  };
+
+  const handleSaveChatConfig = async () => {
+    setChatConfigSaving(true);
+    setChatConfigSuccess(false);
+    setErrorMessage('');
+    try {
+      const res: any = await api.patch('/chat/admin/rules-and-templates', chatConfig);
+      const data = res?.data !== undefined ? res.data : res;
+      if (data && typeof data === 'object') {
+        setChatConfig(data);
+      }
+      setChatConfigSuccess(true);
+      setTimeout(() => setChatConfigSuccess(false), 3500);
+    } catch (err: any) {
+      console.error('Failed to save chat rules config:', err);
+      setErrorMessage(
+        err.response?.data?.message ||
+          (lang === 'bn' ? 'চ্যাট সেটিংস সংরক্ষণ ব্যর্থ হয়েছে!' : 'Failed to save chat settings!'),
+      );
+    } finally {
+      setChatConfigSaving(false);
     }
   };
 
@@ -329,6 +459,10 @@ export default function AdminSettingsPage() {
   };
 
   const handleSave = async (categoryToSave?: string) => {
+    if (activeTab === 'chat_rules' || categoryToSave === 'chat_rules') {
+      return handleSaveChatConfig();
+    }
+
     setSaving(true);
     setSaveSuccess(false);
     setErrorMessage('');
@@ -461,6 +595,12 @@ export default function AdminSettingsPage() {
       icon: Zap,
       desc: lang === 'bn' ? 'ইমেজ কম্প্রেশন, রেট লিমিট ও ক্লিনআপ' : 'Image compression, rate limits & cleanup',
     },
+    {
+      id: 'chat_rules' as const,
+      label: lang === 'bn' ? '💬 চ্যাট রুলস ও টেমপ্লেট' : '💬 Chat Rules & Templates',
+      icon: MessageCircle,
+      desc: lang === 'bn' ? 'চ্যাট সেফটি রুলস ও কুইক মেসেজ টেমপ্লেট' : 'Chat safety rules banner & quick message templates',
+    },
   ];
 
   if (loading) {
@@ -504,22 +644,22 @@ export default function AdminSettingsPage() {
 
           <button
             onClick={() => handleSave()}
-            disabled={saving}
+            disabled={saving || chatConfigSaving}
             className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-amber-500/20 transition disabled:opacity-50"
           >
-            {saving ? (
+            {saving || chatConfigSaving ? (
               <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : saveSuccess ? (
+            ) : saveSuccess || chatConfigSuccess ? (
               <Check className="w-4 h-4 text-slate-950" />
             ) : (
               <Save className="w-4 h-4" />
             )}
             <span>
-              {saving
+              {saving || chatConfigSaving
                 ? lang === 'bn'
                   ? 'সংরক্ষণ হচ্ছে...'
                   : 'Saving...'
-                : saveSuccess
+                : saveSuccess || chatConfigSuccess
                 ? lang === 'bn'
                   ? 'সংরক্ষিত হয়েছে!'
                   : 'Saved Successfully!'
@@ -532,13 +672,13 @@ export default function AdminSettingsPage() {
       </div>
 
       {/* Alert Notifications */}
-      {saveSuccess && (
+      {(saveSuccess || chatConfigSuccess) && (
         <div className="flex items-center gap-2.5 p-4 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl text-emerald-700 dark:text-emerald-400 text-xs font-medium animate-in fade-in">
           <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
           <span>
             {lang === 'bn'
-              ? 'ওয়েবসাইট সেটিংস সফলভাবে সংরক্ষিত ও কার্যকর হয়েছে!'
-              : 'Website settings updated and synchronized successfully across the platform!'}
+              ? 'ওয়েবসাইট ও চ্যাট সেটিংস সফলভাবে সংরক্ষিত ও কার্যকর হয়েছে!'
+              : 'Settings updated and synchronized successfully across the platform!'}
           </span>
         </div>
       )}
@@ -551,7 +691,7 @@ export default function AdminSettingsPage() {
       )}
 
       {/* Tabs Navigation */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2 bg-slate-100 dark:bg-slate-900/60 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-2 bg-slate-100 dark:bg-slate-900/60 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -3185,6 +3325,555 @@ export default function AdminSettingsPage() {
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Tab 10: Chat Rules & Quick Templates */}
+      {activeTab === 'chat_rules' && (
+        <div className="space-y-6">
+          {/* Section 1: Top Bar & Save */}
+          <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                  <MessageCircle className="w-5 h-5" />
+                </div>
+                <span>
+                  {lang === 'bn'
+                    ? 'চ্যাট সেফটি রুলস ও কুইক মেসেজ টেমপ্লেট'
+                    : 'Chat Safety Rules & Quick Message Templates'}
+                </span>
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {lang === 'bn'
+                  ? 'চ্যাটে বায়ার ও সেলারদের জন্য প্রদর্শিত সেফটি সচেতনতা কার্ড এবং ওয়ান-ক্লিক কুইক মেসেজ চিপস সম্পূর্ণ কাস্টমাইজ করুন।'
+                  : 'Customize the in-chat safety guidelines banner and one-click quick reply templates for buyers & sellers.'}
+              </p>
+            </div>
+
+            <button
+              onClick={handleSaveChatConfig}
+              disabled={chatConfigSaving}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-amber-500/20 transition disabled:opacity-50 shrink-0"
+            >
+              {chatConfigSaving ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : chatConfigSuccess ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              <span>
+                {chatConfigSaving
+                  ? lang === 'bn'
+                    ? 'সংরক্ষণ হচ্ছে...'
+                    : 'Saving...'
+                  : chatConfigSuccess
+                  ? lang === 'bn'
+                    ? 'সংরক্ষিত হয়েছে!'
+                    : 'Saved Successfully!'
+                  : lang === 'bn'
+                  ? 'চ্যাট সেটিংস সেভ করুন'
+                  : 'Save Chat Settings'}
+              </span>
+            </button>
+          </div>
+
+          {/* Section 2: Safety Awareness Banner Configuration */}
+          <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-amber-500" />
+                  <span>
+                    {lang === 'bn'
+                      ? '১. চ্যাট সেফটি সচেতনতা ব্যানার (Safety Awareness Banner)'
+                      : '1. Chat Safety Awareness Banner'}
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {lang === 'bn'
+                    ? 'চ্যাট পেজের শীর্ষে বায়ার ও সেলার উভয়ের জন্য প্রদর্শিত অফিশিয়াল সিকিউরিটি রুলস কার্ড।'
+                    : 'Banner shown at the top of the chat area to both buyer and seller to prevent off-platform scams.'}
+                </p>
+              </div>
+
+              {/* Master Switch */}
+              <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/60 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700/60 self-start sm:self-auto">
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'ব্যানার প্রদর্শন:' : 'Show Banner:'}
+                </span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={chatConfig.isEnabled}
+                    onChange={(e) =>
+                      setChatConfig((prev: any) => ({ ...prev, isEnabled: e.target.checked }))
+                    }
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-amber-500"></div>
+                </label>
+                <span className={`text-xs font-bold ${chatConfig.isEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+                  {chatConfig.isEnabled ? (lang === 'bn' ? 'সক্রিয়' : 'Active') : (lang === 'bn' ? 'বন্ধ' : 'Disabled')}
+                </span>
+              </div>
+            </div>
+
+            {/* Banner Basic Fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Badge Text */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'ব্যাজ টেক্সট (Badge Text)' : 'Badge Label'}
+                </label>
+                <input
+                  type="text"
+                  value={chatConfig.banner?.badgeText || ''}
+                  onChange={(e) =>
+                    setChatConfig((prev: any) => ({
+                      ...prev,
+                      banner: { ...prev.banner, badgeText: e.target.value },
+                    }))
+                  }
+                  placeholder="অফিসিয়াল সিকিউরিটি রুলস"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white"
+                />
+              </div>
+
+              {/* Banner Title */}
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'ব্যানার শিরোনাম (Title)' : 'Banner Title'}
+                </label>
+                <input
+                  type="text"
+                  value={chatConfig.banner?.title || ''}
+                  onChange={(e) =>
+                    setChatConfig((prev: any) => ({
+                      ...prev,
+                      banner: { ...prev.banner, title: e.target.value },
+                    }))
+                  }
+                  placeholder="SafnexBD অফিসিয়াল সুরক্ষা ও লেনদেন গাইডলাইন"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white"
+                />
+              </div>
+
+              {/* Color Theme Selector */}
+              <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'কালার থিম (Color Theme)' : 'Theme Color'}
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {[
+                    { id: 'amber', label: 'Amber', color: 'bg-amber-500' },
+                    { id: 'emerald', label: 'Emerald', color: 'bg-emerald-500' },
+                    { id: 'blue', label: 'Blue', color: 'bg-blue-500' },
+                    { id: 'purple', label: 'Purple', color: 'bg-purple-500' },
+                    { id: 'rose', label: 'Rose', color: 'bg-rose-500' },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() =>
+                        setChatConfig((prev: any) => ({
+                          ...prev,
+                          banner: { ...prev.banner, theme: t.id },
+                        }))
+                      }
+                      className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-[11px] font-semibold transition ${
+                        (chatConfig.banner?.theme || 'amber') === t.id
+                          ? 'border-amber-500 bg-amber-50/50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 ring-2 ring-amber-500/20'
+                          : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded-full ${t.color}`} />
+                      <span>{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Subtitle */}
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'সাব-টাইটেল / নির্দেশনা বার্তা' : 'Subtitle / Guideline Description'}
+                </label>
+                <input
+                  type="text"
+                  value={chatConfig.banner?.subtitle || ''}
+                  onChange={(e) =>
+                    setChatConfig((prev: any) => ({
+                      ...prev,
+                      banner: { ...prev.banner, subtitle: e.target.value },
+                    }))
+                  }
+                  placeholder="প্রতারণা এড়াতে এবং আপনার লেনদেন শতভাগ নিরাপদ রাখতে নিচের নিয়মগুলো মনোযোগ দিয়ে পড়ুন:"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white"
+                />
+              </div>
+            </div>
+
+            {/* Rules List CRUD */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>📋</span>
+                  <span>{lang === 'bn' ? 'রুলস ও নিয়মের তালিকা' : 'Safety Rules List'}</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono">
+                    {chatConfig.banner?.rules?.length || 0}
+                  </span>
+                </h4>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newRule = {
+                      id: String(Date.now()),
+                      icon: '🛡️',
+                      title: 'নতুন নিয়ম',
+                      desc: 'এই নিয়মের বিস্তারিত বিবরণ এখানে লিখুন।',
+                    };
+                    setChatConfig((prev: any) => ({
+                      ...prev,
+                      banner: {
+                        ...prev.banner,
+                        rules: [...(prev.banner?.rules || []), newRule],
+                      },
+                    }));
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-xl text-xs font-bold transition"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{lang === 'bn' ? '+ নিয়ম যোগ করুন' : '+ Add Rule'}</span>
+                </button>
+              </div>
+
+              {/* Rules Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {(chatConfig.banner?.rules || []).map((rule: any, idx: number) => (
+                  <div
+                    key={rule.id || idx}
+                    className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-2 relative group"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-1">
+                        <span className="text-xs font-bold text-slate-400 w-5">#{idx + 1}</span>
+                        {/* Icon Input */}
+                        <input
+                          type="text"
+                          value={rule.icon || '🛡️'}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setChatConfig((prev: any) => {
+                              const updated = [...(prev.banner?.rules || [])];
+                              updated[idx] = { ...updated[idx], icon: val };
+                              return { ...prev, banner: { ...prev.banner, rules: updated } };
+                            });
+                          }}
+                          placeholder="আইকন"
+                          className="w-12 text-center text-base py-1 px-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-mono"
+                          title="ইমোজি বা আইকন"
+                        />
+                        {/* Title Input */}
+                        <input
+                          type="text"
+                          value={rule.title || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setChatConfig((prev: any) => {
+                              const updated = [...(prev.banner?.rules || [])];
+                              updated[idx] = { ...updated[idx], title: val };
+                              return { ...prev, banner: { ...prev.banner, rules: updated } };
+                            });
+                          }}
+                          placeholder="নিয়মের শিরোনাম"
+                          className="flex-1 py-1.5 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-800 dark:text-slate-200"
+                        />
+                      </div>
+
+                      {/* Delete Rule */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setChatConfig((prev: any) => {
+                            const updated = (prev.banner?.rules || []).filter((_: any, i: number) => i !== idx);
+                            return { ...prev, banner: { ...prev.banner, rules: updated } };
+                          });
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition"
+                        title="নিয়মটি মুছুন"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Desc Textarea */}
+                    <textarea
+                      rows={2}
+                      value={rule.desc || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setChatConfig((prev: any) => {
+                          const updated = [...(prev.banner?.rules || [])];
+                          updated[idx] = { ...updated[idx], desc: val };
+                          return { ...prev, banner: { ...prev.banner, rules: updated } };
+                        });
+                      }}
+                      placeholder="নিয়মের সংক্ষিপ্ত বিবরণ..."
+                      className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-600 dark:text-slate-300 resize-none"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Live Preview Box */}
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <Eye className="w-3.5 h-3.5" />
+                <span>{lang === 'bn' ? 'লাইভ প্রিভিউ (চ্যাটে যেমন দেখাবে)' : 'Live In-Chat Preview'}</span>
+              </span>
+
+              <div
+                className={`p-4 rounded-2xl border transition-all ${
+                  chatConfig.banner?.theme === 'emerald'
+                    ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300/60 dark:border-emerald-800/60'
+                    : chatConfig.banner?.theme === 'blue'
+                    ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-300/60 dark:border-blue-800/60'
+                    : chatConfig.banner?.theme === 'purple'
+                    ? 'bg-purple-50/50 dark:bg-purple-950/20 border-purple-300/60 dark:border-purple-800/60'
+                    : chatConfig.banner?.theme === 'rose'
+                    ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-300/60 dark:border-rose-800/60'
+                    : 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-300/60 dark:border-amber-800/60'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                      <span>🛡️</span>
+                      <span>{chatConfig.banner?.badgeText || 'অফিসিয়াল সিকিউরিটি রুলস'}</span>
+                    </span>
+                    <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                      {chatConfig.banner?.title || 'SafnexBD অফিসিয়াল সুরক্ষা ও লেনদেন গাইডলাইন'}
+                    </span>
+                  </div>
+                  <span className="text-xs text-amber-700 dark:text-amber-400 font-semibold cursor-pointer">
+                    [নিয়মগুলো দেখুন ▼]
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
+                  {chatConfig.banner?.subtitle || 'প্রতারণা এড়াতে এবং আপনার লেনদেন শতভাগ নিরাপদ রাখতে নিচের নিয়মগুলো মনোযোগ দিয়ে পড়ুন:'}
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-3">
+                  {(chatConfig.banner?.rules || []).map((r: any, i: number) => (
+                    <div
+                      key={i}
+                      className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 shadow-xs"
+                    >
+                      <span className="text-xl shrink-0 p-0.5">{r.icon || '🛡️'}</span>
+                      <div className="min-w-0">
+                        <h5 className="text-xs font-bold text-slate-900 dark:text-white leading-snug">{r.title}</h5>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{r.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Quick Message Templates Manager */}
+          <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-amber-500" />
+                  <span>
+                    {lang === 'bn'
+                      ? '২. কুইক মেসেজ টেমপ্লেট ও চিপস (Quick Message Templates)'
+                      : '2. Quick Message Templates & Chips'}
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {lang === 'bn'
+                    ? 'চ্যাট ইনপুট বক্সের ঠিক উপরে প্রদর্শিত কুইক প্রম্পট। ইউজাররা ক্লিক করলেই মেসেজ টেক্সটবক্সে অটোমেটিক বসে যাবে।'
+                    : 'Pre-made message chips displayed above the input box for one-tap auto-filling.'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const newTemplate = {
+                    id: String(Date.now()),
+                    target: 'ALL',
+                    icon: '💬',
+                    title: 'নতুন প্রম্পট',
+                    text: 'এখানে আপনার কুইক মেসেজের সম্পূর্ণ টেক্সট লিখুন।',
+                  };
+                  setChatConfig((prev: any) => ({
+                    ...prev,
+                    templates: [...(prev.templates || []), newTemplate],
+                  }));
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-xl text-xs font-bold transition self-start sm:self-auto"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{lang === 'bn' ? '+ নতুন টেমপ্লেট যোগ করুন' : '+ Add Template'}</span>
+              </button>
+            </div>
+
+            {/* Templates Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {(chatConfig.templates || []).map((tmpl: any, idx: number) => (
+                <div
+                  key={tmpl.id || idx}
+                  className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-3 relative group"
+                >
+                  {/* Top Row: Target & Delete */}
+                  <div className="flex items-center justify-between gap-2">
+                    {/* Target Audience Selector */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-semibold text-slate-400">টার্গেট:</span>
+                      <select
+                        value={tmpl.target || 'ALL'}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setChatConfig((prev: any) => {
+                            const updated = [...(prev.templates || [])];
+                            updated[idx] = { ...updated[idx], target: val };
+                            return { ...prev, templates: updated };
+                          });
+                        }}
+                        className={`text-[11px] font-bold py-1 px-2.5 rounded-lg border focus:outline-none ${
+                          tmpl.target === 'BUYER'
+                            ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800'
+                            : tmpl.target === 'SELLER'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800'
+                            : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800'
+                        }`}
+                      >
+                        <option value="ALL">👥 উভয়ের জন্য (ALL)</option>
+                        <option value="BUYER">🛍️ শুধুমাত্র বায়ার (BUYER)</option>
+                        <option value="SELLER">🏷️ শুধুমাত্র সেলার (SELLER)</option>
+                      </select>
+                    </div>
+
+                    {/* Delete Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setChatConfig((prev: any) => {
+                          const updated = (prev.templates || []).filter((_: any, i: number) => i !== idx);
+                          return { ...prev, templates: updated };
+                        });
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition"
+                      title="টেমপ্লেট মুছুন"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Icon and Chip Title */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={tmpl.icon || '💬'}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setChatConfig((prev: any) => {
+                          const updated = [...(prev.templates || [])];
+                          updated[idx] = { ...updated[idx], icon: val };
+                          return { ...prev, templates: updated };
+                        });
+                      }}
+                      placeholder="ইমোজি"
+                      className="w-12 text-center text-base py-1.5 px-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-mono"
+                      title="ইমোজি বা আইকন"
+                    />
+                    <input
+                      type="text"
+                      value={tmpl.title || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setChatConfig((prev: any) => {
+                          const updated = [...(prev.templates || [])];
+                          updated[idx] = { ...updated[idx], title: val };
+                          return { ...prev, templates: updated };
+                        });
+                      }}
+                      placeholder="চিপ টাইটেল (যেমন: স্টক যাচাই)"
+                      className="flex-1 py-1.5 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-800 dark:text-slate-200"
+                    />
+                  </div>
+
+                  {/* Message Text */}
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-400 block mb-1">
+                      মেসেজ কন্টেন্ট (যা ইনপুটে বসবে):
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={tmpl.text || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setChatConfig((prev: any) => {
+                          const updated = [...(prev.templates || [])];
+                          updated[idx] = { ...updated[idx], text: val };
+                          return { ...prev, templates: updated };
+                        });
+                      }}
+                      placeholder="ক্লিক করলে সম্পূর্ণ যে মেসেজটি টাইপ হবে..."
+                      className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-700 dark:text-slate-200 resize-none leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Chip Preview */}
+                  <div className="pt-1 flex items-center gap-1.5 text-[11px] text-slate-400">
+                    <span>প্রিভিউ:</span>
+                    <span className="px-2.5 py-1 rounded-full bg-slate-200/80 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-medium flex items-center gap-1">
+                      <span>{tmpl.icon || '💬'}</span>
+                      <span>{tmpl.title || 'প্রম্পট'}</span>
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Bottom Save Button */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+              <button
+                onClick={handleSaveChatConfig}
+                disabled={chatConfigSaving}
+                className="flex items-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-amber-500/20 transition disabled:opacity-50"
+              >
+                {chatConfigSaving ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : chatConfigSuccess ? (
+                  <Check className="w-4 h-4" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                <span>
+                  {chatConfigSaving
+                    ? lang === 'bn'
+                      ? 'সংরক্ষণ হচ্ছে...'
+                      : 'Saving...'
+                    : chatConfigSuccess
+                    ? lang === 'bn'
+                      ? 'সংরক্ষিত হয়েছে!'
+                      : 'Saved Successfully!'
+                    : lang === 'bn'
+                    ? 'সব চ্যাট সেটিংস সেভ করুন'
+                    : 'Save All Chat Settings'}
+                </span>
+              </button>
             </div>
           </div>
         </div>

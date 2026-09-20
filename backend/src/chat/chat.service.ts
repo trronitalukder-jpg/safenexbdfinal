@@ -990,5 +990,176 @@ export class ChatService {
     });
     return isVisible;
   }
+
+  /**
+   * Get Chat Safety Guidelines and Quick Message Templates
+   */
+  async getChatSafetyAndTemplates() {
+    try {
+      const setting = await this.prisma.systemSetting.findUnique({
+        where: { key: 'chat_safety_rules_and_templates' },
+      });
+      if (!setting || !setting.value) {
+        return DEFAULT_CHAT_SAFETY_AND_TEMPLATES;
+      }
+      const val = typeof setting.value === 'string' ? JSON.parse(setting.value) : setting.value;
+      return {
+        isEnabled: val.isEnabled ?? DEFAULT_CHAT_SAFETY_AND_TEMPLATES.isEnabled,
+        banner: {
+          ...DEFAULT_CHAT_SAFETY_AND_TEMPLATES.banner,
+          ...(val.banner || {}),
+          rules: Array.isArray(val.banner?.rules) ? val.banner.rules : DEFAULT_CHAT_SAFETY_AND_TEMPLATES.banner.rules,
+        },
+        templates: Array.isArray(val.templates) ? val.templates : DEFAULT_CHAT_SAFETY_AND_TEMPLATES.templates,
+      };
+    } catch {
+      return DEFAULT_CHAT_SAFETY_AND_TEMPLATES;
+    }
+  }
+
+  /**
+   * Update Chat Safety Guidelines and Quick Message Templates (Admin)
+   */
+  async updateChatSafetyAndTemplates(payload: any, adminId?: string) {
+    const current = await this.getChatSafetyAndTemplates();
+    const updated = {
+      isEnabled: payload.isEnabled ?? current.isEnabled,
+      banner: {
+        title: payload.banner?.title ?? current.banner.title,
+        subtitle: payload.banner?.subtitle ?? current.banner.subtitle,
+        theme: payload.banner?.theme ?? current.banner.theme,
+        badgeText: payload.banner?.badgeText ?? current.banner.badgeText,
+        rules: Array.isArray(payload.banner?.rules) ? payload.banner.rules : current.banner.rules,
+      },
+      templates: Array.isArray(payload.templates) ? payload.templates : current.templates,
+    };
+
+    await this.prisma.systemSetting.upsert({
+      where: { key: 'chat_safety_rules_and_templates' },
+      create: {
+        key: 'chat_safety_rules_and_templates',
+        value: updated,
+        category: 'CHAT',
+        isPublic: true,
+        description: 'Chat Safety Guidelines Banner and Quick Message Templates configuration',
+      },
+      update: {
+        value: updated,
+      },
+    });
+
+    if (adminId) {
+      await this.prisma.auditLog
+        .create({
+          data: {
+            actorId: adminId,
+            actorType: 'ADMIN',
+            action: 'CHAT_SETTINGS_UPDATE',
+            targetEntity: 'SystemSetting',
+            targetId: 'chat_safety_rules_and_templates',
+            beforeState: current,
+            afterState: updated,
+            reason: 'Updated Chat Safety Guidelines & Quick Templates',
+          },
+        })
+        .catch(() => null);
+    }
+
+    return updated;
+  }
 }
+
+export const DEFAULT_CHAT_SAFETY_AND_TEMPLATES = {
+  isEnabled: true,
+  banner: {
+    title: 'SafnexBD অফিসিয়াল সুরক্ষা ও লেনদেন গাইডলাইন',
+    subtitle: 'প্রতারণা এড়াতে এবং আপনার লেনদেন শতভাগ নিরাপদ রাখতে নিচের নিয়মগুলো মনোযোগ দিয়ে পড়ুন:',
+    theme: 'amber',
+    badgeText: 'অফিসিয়াল সিকিউরিটি রুলস',
+    rules: [
+      {
+        id: '1',
+        icon: '🛡️',
+        title: 'প্ল্যাটফর্মের বাইরে কোনো লেনদেন করবেন না',
+        desc: 'ব্যক্তিগত বিকাশ/নগদ বা অফলাইনে লেনদেন করলে SafnexBD কোনো দায়ভার বহন করবে না।',
+      },
+      {
+        id: '2',
+        icon: '🔒',
+        title: 'এসক্রো সিস্টেমে টাকা ১০০% নিরাপদ',
+        desc: 'লেনদেনের টাকা প্ল্যাটফর্মের হোল্ডে সুরক্ষিত থাকে, কাজ বা পণ্য বুঝে পাওয়ার পরেই কেবল টাকা রিলিজ হবে।',
+      },
+      {
+        id: '3',
+        icon: '📦',
+        title: 'কাজের প্রমাণ ও ডেলিভারি নিশ্চিত করুন',
+        desc: 'সবকিছু সঠিকভাবে সম্পন্ন হলে পেমেন্ট রিলিজ করবেন, কোনো সমস্যা বা অমিল থাকলে সাথে সাথে ডিসপ্যুট ওপেন করুন।',
+      },
+      {
+        id: '4',
+        icon: '⚠️',
+        title: 'গোপনীয় তথ্য কখনোই শেয়ার করবেন না',
+        desc: 'আপনার অ্যাকাউন্ট পাসওয়ার্ড, পিন কোড, ওটিপি বা ব্যাংক সিকিউরিটি তথ্য কারো সাথে শেয়ার করবেন না।',
+      },
+    ],
+  },
+  templates: [
+    {
+      id: '1',
+      target: 'ALL',
+      icon: '👋',
+      title: 'সালাম ও কুশল',
+      text: 'আসসালামু আলাইকুম, কেমন আছেন? আপনার পণ্য বা সার্ভিস সম্পর্কে কিছু তথ্য জানতে চাচ্ছিলাম।',
+    },
+    {
+      id: '2',
+      target: 'BUYER',
+      icon: '🛍️',
+      title: 'স্টক যাচাই',
+      text: 'পণ্যটি কি এখনো অ্যাভেইলেবল আছে? আমি কিনতে আগ্রহী।',
+    },
+    {
+      id: '3',
+      target: 'BUYER',
+      icon: '💰',
+      title: 'দাম আলোচনা',
+      text: 'পণ্যটির শেষ বা ফিক্সড প্রাইস কত রাখা যাবে? কিছু ডিসকাউন্ট দেওয়া সম্ভব কি?',
+    },
+    {
+      id: '4',
+      target: 'BUYER',
+      icon: '⏳',
+      title: 'ডেলিভারি সময়',
+      text: 'অর্ডার কনফার্ম করার পর কতক্ষণের মধ্যে ডেলিভারি বা কাজ হস্তান্তর করতে পারবেন?',
+    },
+    {
+      id: '5',
+      target: 'SELLER',
+      icon: '✅',
+      title: 'প্রোডাক্ট প্রস্তুত',
+      text: 'জি, পণ্যটি সম্পূর্ণ প্রস্তুত আছে। আপনি এখনই এসক্রো পেমেন্ট রিকোয়েস্ট একসেপ্ট করতে পারেন।',
+    },
+    {
+      id: '6',
+      target: 'SELLER',
+      icon: '💳',
+      title: 'পেমেন্ট রিকোয়েস্ট',
+      text: 'আমি চ্যাটে অফিসিয়াল পেমেন্ট রিকোয়েস্ট পাঠিয়েছি, অনুগ্রহ করে একসেপ্ট করে টাকা হোল্ডে রাখুন।',
+    },
+    {
+      id: '7',
+      target: 'SELLER',
+      icon: '🚀',
+      title: 'কাজ সম্পন্ন',
+      text: 'আপনার কাজটি সফলভাবে সম্পন্ন হয়েছে এবং প্রয়োজনীয় ফাইল পাঠানো হয়েছে। অনুগ্রহ করে চেক করে পেমেন্ট রিলিজ করুন।',
+    },
+    {
+      id: '8',
+      target: 'ALL',
+      icon: '🤝',
+      title: 'ধন্যবাদ',
+      text: 'আপনার চমৎকার সহযোগিতার জন্য ধন্যবাদ। আশা করি আবার লেনদেন হবে!',
+    },
+  ],
+};
 

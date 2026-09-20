@@ -14,7 +14,7 @@ import { ChatService } from './chat.service';
 import { ChatGateway } from './chat.gateway';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { Roles, Public } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @Controller('chat')
@@ -181,6 +181,38 @@ export class ChatController {
     this.chatGateway.notifyAdmins('chat:admin_visibility_changed', { isVisible });
     this.chatGateway.server?.emit('chat:admin_visibility_changed', { isVisible });
     return { success: true, isVisible };
+  }
+
+  /**
+   * Get Chat Safety Rules & Quick Message Templates (for all chat users)
+   */
+  @Public()
+  @Get('rules-and-templates')
+  async getRulesAndTemplates() {
+    return this.chatService.getChatSafetyAndTemplates();
+  }
+
+  /**
+   * Admin: Get Chat Safety Rules & Quick Message Templates
+   */
+  @Get('admin/rules-and-templates')
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  async getRulesAndTemplatesAdmin() {
+    return this.chatService.getChatSafetyAndTemplates();
+  }
+
+  /**
+   * Admin: Update Chat Safety Rules & Quick Message Templates
+   */
+  @Patch('admin/rules-and-templates')
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  async updateRulesAndTemplatesAdmin(
+    @Body() payload: any,
+    @CurrentUser('id') adminId: string,
+  ) {
+    return this.chatService.updateChatSafetyAndTemplates(payload, adminId);
   }
 
   @Post('conversations')
