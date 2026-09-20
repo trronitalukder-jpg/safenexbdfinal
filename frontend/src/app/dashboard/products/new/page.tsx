@@ -163,8 +163,8 @@ function NewProductForm() {
       );
 
       try {
-        // Compress image client side
-        const { base64Data, fileName: cleanFileName } = await compressImage(file, 1200, 1200, 0.85);
+        // Compress image and apply SafnexBD watermark client-side
+        const { base64Data, fileName: cleanFileName } = await compressImage(file, 1200, 1200, 0.85, 'SafnexBD');
 
         // Upload to backend /uploads
         const res: any = await api.post('/uploads', {

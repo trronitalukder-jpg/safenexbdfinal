@@ -171,7 +171,7 @@ export default function MyProductsPage() {
       if (!file.type.startsWith('image/')) continue;
 
       try {
-        const { base64Data, fileName: cleanFileName } = await compressImage(file, 1200, 1200, 0.85);
+        const { base64Data, fileName: cleanFileName } = await compressImage(file, 1200, 1200, 0.85, 'SafnexBD');
         const res: any = await api.post('/uploads', {
           base64Data,
           fileName: cleanFileName,
