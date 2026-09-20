@@ -19,8 +19,12 @@ import {
   Share2,
   Sparkles,
   Lock,
+  Star,
+  X,
+  AlertCircle,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
 
@@ -28,18 +32,57 @@ export default function UserPublicProfilePage() {
   const params = useParams();
   const userId = params?.userId as string;
   const { lang, t } = useLanguage();
+  const { user: currentUser } = useAuthStore();
 
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  // Rating Modal state
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [ratingValue, setRatingValue] = useState(5);
+  const [ratingHover, setRatingHover] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
+  const [submittingRating, setSubmittingRating] = useState(false);
+  const [ratingError, setRatingError] = useState('');
+  const [ratingSuccess, setRatingSuccess] = useState('');
+
+  const fetchProfile = () => {
     if (!userId) return;
     setLoading(true);
     api.get(`/users/profile/${userId}`)
       .then((res: any) => setProfile(res))
       .catch(() => setProfile(null))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchProfile();
   }, [userId]);
+
+  const handleSubmitRating = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile) return;
+    setSubmittingRating(true);
+    setRatingError('');
+    setRatingSuccess('');
+
+    try {
+      await api.post(`/users/${profile.id}/reviews`, {
+        rating: ratingValue,
+        comment: ratingComment.trim() || undefined,
+      });
+      setRatingSuccess(lang === 'bn' ? 'রেটিং সফলভাবে সম্পন্ন হয়েছে!' : 'Review submitted successfully!');
+      setTimeout(() => {
+        setShowRatingModal(false);
+        setRatingSuccess('');
+        fetchProfile();
+      }, 1200);
+    } catch (err: any) {
+      setRatingError(err.response?.data?.message || err.message || (lang === 'bn' ? 'রেটিং দিতে ব্যর্থ হয়েছে' : 'Failed to submit review'));
+    } finally {
+      setSubmittingRating(false);
+    }
+  };
 
   if (loading) {
     return <div className="max-w-5xl mx-auto px-4 py-16 text-center text-xs text-slate-400">Loading user profile...</div>;
@@ -166,24 +209,44 @@ export default function UserPublicProfilePage() {
 
         {/* Action & Stats Column */}
         <div className="flex flex-col items-center sm:items-end gap-3 shrink-0">
-          <div className="flex gap-3 text-center">
-            <div className="px-4 py-2 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+          <div className="flex gap-2.5 text-center">
+            <div className="px-3.5 py-2 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-900/40 text-center">
+              <div className="text-base font-bold text-amber-600 flex items-center justify-center gap-1">
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <span>{profile.averageRating ? Number(profile.averageRating).toFixed(1) : '5.0'}</span>
+              </div>
+              <div className="text-[10px] text-amber-700 dark:text-amber-400 font-medium">{profile.reviewsCount || 0} {lang === 'bn' ? 'রিভিউ' : 'Reviews'}</div>
+            </div>
+            <div className="px-3.5 py-2 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
               <div className="text-base font-bold text-slate-900 dark:text-white">{profile.productsCount}</div>
               <div className="text-[10px] text-slate-400">{lang === 'bn' ? 'প্রোডাক্ট' : 'Products'}</div>
             </div>
-            <div className="px-4 py-2 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
+            <div className="px-3.5 py-2 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
               <div className="text-base font-bold text-emerald-600">{profile.completedTransactionsCount}</div>
               <div className="text-[10px] text-emerald-600">{lang === 'bn' ? 'সম্পন্ন ডিল' : 'Deals Done'}</div>
             </div>
           </div>
 
-          <Link
-            href={`/dashboard/chat?targetUserId=${profile.id}`}
-            className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-sky-600/20 transition active:scale-95"
-          >
-            <MessageSquare className="w-4 h-4" />
-            <span>{t('chat')}</span>
-          </Link>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            {!currentUser || currentUser.id !== profile.id ? (
+              <button
+                type="button"
+                onClick={() => setShowRatingModal(true)}
+                className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 transition active:scale-95"
+              >
+                <Star className="w-3.5 h-3.5 fill-slate-950" />
+                <span>{lang === 'bn' ? 'রেটিং দিন' : 'Rate User'}</span>
+              </button>
+            ) : null}
+
+            <Link
+              href={`/dashboard/chat?targetUserId=${profile.id}`}
+              className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-sky-600/20 transition active:scale-95"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>{t('chat')}</span>
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -477,6 +540,242 @@ export default function UserPublicProfilePage() {
           </div>
         )}
       </div>
+
+      {/* Ratings & Reviews Section */}
+      <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-6 text-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Star className="w-5 h-5 text-amber-500 fill-amber-400" />
+              <span>{lang === 'bn' ? 'রেটিং ও রিভিউ (Ratings & Reviews)' : 'Ratings & Reviews'}</span>
+            </h2>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {lang === 'bn' ? 'এই ব্যবহারকারীর সাথে লেনদেন করা অন্যান্য ব্যবহারকারীদের মতামত' : 'Feedback from users who interacted or traded with this user'}
+            </p>
+          </div>
+
+          {!currentUser || currentUser.id !== profile.id ? (
+            <button
+              type="button"
+              onClick={() => setShowRatingModal(true)}
+              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95 self-start sm:self-auto"
+            >
+              <Star className="w-3.5 h-3.5 fill-slate-950" />
+              <span>{lang === 'bn' ? 'রিভিউ দিন / রেটিং দিন' : 'Write a Review'}</span>
+            </button>
+          ) : null}
+        </div>
+
+        {/* Rating summary stats */}
+        <div className="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/60 dark:border-slate-800">
+          <div className="flex flex-col items-center justify-center text-center sm:border-r sm:border-slate-200 dark:sm:border-slate-800 sm:pr-8">
+            <div className="text-3xl sm:text-4xl font-black text-amber-500">
+              {profile.averageRating ? Number(profile.averageRating).toFixed(1) : '5.0'}
+            </div>
+            <div className="flex items-center gap-1 mt-1 text-amber-400">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  className={`w-4 h-4 ${
+                    star <= Math.round(profile.averageRating || 5)
+                      ? 'fill-amber-400 text-amber-400'
+                      : 'text-slate-300 dark:text-slate-600'
+                  }`}
+                />
+              ))}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-1 font-medium">
+              {profile.reviewsCount || 0} {lang === 'bn' ? 'টি মোট রিভিউ' : 'total reviews'}
+            </div>
+          </div>
+
+          <div className="flex-1 text-slate-600 dark:text-slate-300 text-xs">
+            <p className="font-semibold text-slate-900 dark:text-white mb-1">
+              {lang === 'bn' ? 'বিশ্বস্ততা ও রেটিং সিস্টেম' : 'Trust & Rating System'}
+            </p>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              {lang === 'bn'
+                ? 'সফল লেনদেনের পর যেকোনো ভেরিফাইড ইউজার এই সেলার বা বায়ারকে রেটিং দিতে পারেন। এটি প্ল্যাটফর্মের নিরাপত্তা বজায় রাখতে সাহায্য করে।'
+                : 'Any verified user can rate and review after interacting or trading, ensuring trust and security on the platform.'}
+            </p>
+          </div>
+        </div>
+
+        {/* Reviews List */}
+        {profile.reviews && profile.reviews.length > 0 ? (
+          <div className="space-y-3 pt-2">
+            {profile.reviews.map((rev: any) => (
+              <div
+                key={rev.id}
+                className="p-4 rounded-2xl bg-white dark:bg-slate-850/60 border border-slate-200/60 dark:border-slate-800 space-y-2"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    {rev.reviewer?.avatarUrl ? (
+                      <img
+                        src={getImageUrl(rev.reviewer.avatarUrl)}
+                        alt={rev.reviewer.fullName}
+                        className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-sky-600 text-white font-bold text-xs flex items-center justify-center">
+                        {rev.reviewer?.fullName?.charAt(0) || 'U'}
+                      </div>
+                    )}
+                    <div>
+                      <div className="font-bold text-slate-900 dark:text-white">
+                        {rev.reviewer?.fullName || 'Anonymous'}
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-mono">
+                        ID: {rev.reviewer?.uniqueUserId}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex items-center text-amber-400">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star
+                          key={s}
+                          className={`w-3.5 h-3.5 ${
+                            s <= rev.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-700'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-[10px] text-slate-400">
+                      {new Date(rev.createdAt).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                </div>
+
+                {rev.comment && (
+                  <p className="text-slate-700 dark:text-slate-300 text-xs pl-10 leading-relaxed">
+                    "{rev.comment}"
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-8 text-center bg-slate-50/50 dark:bg-slate-850/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-400 space-y-2">
+            <p>{lang === 'bn' ? 'এখনো কোনো রিভিউ দেওয়া হয়নি।' : 'No reviews given yet.'}</p>
+            {!currentUser || currentUser.id !== profile.id ? (
+              <button
+                type="button"
+                onClick={() => setShowRatingModal(true)}
+                className="text-sky-600 dark:text-sky-400 font-bold hover:underline"
+              >
+                {lang === 'bn' ? 'প্রথম রিভিউটি আপনি দিন!' : 'Be the first to review!'}
+              </button>
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      {/* Rating Submission Modal */}
+      {showRatingModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 w-full max-w-md p-6 shadow-2xl space-y-5 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
+                <span>{lang === 'bn' ? 'ইউজার রেটিং ও রিভিউ দিন' : 'Rate & Review User'}</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowRatingModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {ratingSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-xs font-semibold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>{ratingSuccess}</span>
+              </div>
+            )}
+
+            {ratingError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 text-xs font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{ratingError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitRating} className="space-y-4 text-xs">
+              <div className="text-center space-y-2">
+                <div className="text-slate-600 dark:text-slate-300 font-semibold">
+                  {lang === 'bn' ? `${profile.fullName}-কে কত স্টার দিতে চান?` : `Select rating for ${profile.fullName}`}
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onMouseEnter={() => setRatingHover(star)}
+                      onMouseLeave={() => setRatingHover(0)}
+                      onClick={() => setRatingValue(star)}
+                      className="p-1 transition transform hover:scale-125 focus:outline-none"
+                    >
+                      <Star
+                        className={`w-8 h-8 transition ${
+                          star <= (ratingHover || ratingValue)
+                            ? 'fill-amber-400 text-amber-400 drop-shadow-sm'
+                            : 'text-slate-300 dark:text-slate-700'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+                <div className="text-xs font-bold text-amber-500">
+                  {ratingValue} / 5 Stars
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-slate-700 dark:text-slate-300 font-bold">
+                  {lang === 'bn' ? 'মতামত বা মন্তব্য (ঐচ্ছিক)' : 'Feedback / Review Comment (Optional)'}
+                </label>
+                <textarea
+                  rows={3}
+                  value={ratingComment}
+                  onChange={(e) => setRatingComment(e.target.value)}
+                  placeholder={
+                    lang === 'bn'
+                      ? 'যেমন: লেনদেন খুবই দ্রুত ও নিরাপদ ছিল, দারুণ অভিজ্ঞতা!'
+                      : 'e.g. Very fast transaction, trustworthy and polite seller!'
+                  }
+                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowRatingModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold"
+                >
+                  {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingRating}
+                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-500/20 transition active:scale-95 disabled:opacity-50"
+                >
+                  {submittingRating ? (lang === 'bn' ? 'সাবমিট হচ্ছে...' : 'Submitting...') : (lang === 'bn' ? 'সাবমিট করুন' : 'Submit Review')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

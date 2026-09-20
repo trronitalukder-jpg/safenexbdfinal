@@ -52,6 +52,10 @@ export interface UserProfile {
   whoCanMessage?: string;
   showPhone?: boolean;
   showEmail?: boolean;
+  showLocation?: boolean;
+  showProfession?: boolean;
+  showSkills?: boolean;
+  showSocialLinks?: boolean;
   timezone?: string;
   twoFactorEnabled?: boolean;
   businessName?: string;

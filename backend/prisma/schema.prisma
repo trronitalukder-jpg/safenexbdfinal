@@ -61,6 +61,10 @@ model User {
   whoCanMessage     String  @default("EVERYONE") @db.VarChar(20) // EVERYONE, VERIFIED, NO_ONE
   showPhone         Boolean @default(false)
   showEmail         Boolean @default(false)
+  showLocation      Boolean @default(true)
+  showProfession    Boolean @default(true)
+  showSkills        Boolean @default(true)
+  showSocialLinks   Boolean @default(true)
   timezone          String? @default("Asia/Dhaka") @db.VarChar(50)
 
   // Verification (NID)
@@ -108,10 +112,31 @@ model User {
   handoffsSent         TaskHandoffLog[]    @relation("HandoffFromStaff")
   handoffsReceived     TaskHandoffLog[]    @relation("HandoffToStaff")
 
+  receivedReviews      UserReview[]        @relation("ReceivedReviews")
+  givenReviews         UserReview[]        @relation("GivenReviews")
+
   @@index([uniqueUserId])
   @@index([email])
   @@index([phone])
   @@map("users")
+}
+
+model UserReview {
+  id           String   @id @default(uuid())
+  reviewerId   String
+  targetUserId String
+  rating       Int      @default(5)
+  comment      String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  reviewer     User     @relation("GivenReviews", fields: [reviewerId], references: [id], onDelete: Cascade)
+  targetUser   User     @relation("ReceivedReviews", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewerId, targetUserId])
+  @@index([targetUserId])
+  @@index([reviewerId])
+  @@map("user_reviews")
 }
 
 model PasswordResetRequest {

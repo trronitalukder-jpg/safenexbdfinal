@@ -11,5 +11,19 @@
     "prisma:generate": "cd backend && npx prisma generate",
     "prisma:push": "cd backend && npx prisma db push",
     "prisma:seed": "cd backend && node dist/prisma/seed.js"
+  },
+  "main": "ecosystem.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vexabd26-ship-it/safnexbd.git"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/vexabd26-ship-it/safnexbd/issues"
+  },
+  "homepage": "https://github.com/vexabd26-ship-it/safnexbd#readme",
+  "dependencies": {
+    "ssh2": "^1.17.0"
   }
 }

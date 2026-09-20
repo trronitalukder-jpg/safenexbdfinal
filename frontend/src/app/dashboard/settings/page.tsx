@@ -182,6 +182,10 @@ function SettingsContent() {
   const [whoCanMessage, setWhoCanMessage] = useState(user?.whoCanMessage || 'EVERYONE');
   const [showPhone, setShowPhone] = useState(Boolean(user?.showPhone));
   const [showEmail, setShowEmail] = useState(Boolean(user?.showEmail));
+  const [showLocation, setShowLocation] = useState(user?.showLocation !== false);
+  const [showProfession, setShowProfession] = useState(user?.showProfession !== false);
+  const [showSkills, setShowSkills] = useState(user?.showSkills !== false);
+  const [showSocialLinks, setShowSocialLinks] = useState(user?.showSocialLinks !== false);
   const [timezone, setTimezone] = useState(user?.timezone || 'Asia/Dhaka');
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(Boolean(user?.twoFactorEnabled));
   const [privacyMessage, setPrivacyMessage] = useState('');
@@ -369,6 +373,10 @@ function SettingsContent() {
       setWhoCanMessage(user.whoCanMessage || 'EVERYONE');
       setShowPhone(Boolean(user.showPhone));
       setShowEmail(Boolean(user.showEmail));
+      setShowLocation(user.showLocation !== false);
+      setShowProfession(user.showProfession !== false);
+      setShowSkills(user.showSkills !== false);
+      setShowSocialLinks(user.showSocialLinks !== false);
       setTimezone(user.timezone || 'Asia/Dhaka');
       setTwoFactorEnabled(Boolean(user.twoFactorEnabled));
       setBusinessName(user.businessName || '');
@@ -466,6 +474,7 @@ function SettingsContent() {
       await api.patch('/users/profile', {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
+        headline: headline.trim() || undefined,
         phone: phone.trim() || undefined,
         additionalPhone: additionalPhone.trim() || undefined,
         dateOfBirth: dateOfBirth || undefined,
@@ -628,6 +637,10 @@ function SettingsContent() {
         whoCanMessage,
         showPhone,
         showEmail,
+        showLocation,
+        showProfession,
+        showSkills,
+        showSocialLinks,
         timezone,
         twoFactorEnabled,
       });
@@ -970,16 +983,16 @@ function SettingsContent() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 overflow-x-auto custom-scrollbar">
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/70 dark:border-slate-700/60">
         {[
           { id: 'profile', icon: User, label: lang === 'bn' ? 'বেসিক প্রোফাইল' : 'Basic Profile' },
           { id: 'address', icon: MapPin, label: lang === 'bn' ? 'ঠিকানা ও অবস্থান' : 'Address & Location' },
           { id: 'profession', icon: GraduationCap, label: lang === 'bn' ? 'শিক্ষা ও পেশা' : 'Education & Career' },
           { id: 'about', icon: FileText, label: lang === 'bn' ? 'ব্যক্তিগত ও সোশ্যাল' : 'About & Social' },
-          { id: 'verification', icon: Award, label: lang === 'bn' ? 'এনআইডি ভেরিফিকেশন' : 'NID Verification', badge: user?.isVerified ? 'Verified' : user?.verificationStatus === 'PENDING' ? 'Pending' : undefined },
+          { id: 'verification', icon: Award, label: lang === 'bn' ? 'এনআইডি কার্ড' : 'NID Verification', badge: user?.isVerified ? 'Verified' : user?.verificationStatus === 'PENDING' ? 'Pending' : undefined },
           { id: 'payouts', icon: CreditCard, label: lang === 'bn' ? 'উইথড্র একাউন্ট' : 'Payout Accounts', count: paymentAccounts.length },
-          { id: 'security', icon: Lock, label: lang === 'bn' ? 'পাসওয়ার্ড ও সিকিউরিটি' : 'Security' },
-          { id: 'preferences', icon: Sparkles, label: lang === 'bn' ? 'প্রাইভেসি ও সেটিংস' : 'Privacy & Settings' },
+          { id: 'security', icon: Lock, label: lang === 'bn' ? 'পাসওয়ার্ড সিকিউরিটি' : 'Security' },
+          { id: 'preferences', icon: Sparkles, label: lang === 'bn' ? 'প্রাইভেসি সেটিংস' : 'Privacy & Settings' },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -988,23 +1001,23 @@ function SettingsContent() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id as TabType)}
-              className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition shrink-0 ${
+              className={`flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl font-bold text-xs text-center transition ${
                 isActive
-                  ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm ring-1 ring-sky-500/20'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/60'
               }`}
             >
-              <Icon className="w-4 h-4" />
-              <span>{tab.label}</span>
+              <Icon className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{tab.label}</span>
               {tab.badge && (
-                <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${
+                <span className={`px-1 py-0.2 rounded-full text-[8px] font-black shrink-0 ${
                   tab.badge === 'Verified' ? 'bg-emerald-500/15 text-emerald-600' : 'bg-amber-500/15 text-amber-600'
                 }`}>
                   {tab.badge}
                 </span>
               )}
               {tab.count !== undefined && tab.count > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-sky-100 dark:bg-sky-950 text-sky-600 dark:text-sky-300 font-extrabold">
+                <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-sky-100 dark:bg-sky-950 text-sky-600 dark:text-sky-300 font-extrabold shrink-0">
                   {tab.count}
                 </span>
               )}
@@ -1255,6 +1268,21 @@ function SettingsContent() {
                   <option value="OTHER">{lang === 'bn' ? 'অন্যান্য (Other)' : 'Other'}</option>
                 </select>
               </div>
+            </div>
+
+            {/* Headline / Title */}
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5 flex items-center justify-between">
+                <span>{lang === 'bn' ? 'প্রোফাইল হেডলাইন / উপাধি (Headline / Title)' : 'Profile Headline / Title'}</span>
+                <span className="text-[10px] text-sky-500 font-medium">{lang === 'bn' ? 'ইউজার লিস্টে ও চ্যাটে এটি সবার আগে দেখা যাবে' : 'Visible first on users list and chat'}</span>
+              </label>
+              <input
+                type="text"
+                value={headline}
+                onChange={(e) => setHeadline(e.target.value)}
+                placeholder={lang === 'bn' ? 'যেমন: Top Rated P2P Trader | Full-stack Developer' : 'e.g. Top Rated P2P Trader | Full-stack Developer'}
+                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+              />
             </div>
 
             {/* Business info */}
@@ -2506,10 +2534,10 @@ function SettingsContent() {
                 </div>
               </div>
 
-              {/* Show Phone & Show Email toggles */}
+              {/* Profile Data Display & Privacy toggles */}
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/70 dark:border-slate-800 space-y-3">
                 <div className="font-bold text-slate-900 dark:text-white">
-                  {lang === 'bn' ? 'যোগাযোগ তথ্য প্রদর্শন' : 'Contact Info Display'}
+                  {lang === 'bn' ? 'পাবলিক প্রোফাইল তথ্য প্রদর্শন নিয়ন্ত্রণ' : 'Public Profile Data Display Control'}
                 </div>
 
                 <label className="flex items-center justify-between cursor-pointer">
@@ -2544,6 +2572,82 @@ function SettingsContent() {
                     type="checkbox"
                     checked={showEmail}
                     onChange={(e) => setShowEmail(e.target.checked)}
+                    className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500"
+                  />
+                </label>
+
+                <div className="border-t border-slate-200/60 dark:border-slate-700/60 pt-2" />
+
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div>
+                    <div className="font-semibold text-slate-700 dark:text-slate-300">
+                      {lang === 'bn' ? 'পাবলিক প্রোফাইলে ঠিকানা ও অবস্থান দেখান' : 'Show location / address on public profile'}
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      {lang === 'bn' ? 'অন্যান্য ইউজাররা আপনার বিভাগ ও জেলা দেখতে পারবে' : 'Other users can view your division/district'}
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={showLocation}
+                    onChange={(e) => setShowLocation(e.target.checked)}
+                    className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500"
+                  />
+                </label>
+
+                <div className="border-t border-slate-200/60 dark:border-slate-700/60 pt-2" />
+
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div>
+                    <div className="font-semibold text-slate-700 dark:text-slate-300">
+                      {lang === 'bn' ? 'পাবলিক প্রোফাইলে পেশা ও শিক্ষা দেখান' : 'Show profession & career on public profile'}
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      {lang === 'bn' ? 'অন্যান্য ইউজাররা আপনার পেশা, কোম্পানি বা প্রতিষ্ঠান দেখতে পারবে' : 'Other users can view your profession and company'}
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={showProfession}
+                    onChange={(e) => setShowProfession(e.target.checked)}
+                    className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500"
+                  />
+                </label>
+
+                <div className="border-t border-slate-200/60 dark:border-slate-700/60 pt-2" />
+
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div>
+                    <div className="font-semibold text-slate-700 dark:text-slate-300">
+                      {lang === 'bn' ? 'পাবলিক প্রোফাইলে স্কিল ও দক্ষতা দেখান' : 'Show skills & tags on public profile'}
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      {lang === 'bn' ? 'অন্যান্য ইউজাররা আপনার স্কিল ট্যাগগুলো দেখতে পারবে' : 'Other users can view your skill badges'}
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={showSkills}
+                    onChange={(e) => setShowSkills(e.target.checked)}
+                    className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500"
+                  />
+                </label>
+
+                <div className="border-t border-slate-200/60 dark:border-slate-700/60 pt-2" />
+
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div>
+                    <div className="font-semibold text-slate-700 dark:text-slate-300">
+                      {lang === 'bn' ? 'পাবলিক প্রোফাইলে সোশ্যাল মিডিয়া লিংক দেখান' : 'Show social media links on public profile'}
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      {lang === 'bn' ? 'অন্যান্য ইউজাররা আপনার ফেসবুক, টেলিগ্রাম ইত্যাদি লিংক দেখতে পারবে' : 'Other users can view your social profiles'}
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={showSocialLinks}
+                    onChange={(e) => setShowSocialLinks(e.target.checked)}
                     className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500"
                   />
                 </label>

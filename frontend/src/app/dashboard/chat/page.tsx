@@ -44,6 +44,10 @@ import {
   PhoneCall,
   PanelLeftClose,
   PanelLeftOpen,
+  Star,
+  MapPin,
+  Briefcase,
+  GraduationCap,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguage } from '@/context/LanguageContext';
@@ -100,8 +104,24 @@ function MessengerChatContent() {
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState<any>(null);
+  const [profileModalDetails, setProfileModalDetails] = useState<any>(null);
+  const [loadingProfileModal, setLoadingProfileModal] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
+
+  useEffect(() => {
+    if (showProfileModal) {
+      setProfileModalDetails(null);
+      const identifier = showProfileModal.uniqueUserId || showProfileModal.id;
+      if (identifier) {
+        setLoadingProfileModal(true);
+        api.get(`/users/profile/${identifier}`)
+          .then((res: any) => setProfileModalDetails(res))
+          .catch(() => setProfileModalDetails(null))
+          .finally(() => setLoadingProfileModal(false));
+      }
+    }
+  }, [showProfileModal]);
   const [showDisputeModal, setShowDisputeModal] = useState<any>(null);
   const [showOptionsDropdown, setShowOptionsDropdown] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
@@ -3305,87 +3325,168 @@ function MessengerChatContent() {
       {/* =========================================================================
           MODAL 1: Profile Preview Modal (Spec #4 & #19)
       ========================================================================= */}
-      {showProfileModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-6 shadow-2xl relative text-center">
-            <button
-              onClick={() => setShowProfileModal(null)}
-              className="absolute right-4 top-4 p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              <X className="w-5 h-5" />
-            </button>
+      {showProfileModal && (() => {
+        const u = profileModalDetails || showProfileModal;
+        const displayName = getUserDisplayName(u);
+        const headline = u.headline || showProfileModal.headline;
+        const locationParts = [u.city, u.district, u.division].filter(Boolean);
+        const locationText = locationParts.length > 0 ? locationParts.join(', ') : null;
+        const skillsList = u.skills ? u.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
 
-            {/* Profile Picture */}
-            <div className="relative inline-block mx-auto mb-3">
-              {showProfileModal.avatarUrl ? (
-                <img
-                  src={getImageUrl(showProfileModal.avatarUrl)}
-                  alt={getUserDisplayName(showProfileModal)}
-                  className="w-24 h-24 rounded-full object-cover border-4 border-slate-100 dark:border-slate-800 shadow-md"
-                />
-              ) : (
-                <div className="w-24 h-24 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-bold flex items-center justify-center text-3xl border-4 border-slate-100 dark:border-slate-800 shadow-md">
-                  {getUserDisplayName(showProfileModal).charAt(0)}
+        return (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl relative text-center space-y-4 my-8 animate-in zoom-in-95">
+              <button
+                onClick={() => setShowProfileModal(null)}
+                className="absolute right-4 top-4 p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Profile Picture */}
+              <div className="relative inline-block mx-auto">
+                {u.avatarUrl ? (
+                  <img
+                    src={getImageUrl(u.avatarUrl)}
+                    alt={displayName}
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-4 border-slate-100 dark:border-slate-800 shadow-md"
+                  />
+                ) : (
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-tr from-sky-600 to-indigo-600 text-white font-bold flex items-center justify-center text-3xl border-4 border-slate-100 dark:border-slate-800 shadow-md">
+                    {displayName.charAt(0)}
+                  </div>
+                )}
+                {u.isVerified && (
+                  <span className="absolute -bottom-1 -right-1 p-1 rounded-full bg-emerald-500 text-white shadow-sm" title="Verified User">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </span>
+                )}
+              </div>
+
+              {/* Name & ID */}
+              <div>
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center justify-center gap-1.5">
+                  <span>{displayName}</span>
+                  {u.isVerified && <Shield className="w-4 h-4 text-emerald-500" />}
+                </h3>
+                <p className="text-xs font-mono text-sky-600 dark:text-sky-400 font-bold mt-0.5">
+                  ID: {u.uniqueUserId || 'TBD' + u.id?.slice(0, 5).toUpperCase()}
+                </p>
+
+                {/* Rating & Location */}
+                <div className="flex flex-wrap items-center justify-center gap-2.5 mt-2">
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-500 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-lg border border-amber-200/50 dark:border-amber-900/40">
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <span>{u.averageRating ? Number(u.averageRating).toFixed(1) : '5.0'}</span>
+                    <span className="text-[10px] text-slate-400 font-normal">({u.reviewsCount || 0} reviews)</span>
+                  </span>
+
+                  {locationText && (
+                    <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                      <MapPin className="w-3 h-3 text-emerald-500" />
+                      <span>{locationText}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Headline */}
+              {headline && (
+                <div className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-sky-950/40 dark:to-indigo-950/40 border border-sky-200/70 dark:border-sky-800/60 text-xs font-bold text-sky-800 dark:text-sky-200 text-center">
+                  {headline}
                 </div>
               )}
-              <span className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-emerald-500 border-3 border-white dark:border-slate-900" />
-            </div>
 
-            {/* Name & ID */}
-            <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center justify-center gap-1.5">
-              {getUserDisplayName(showProfileModal)}
-              {showProfileModal.isVerified && <Shield className="w-4 h-4 text-blue-500" />}
-            </h3>
-            <p className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-              {showProfileModal.uniqueUserId || 'TBD' + showProfileModal.id?.slice(0, 5).toUpperCase()}
-            </p>
-            <div className="inline-flex items-center gap-1 mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" /> Online
-            </div>
-
-            <div className="my-4 border-t border-slate-100 dark:border-slate-800" />
-
-            {/* Actions */}
-            <div className="space-y-2">
-              <button
-                onClick={() => startChatWithUser(showProfileModal)}
-                className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 shadow-sm"
-              >
-                <MessageSquare className="w-4 h-4" /> Message
-              </button>
-
-              <button
-                onClick={() => {
-                  startChatWithUser(showProfileModal);
-                  setShowPayModal(true);
-                }}
-                className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-sm transition-colors flex items-center justify-center gap-2"
-              >
-                <ArrowUpRight className="w-4 h-4 text-emerald-500" /> Pay Money
-              </button>
-
-              <button
-                onClick={() => {
-                  startChatWithUser(showProfileModal);
-                  setShowRequestModal(true);
-                }}
-                className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-sm transition-colors flex items-center justify-center gap-2"
-              >
-                <ArrowDownLeft className="w-4 h-4 text-blue-500" /> Request Money
-              </button>
-
-              {showProfileModal.uniqueUserId && (
-                <Link
-                  href={`/users/${showProfileModal.uniqueUserId}`}
-                  className="block pt-2 text-xs text-slate-500 hover:text-emerald-600 transition-colors"
-                >
-                  View Full Profile →
-                </Link>
+              {/* Bio / About */}
+              {u.bio && (
+                <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-3 text-left bg-slate-50 dark:bg-slate-850 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800">
+                  {u.bio}
+                </p>
               )}
+
+              {/* Profession & Business */}
+              {(u.profession || u.company || u.businessName) && (
+                <div className="text-xs text-slate-600 dark:text-slate-300 text-left bg-slate-50 dark:bg-slate-850 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800 space-y-1">
+                  {u.profession && (
+                    <div className="flex items-center gap-1.5">
+                      <Briefcase className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                      <span><strong>{u.profession}</strong> {u.company ? `@ ${u.company}` : ''}</span>
+                    </div>
+                  )}
+                  {u.businessName && !u.profession && (
+                    <div className="text-slate-500 dark:text-slate-400">
+                      🏢 <strong>{u.businessName}</strong>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Skills preview */}
+              {skillsList.length > 0 && (
+                <div className="flex flex-wrap gap-1 justify-center">
+                  {skillsList.slice(0, 5).map((s: string, idx: number) => (
+                    <span
+                      key={idx}
+                      className="px-2 py-0.5 rounded-lg bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-300 text-[10px] font-semibold border border-sky-100 dark:border-sky-900/40"
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="border-t border-slate-100 dark:border-slate-800 pt-2" />
+
+              {/* Actions */}
+              <div className="space-y-2">
+                <button
+                  onClick={() => {
+                    startChatWithUser(u);
+                    setShowProfileModal(null);
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs transition flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <MessageSquare className="w-4 h-4" /> Message
+                </button>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      startChatWithUser(u);
+                      setShowPayModal(true);
+                      setShowProfileModal(null);
+                    }}
+                    className="py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-semibold text-xs transition flex items-center justify-center gap-1.5 border border-emerald-200 dark:border-emerald-800/60"
+                  >
+                    <ArrowUpRight className="w-4 h-4 text-emerald-600" /> Pay Money
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      startChatWithUser(u);
+                      setShowRequestModal(true);
+                      setShowProfileModal(null);
+                    }}
+                    className="py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-semibold text-xs transition flex items-center justify-center gap-1.5 border border-blue-200 dark:border-blue-800/60"
+                  >
+                    <ArrowDownLeft className="w-4 h-4 text-blue-600" /> Request Money
+                  </button>
+                </div>
+
+                {u.uniqueUserId && (
+                  <Link
+                    href={`/users/${u.uniqueUserId}`}
+                    onClick={() => setShowProfileModal(null)}
+                    className="block pt-1 text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline transition"
+                  >
+                    {lang === 'bn' ? 'সম্পূর্ণ প্রোফাইল দেখুন ও রিভিউ দিন →' : 'View Full Profile & Reviews →'}
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* =========================================================================
           MODAL 2: Send Money / Pay Request Modal

@@ -116,12 +116,32 @@ export default function RegisterPage() {
       return;
     }
 
+    if (uploadingAvatar) {
+      setError(lang === 'bn' ? 'অনুগ্রহ করে প্রোফাইল ছবি আপলোড হওয়া পর্যন্ত ২ সেকেন্ড অপেক্ষা করুন...' : 'Please wait for profile photo to finish uploading...');
+      return;
+    }
+
     setLoading(true);
 
     try {
+      let finalAvatarUrl = avatarUrl;
+      // If photo was chosen but upload is not yet complete or failed, attempt immediate upload now
+      if (!finalAvatarUrl && avatarPreview && avatarPreview.startsWith('data:')) {
+        try {
+          const uploadRes: any = await api.post('/uploads', {
+            base64Data: avatarPreview,
+            fileName: 'avatar.jpg',
+            folder: 'avatars',
+          });
+          finalAvatarUrl = uploadRes?.fileUrl || uploadRes?.data?.fileUrl || '';
+        } catch (uErr) {
+          console.error('Fallback avatar upload failed:', uErr);
+        }
+      }
+
       const res: any = await api.post('/auth/register', {
         ...formData,
-        avatarUrl: avatarUrl || undefined,
+        avatarUrl: finalAvatarUrl || undefined,
       });
 
       setAuth(res.user, res.accessToken, res.refreshToken);
@@ -398,8 +418,13 @@ export default function RegisterPage() {
             disabled={loading || uploadingAvatar}
             className="w-full py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md shadow-sky-600/20 flex items-center justify-center gap-2 transition disabled:opacity-50"
           >
-            {loading ? (
-              <span>Creating account...</span>
+            {uploadingAvatar ? (
+              <span className="flex items-center gap-2">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>{lang === 'bn' ? 'ছবি আপলোড হচ্ছে...' : 'Uploading photo...'}</span>
+              </span>
+            ) : loading ? (
+              <span>{lang === 'bn' ? 'অ্যাকাউন্ট তৈরি হচ্ছে...' : 'Creating account...'}</span>
             ) : (
               <>
                 <span>{lang === 'bn' ? 'রেজিস্ট্রেশন সম্পন্ন করুন' : 'Complete Registration'}</span>

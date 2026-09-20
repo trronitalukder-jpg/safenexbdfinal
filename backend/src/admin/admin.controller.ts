@@ -47,7 +47,7 @@ export class AdminController {
   @Patch('users/:id/status')
   async updateUserStatus(
     @Param('id') userId: string,
-    @Body() body: { isActive?: boolean; isVerified?: boolean; reason?: string },
+    @Body() body: { isActive?: boolean; isVerified?: boolean; verificationStatus?: string; reason?: string },
     @CurrentUser('id') adminId: string,
   ) {
     return this.adminService.updateUserStatus(userId, body, adminId, body.reason);

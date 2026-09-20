@@ -5,6 +5,7 @@ import { SettingsService } from '../settings/settings.service';
 import {
   ChangePasswordDto,
   CreatePaymentAccountDto,
+  CreateUserReviewDto,
   SearchUserQueryDto,
   UpdatePaymentAccountDto,
   UpdateProfileDto,
@@ -30,7 +31,9 @@ export class UsersService {
       const q = query.trim();
       const compactQ = q.replace(/[\s\-\(\)]+/g, '');
       const cleanPhone = compactQ.replace(/^\+?88/, '');
-      whereClause.OR = [
+      const tokens = q.split(/\s+/).filter(Boolean);
+
+      const conditions: any[] = [
         { uniqueUserId: { contains: q } },
         { firstName: { contains: q } },
         { lastName: { contains: q } },
@@ -43,10 +46,31 @@ export class UsersService {
         { profession: { contains: q } },
         { skills: { contains: q } },
         { company: { contains: q } },
+        { businessName: { contains: q } },
         { city: { contains: q } },
         { district: { contains: q } },
         { division: { contains: q } },
       ];
+
+      if (tokens.length > 1) {
+        for (const token of tokens) {
+          if (token.length >= 2) {
+            conditions.push(
+              { firstName: { contains: token } },
+              { lastName: { contains: token } },
+              { headline: { contains: token } },
+              { skills: { contains: token } },
+              { profession: { contains: token } },
+              { company: { contains: token } },
+              { businessName: { contains: token } },
+              { city: { contains: token } },
+              { district: { contains: token } },
+            );
+          }
+        }
+      }
+
+      whereClause.OR = conditions;
     }
 
     if (isVerified === 'true') {
@@ -135,6 +159,11 @@ export class UsersService {
       city: true,
       district: true,
       division: true,
+      receivedReviews: {
+        select: {
+          rating: true,
+        },
+      },
       _count: {
         select: {
           products: { where: { status: 'ACTIVE' as any } },
@@ -179,25 +208,35 @@ export class UsersService {
 
     const allUsers = [...bidUsers, ...nonBidUsers];
 
-    return allUsers.map((u) => ({
-      id: u.id,
-      uniqueUserId: u.uniqueUserId,
-      fullName: `${u.firstName} ${u.lastName}`.trim(),
-      email: u.email,
-      avatarUrl: u.avatarUrl,
-      isVerified: u.isVerified,
-      businessName: u.businessName,
-      businessType: u.businessType,
-      headline: u.headline,
-      profession: u.profession,
-      skills: u.skills,
-      location: [u.city, u.district, u.division].filter(Boolean).join(', '),
-      memberSince: u.createdAt,
-      activeProductsCount: u._count?.products || 0,
-      completedTransactionsCount: u._count?.receivedTransactions || 0,
-      bidPosition: userBidMap.get(u.id)?.targetPosition,
-      activeBid: userBidMap.get(u.id) || null,
-    }));
+    return allUsers.map((u) => {
+      const reviews = u.receivedReviews || [];
+      const totalReviews = reviews.length;
+      const averageRating = totalReviews > 0
+        ? Math.round((reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / totalReviews) * 10) / 10
+        : 5.0;
+
+      return {
+        id: u.id,
+        uniqueUserId: u.uniqueUserId,
+        fullName: `${u.firstName} ${u.lastName}`.trim(),
+        email: u.email,
+        avatarUrl: u.avatarUrl,
+        isVerified: u.isVerified,
+        businessName: u.businessName,
+        businessType: u.businessType,
+        headline: u.headline,
+        profession: u.profession,
+        skills: u.skills,
+        location: [u.city, u.district, u.division].filter(Boolean).join(', '),
+        memberSince: u.createdAt,
+        activeProductsCount: u._count?.products || 0,
+        completedTransactionsCount: u._count?.receivedTransactions || 0,
+        bidPosition: userBidMap.get(u.id)?.targetPosition,
+        activeBid: userBidMap.get(u.id) || null,
+        averageRating,
+        reviewsCount: totalReviews,
+      };
+    });
   }
 
   async getPublicProfile(uniqueUserId: string) {
@@ -240,6 +279,10 @@ export class UsersService {
         whoCanMessage: true,
         showPhone: true,
         showEmail: true,
+        showLocation: true,
+        showProfession: true,
+        showSkills: true,
+        showSocialLinks: true,
         phone: true,
         email: true,
         createdAt: true,
@@ -255,6 +298,26 @@ export class UsersService {
           },
           take: 12,
         },
+        receivedReviews: {
+          take: 30,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            rating: true,
+            comment: true,
+            createdAt: true,
+            reviewer: {
+              select: {
+                id: true,
+                uniqueUserId: true,
+                firstName: true,
+                lastName: true,
+                avatarUrl: true,
+                isVerified: true,
+              },
+            },
+          },
+        },
         userRoles: {
           include: {
             role: true,
@@ -264,6 +327,7 @@ export class UsersService {
           select: {
             products: { where: { status: 'ACTIVE' } },
             receivedTransactions: { where: { status: 'RELEASED' } },
+            receivedReviews: true,
           },
         },
       },
@@ -296,6 +360,16 @@ export class UsersService {
     }
 
     const isPrivate = user.profileVisibility === 'PRIVATE';
+    const hideLocation = !user.showLocation && isPrivate;
+    const hideProfession = !user.showProfession || isPrivate;
+    const hideSkills = !user.showSkills || isPrivate;
+    const hideSocial = !user.showSocialLinks || isPrivate;
+
+    const reviews = user.receivedReviews || [];
+    const totalReviews = user._count?.receivedReviews || reviews.length;
+    const averageRating = reviews.length > 0
+      ? Math.round((reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length) * 10) / 10
+      : 5.0;
 
     return {
       id: user.id,
@@ -311,27 +385,134 @@ export class UsersService {
       products: user.products,
       headline: user.headline,
       bio: isPrivate ? null : user.bio,
-      skills: isPrivate ? null : user.skills,
-      interests: isPrivate ? null : user.interests,
-      languages: isPrivate ? null : user.languages,
-      website: isPrivate ? null : user.website,
-      socialLinks: isPrivate ? null : user.socialLinks,
-      profession: isPrivate ? null : user.profession,
-      company: isPrivate ? null : user.company,
-      jobTitle: isPrivate ? null : user.jobTitle,
-      institution: isPrivate ? null : user.institution,
-      department: isPrivate ? null : user.department,
-      educationLevel: isPrivate ? null : user.educationLevel,
-      graduationYear: isPrivate ? null : user.graduationYear,
-      country: user.country,
-      division: user.division,
-      district: user.district,
-      upazila: user.upazila,
-      city: user.city,
+      skills: hideSkills ? null : user.skills,
+      interests: hideSkills ? null : user.interests,
+      languages: hideSkills ? null : user.languages,
+      website: hideSocial ? null : user.website,
+      socialLinks: hideSocial ? null : user.socialLinks,
+      profession: hideProfession ? null : user.profession,
+      company: hideProfession ? null : user.company,
+      jobTitle: hideProfession ? null : user.jobTitle,
+      institution: hideProfession ? null : user.institution,
+      department: hideProfession ? null : user.department,
+      educationLevel: hideProfession ? null : user.educationLevel,
+      graduationYear: hideProfession ? null : user.graduationYear,
+      country: hideLocation ? null : user.country,
+      division: hideLocation ? null : user.division,
+      district: hideLocation ? null : user.district,
+      upazila: hideLocation ? null : user.upazila,
+      city: hideLocation ? null : user.city,
       profileVisibility: user.profileVisibility,
       whoCanMessage: user.whoCanMessage,
+      showPhone: user.showPhone,
+      showEmail: user.showEmail,
+      showLocation: user.showLocation,
+      showProfession: user.showProfession,
+      showSkills: user.showSkills,
+      showSocialLinks: user.showSocialLinks,
       phone: user.showPhone ? user.phone : null,
       email: user.showEmail ? user.email : null,
+      averageRating,
+      reviewsCount: totalReviews,
+      reviews: reviews.map((r: any) => ({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.createdAt,
+        reviewer: {
+          id: r.reviewer?.id,
+          uniqueUserId: r.reviewer?.uniqueUserId,
+          fullName: `${r.reviewer?.firstName || ''} ${r.reviewer?.lastName || ''}`.trim(),
+          avatarUrl: r.reviewer?.avatarUrl,
+          isVerified: r.reviewer?.isVerified,
+        },
+      })),
+    };
+  }
+
+  async createOrUpdateReview(reviewerId: string, targetUserId: string, dto: CreateUserReviewDto) {
+    if (reviewerId === targetUserId) {
+      throw new BadRequestException('নিজের প্রোফাইলে নিজে রিভিউ দিতে পারবেন না');
+    }
+    const rating = Math.min(5, Math.max(1, Math.round(Number(dto.rating) || 5)));
+
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+    });
+    if (!targetUser) throw new NotFoundException('User not found');
+
+    const review = await this.prisma.userReview.upsert({
+      where: {
+        reviewerId_targetUserId: {
+          reviewerId,
+          targetUserId,
+        },
+      },
+      create: {
+        reviewerId,
+        targetUserId,
+        rating,
+        comment: dto.comment?.trim() || null,
+      },
+      update: {
+        rating,
+        comment: dto.comment?.trim() || null,
+      },
+      include: {
+        reviewer: {
+          select: {
+            id: true,
+            uniqueUserId: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            isVerified: true,
+          },
+        },
+      },
+    });
+
+    return review;
+  }
+
+  async getUserReviews(targetUserId: string) {
+    const reviews = await this.prisma.userReview.findMany({
+      where: { targetUserId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: {
+        reviewer: {
+          select: {
+            id: true,
+            uniqueUserId: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            isVerified: true,
+          },
+        },
+      },
+    });
+
+    const total = reviews.length;
+    const avg = total > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / total : 5.0;
+
+    return {
+      averageRating: Math.round(avg * 10) / 10,
+      totalReviews: total,
+      reviews: reviews.map((r) => ({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.createdAt,
+        reviewer: {
+          id: r.reviewer?.id,
+          uniqueUserId: r.reviewer?.uniqueUserId,
+          fullName: `${r.reviewer?.firstName || ''} ${r.reviewer?.lastName || ''}`.trim(),
+          avatarUrl: r.reviewer?.avatarUrl,
+          isVerified: r.reviewer?.isVerified,
+        },
+      })),
     };
   }
 
@@ -372,6 +553,10 @@ export class UsersService {
     if (dto.whoCanMessage !== undefined) dataToUpdate.whoCanMessage = dto.whoCanMessage.trim();
     if (dto.showPhone !== undefined) dataToUpdate.showPhone = Boolean(dto.showPhone);
     if (dto.showEmail !== undefined) dataToUpdate.showEmail = Boolean(dto.showEmail);
+    if (dto.showLocation !== undefined) dataToUpdate.showLocation = Boolean(dto.showLocation);
+    if (dto.showProfession !== undefined) dataToUpdate.showProfession = Boolean(dto.showProfession);
+    if (dto.showSkills !== undefined) dataToUpdate.showSkills = Boolean(dto.showSkills);
+    if (dto.showSocialLinks !== undefined) dataToUpdate.showSocialLinks = Boolean(dto.showSocialLinks);
     if (dto.timezone !== undefined) dataToUpdate.timezone = dto.timezone.trim() || 'Asia/Dhaka';
     if (dto.nidNumber !== undefined) dataToUpdate.nidNumber = dto.nidNumber.trim() || null;
     if (dto.nidName !== undefined) dataToUpdate.nidName = dto.nidName.trim() || null;

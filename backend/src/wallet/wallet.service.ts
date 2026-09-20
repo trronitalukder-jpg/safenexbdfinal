@@ -771,18 +771,11 @@ export class WalletService {
       }
     }
 
-    // 3. Check: First-time / Unsaved Destination Password Verification
     const savedAccountsCount = await this.prisma.userPaymentAccount.count({ where: { userId } });
-    if (savedAccountsCount === 0 && withSettings.requirePasswordFirstWithdraw) {
-      if (!dto.password || !dto.password.trim()) {
-        throw new BadRequestException('নিরাপত্তার জন্য আপনার পাসওয়ার্ড দিন।');
-      }
-      const isMatch = await bcrypt.compare(dto.password, userRecord.passwordHash);
-      if (!isMatch) {
-        throw new BadRequestException('ভুল পাসওয়ার্ড! অনুগ্রহ করে আপনার অ্যাকাউন্টের সঠিক পাসওয়ার্ড দিন।');
-      }
-    } else if (dto.password) {
-      const isMatch = await bcrypt.compare(dto.password, userRecord.passwordHash);
+
+    // 3. Optional Password Verification (if provided by user)
+    if (dto.password && dto.password.trim()) {
+      const isMatch = await bcrypt.compare(dto.password.trim(), userRecord.passwordHash);
       if (!isMatch) {
         throw new BadRequestException('ভুল পাসওয়ার্ড! অনুগ্রহ করে আপনার অ্যাকাউন্টের সঠিক পাসওয়ার্ড দিন।');
       }

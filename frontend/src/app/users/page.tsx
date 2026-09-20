@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Search, UserCheck, MessageSquare, ShieldCheck, CheckCircle2, Clock, MapPin } from 'lucide-react';
+import { Search, UserCheck, MessageSquare, ShieldCheck, CheckCircle2, Clock, MapPin, Star } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { api } from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
@@ -50,7 +50,7 @@ export default function UsersSearchPage() {
           {lang === 'bn' ? 'ইউজার অনুসন্ধান' : 'Find Users & Sellers'}
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          {lang === 'bn' ? 'ইউজার আইডি, নাম বা ফোন নম্বর দিয়ে খুঁজুন এবং সরাসরি নিরাপদে লেনদেন করুন' : 'Search by Unique User ID, Name or contact to transact safely'}
+          {lang === 'bn' ? 'ইউজার আইডি, নাম, হেডলাইন বা স্কিল দিয়ে খুঁজুন এবং সরাসরি নিরাপদে লেনদেন করুন' : 'Search by Unique User ID, Name, headline or skill to transact safely'}
         </p>
       </div>
 
@@ -61,7 +61,7 @@ export default function UsersSearchPage() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={lang === 'bn' ? 'ইউজার আইডি (যেমন Rahim2345), নাম বা ইমেইল লিখুন...' : 'Search User ID (e.g. Rahim2345), name...'}
+            placeholder={lang === 'bn' ? 'ইউজার আইডি, নাম, হেডলাইন (যেমন Trader, Designer) বা স্কিল লিখুন...' : 'Search by ID, name, headline (e.g. Trader, Designer) or skill...'}
             className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm focus:outline-none focus:border-sky-500 shadow-sm"
           />
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
@@ -110,41 +110,42 @@ export default function UsersSearchPage() {
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0">
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
                     {u.avatarUrl ? (
                       <img
                         src={getImageUrl(u.avatarUrl)}
                         alt={u.fullName}
-                        className="w-12 h-12 rounded-2xl object-cover border border-sky-500/30 flex-shrink-0"
+                        className="w-13 h-13 rounded-2xl object-cover border-2 border-sky-500/30 flex-shrink-0 shadow-sm"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-2xl bg-sky-600 text-white font-bold text-base flex items-center justify-center flex-shrink-0">
+                      <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-sky-600 to-indigo-600 text-white font-bold text-base flex items-center justify-center flex-shrink-0 shadow-sm">
                         {u.fullName?.charAt(0) || 'U'}
                       </div>
                     )}
-                    <div className="overflow-hidden">
+                    <div className="overflow-hidden flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
                           {u.fullName}
                         </h3>
                         {u.isVerified && <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />}
                       </div>
-                      <div className="text-xs font-mono font-bold text-sky-600 dark:text-sky-400">
-                        ID: {u.uniqueUserId}
+                      <div className="flex items-center gap-2 pt-0.5">
+                        <span className="text-xs font-mono font-bold text-sky-600 dark:text-sky-400">
+                          ID: {u.uniqueUserId}
+                        </span>
+                        {/* Rating Display */}
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-500 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.2 rounded-md border border-amber-200/50 dark:border-amber-900/40">
+                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                          <span>{u.averageRating ? Number(u.averageRating).toFixed(1) : '5.0'}</span>
+                          <span className="text-[10px] text-slate-400 font-normal">({u.reviewsCount || 0})</span>
+                        </span>
                       </div>
-                      {u.headline && (
-                        <div className="text-[11px] font-medium text-slate-600 dark:text-slate-300 truncate">
-                          {u.headline}
-                        </div>
-                      )}
+
                       {(u.city || u.district || u.division) && (
-                        <div className="text-[10px] text-slate-400 flex items-center gap-1 truncate pt-0.5">
+                        <div className="text-[10px] text-slate-400 flex items-center gap-1 truncate pt-1">
                           <MapPin className="w-3 h-3 text-emerald-500 shrink-0" />
                           <span>{[u.city, u.district, u.division].filter(Boolean).join(', ')}</span>
                         </div>
-                      )}
-                      {u.businessName && !u.headline && (
-                        <div className="text-[11px] text-slate-400 truncate">{u.businessName}</div>
                       )}
                     </div>
                   </div>
@@ -156,13 +157,24 @@ export default function UsersSearchPage() {
                   )}
                 </div>
 
+                {/* Prominent Headline */}
+                {u.headline ? (
+                  <div className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-sky-950/40 dark:to-indigo-950/40 border border-sky-200/70 dark:border-sky-800/60 text-xs font-bold text-sky-800 dark:text-sky-200 line-clamp-2">
+                    {u.headline}
+                  </div>
+                ) : u.businessName ? (
+                  <div className="px-3 py-1 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-xs font-semibold text-slate-600 dark:text-slate-300 truncate">
+                    🏢 {u.businessName}
+                  </div>
+                ) : null}
+
                 {/* Skills tags preview */}
                 {u.skills && (
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    {u.skills.split(',').slice(0, 3).map((s: string, idx: number) => (
+                  <div className="flex flex-wrap gap-1">
+                    {u.skills.split(',').slice(0, 4).map((s: string, idx: number) => (
                       <span
                         key={idx}
-                        className="px-2 py-0.5 rounded-lg bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-300 text-[10px] font-semibold border border-sky-100 dark:border-sky-900/40"
+                        className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-semibold border border-slate-200 dark:border-slate-700"
                       >
                         {s.trim()}
                       </span>

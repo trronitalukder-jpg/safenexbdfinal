@@ -32,6 +32,12 @@ import {
   CreditCard,
   Package,
   Activity,
+  Briefcase,
+  GraduationCap,
+  Globe,
+  FileText,
+  Star,
+  ExternalLink,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
@@ -58,6 +64,7 @@ export default function AdminUsersPage() {
   // Modals state
   const [viewUser, setViewUser] = useState<any | null>(null);
   const [viewUserLoading, setViewUserLoading] = useState(false);
+  const [previewNidImage, setPreviewNidImage] = useState<string | null>(null);
   const [adjustingUser, setAdjustingUser] = useState<any | null>(null);
   const [deletingUser, setDeletingUser] = useState<any | null>(null);
   const [statusModalUser, setStatusModalUser] = useState<{ user: any; nextStatus: boolean } | null>(null);
@@ -172,6 +179,27 @@ export default function AdminUsersPage() {
       loadUsers();
     } catch (err: any) {
       showNotice(err.message || 'Failed to toggle verification', 'error');
+    }
+  };
+
+  // KYC Status handler (Approve / Reject)
+  const handleKycStatus = async (user: any, status: 'VERIFIED' | 'REJECTED') => {
+    try {
+      await api.patch(`/admin/users/${user.id}/status`, {
+        verificationStatus: status,
+        isVerified: status === 'VERIFIED',
+      });
+      showNotice(`KYC status for ${user.fullName || user.uniqueUserId} updated to ${status}.`);
+      if (viewUser && viewUser.id === user.id) {
+        setViewUser({
+          ...viewUser,
+          verificationStatus: status,
+          isVerified: status === 'VERIFIED',
+        });
+      }
+      loadUsers();
+    } catch (err: any) {
+      showNotice(err.message || 'Failed to update KYC status', 'error');
     }
   };
 
@@ -892,13 +920,34 @@ export default function AdminUsersPage() {
                     <div className="font-semibold text-white mt-0.5">{viewUser.phone || 'Not provided'}</div>
                   </div>
 
+                  {viewUser.additionalPhone && (
+                    <div>
+                      <span className="text-slate-400 text-[11px]">Additional Phone</span>
+                      <div className="font-semibold text-white mt-0.5">{viewUser.additionalPhone}</div>
+                    </div>
+                  )}
+
+                  {viewUser.gender && (
+                    <div>
+                      <span className="text-slate-400 text-[11px]">Gender</span>
+                      <div className="font-semibold text-white mt-0.5">{viewUser.gender}</div>
+                    </div>
+                  )}
+
+                  {viewUser.dateOfBirth && (
+                    <div>
+                      <span className="text-slate-400 text-[11px]">Date of Birth</span>
+                      <div className="font-semibold text-white mt-0.5">
+                        {new Date(viewUser.dateOfBirth).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </div>
+                    </div>
+                  )}
+
                   <div>
-                    <span className="text-slate-400 text-[11px]">Physical Address</span>
+                    <span className="text-slate-400 text-[11px]">Detailed Address</span>
                     <div className="font-semibold text-slate-200 mt-0.5">
-                      {viewUser.address ? `${viewUser.address}, ` : ''}
-                      {viewUser.city ? `${viewUser.city}, ` : ''}
-                      {viewUser.country || 'Bangladesh'}
-                      {viewUser.postalCode ? ` (${viewUser.postalCode})` : ''}
+                      {[viewUser.address, viewUser.upazila, viewUser.district, viewUser.division, viewUser.country || 'Bangladesh'].filter(Boolean).join(', ')}
+                      {viewUser.postalCode ? ` - ${viewUser.postalCode}` : ''}
                     </div>
                   </div>
 
@@ -917,6 +966,230 @@ export default function AdminUsersPage() {
                   </div>
                 </div>
               </div>
+
+              {/* 3. KYC & NID Verification Section */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-bold text-slate-300 flex items-center gap-1.5 text-xs uppercase tracking-wider">
+                    <BadgeCheck className="w-3.5 h-3.5 text-sky-400" />
+                    <span>NID Verification & KYC Documents</span>
+                  </h3>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        viewUser.verificationStatus === 'VERIFIED' || viewUser.isVerified
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : viewUser.verificationStatus === 'PENDING'
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse'
+                          : viewUser.verificationStatus === 'REJECTED'
+                          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                          : 'bg-slate-800 text-slate-400 border border-slate-700'
+                      }`}
+                    >
+                      {viewUser.verificationStatus || (viewUser.isVerified ? 'VERIFIED' : 'UNVERIFIED')}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <span className="text-slate-400 text-[11px]">NID Holder Name</span>
+                      <div className="font-semibold text-white mt-0.5">{viewUser.nidName || 'Not submitted'}</div>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-[11px]">NID Number</span>
+                      <div className="font-semibold text-white font-mono mt-0.5">{viewUser.nidNumber || 'Not submitted'}</div>
+                    </div>
+                  </div>
+
+                  {/* NID Photos */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <div>
+                      <span className="text-slate-400 text-[11px] block mb-1.5">NID Front Side Photo</span>
+                      {viewUser.nidFrontUrl ? (
+                        <div
+                          onClick={() => setPreviewNidImage(viewUser.nidFrontUrl)}
+                          className="relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-900 aspect-video flex items-center justify-center cursor-pointer hover:border-sky-500 transition"
+                        >
+                          <img
+                            src={getImageUrl(viewUser.nidFrontUrl)}
+                            alt="NID Front"
+                            className="w-full h-full object-cover group-hover:scale-105 transition"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white font-bold text-[11px] gap-1">
+                            <Eye className="w-4 h-4" />
+                            <span>Click to Zoom</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-slate-800 p-4 text-center text-slate-500 text-[11px]">
+                          Front photo not uploaded
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 text-[11px] block mb-1.5">NID Back Side Photo</span>
+                      {viewUser.nidBackUrl ? (
+                        <div
+                          onClick={() => setPreviewNidImage(viewUser.nidBackUrl)}
+                          className="relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-900 aspect-video flex items-center justify-center cursor-pointer hover:border-sky-500 transition"
+                        >
+                          <img
+                            src={getImageUrl(viewUser.nidBackUrl)}
+                            alt="NID Back"
+                            className="w-full h-full object-cover group-hover:scale-105 transition"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white font-bold text-[11px] gap-1">
+                            <Eye className="w-4 h-4" />
+                            <span>Click to Zoom</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-slate-800 p-4 text-center text-slate-500 text-[11px]">
+                          Back photo not uploaded
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* KYC Approval / Rejection Buttons */}
+                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => handleKycStatus(viewUser, 'VERIFIED')}
+                      className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition active:scale-95"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Approve KYC (ভেরিফাই করুন)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleKycStatus(viewUser, 'REJECTED')}
+                      className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 transition active:scale-95"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      <span>Reject KYC (বাতিল করুন)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Education & Career Information */}
+              {(viewUser.profession || viewUser.company || viewUser.jobTitle || viewUser.institution || viewUser.educationLevel) && (
+                <div>
+                  <h3 className="font-bold text-slate-300 flex items-center gap-1.5 text-xs uppercase tracking-wider mb-2">
+                    <Briefcase className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Education & Career Details</span>
+                  </h3>
+
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    {viewUser.profession && (
+                      <div>
+                        <span className="text-slate-400 text-[11px]">Profession</span>
+                        <div className="font-semibold text-white mt-0.5">{viewUser.profession}</div>
+                      </div>
+                    )}
+                    {viewUser.company && (
+                      <div>
+                        <span className="text-slate-400 text-[11px]">Company / Organization</span>
+                        <div className="font-semibold text-white mt-0.5">{viewUser.company}</div>
+                      </div>
+                    )}
+                    {viewUser.jobTitle && (
+                      <div>
+                        <span className="text-slate-400 text-[11px]">Job Title</span>
+                        <div className="font-semibold text-white mt-0.5">{viewUser.jobTitle}</div>
+                      </div>
+                    )}
+                    {viewUser.institution && (
+                      <div>
+                        <span className="text-slate-400 text-[11px]">Institution</span>
+                        <div className="font-semibold text-white mt-0.5">{viewUser.institution}</div>
+                      </div>
+                    )}
+                    {viewUser.educationLevel && (
+                      <div>
+                        <span className="text-slate-400 text-[11px]">Education Level</span>
+                        <div className="font-semibold text-white mt-0.5">{viewUser.educationLevel}</div>
+                      </div>
+                    )}
+                    {viewUser.graduationYear && (
+                      <div>
+                        <span className="text-slate-400 text-[11px]">Graduation Year</span>
+                        <div className="font-semibold text-white font-mono mt-0.5">{viewUser.graduationYear}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 5. Headline, Bio, Skills & Social Links */}
+              {(viewUser.headline || viewUser.bio || viewUser.skills || viewUser.website || viewUser.socialLinks) && (
+                <div>
+                  <h3 className="font-bold text-slate-300 flex items-center gap-1.5 text-xs uppercase tracking-wider mb-2">
+                    <FileText className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Headline, Bio & Social Profiles</span>
+                  </h3>
+
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 text-xs">
+                    {viewUser.headline && (
+                      <div>
+                        <span className="text-slate-400 text-[11px]">Headline</span>
+                        <div className="font-bold text-sky-400 mt-0.5">{viewUser.headline}</div>
+                      </div>
+                    )}
+
+                    {viewUser.bio && (
+                      <div>
+                        <span className="text-slate-400 text-[11px]">Bio</span>
+                        <div className="text-slate-200 mt-0.5 whitespace-pre-line leading-relaxed">{viewUser.bio}</div>
+                      </div>
+                    )}
+
+                    {viewUser.skills && (
+                      <div>
+                        <span className="text-slate-400 text-[11px] block mb-1">Skills</span>
+                        <div className="flex flex-wrap gap-1">
+                          {viewUser.skills.split(',').map((s: string, idx: number) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-0.5 rounded-lg bg-sky-950 text-sky-300 text-[10px] font-semibold border border-sky-800"
+                            >
+                              {s.trim()}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {viewUser.socialLinks && Object.values(viewUser.socialLinks).some(Boolean) && (
+                      <div>
+                        <span className="text-slate-400 text-[11px] block mb-1">Social Links</span>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(viewUser.socialLinks).map(([k, v]: [string, any]) => {
+                            if (!v) return null;
+                            return (
+                              <a
+                                key={k}
+                                href={String(v).startsWith('http') ? String(v) : `https://${v}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-sky-400 text-[11px] font-semibold flex items-center gap-1 border border-slate-800"
+                              >
+                                <Globe className="w-3 h-3" />
+                                <span className="capitalize">{k}: {String(v)}</span>
+                                <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* 3. Activity Statistics */}
               <div>
@@ -1280,6 +1553,28 @@ export default function AdminUsersPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* NID Image Lightbox */}
+      {previewNidImage && (
+        <div
+          onClick={() => setPreviewNidImage(null)}
+          className="fixed inset-0 z-60 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer"
+        >
+          <div className="relative max-w-3xl max-h-[90vh] bg-slate-900 rounded-3xl p-2 border border-slate-700 shadow-2xl overflow-hidden">
+            <button
+              onClick={() => setPreviewNidImage(null)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-black/70 text-white hover:bg-black transition z-10"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img
+              src={getImageUrl(previewNidImage)}
+              alt="NID Document"
+              className="max-h-[85vh] w-auto rounded-2xl object-contain mx-auto"
+            />
           </div>
         </div>
       )}

@@ -14,6 +14,7 @@ import { UsersService } from './users.service';
 import {
   ChangePasswordDto,
   CreatePaymentAccountDto,
+  CreateUserReviewDto,
   DeletePaymentAccountDto,
   SearchUserQueryDto,
   UpdatePaymentAccountDto,
@@ -37,6 +38,22 @@ export class UsersController {
   @Get('profile/:uniqueUserId')
   async getPublicProfile(@Param('uniqueUserId') uniqueUserId: string) {
     return this.usersService.getPublicProfile(uniqueUserId);
+  }
+
+  @Public()
+  @Get(':id/reviews')
+  async getUserReviews(@Param('id') targetUserId: string) {
+    return this.usersService.getUserReviews(targetUserId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/reviews')
+  async createOrUpdateReview(
+    @CurrentUser('id') reviewerId: string,
+    @Param('id') targetUserId: string,
+    @Body() dto: CreateUserReviewDto,
+  ) {
+    return this.usersService.createOrUpdateReview(reviewerId, targetUserId, dto);
   }
 
   @UseGuards(JwtAuthGuard)

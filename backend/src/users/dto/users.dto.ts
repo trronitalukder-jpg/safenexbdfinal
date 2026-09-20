@@ -137,6 +137,18 @@ export class UpdateProfileDto {
   @IsOptional()
   showEmail?: boolean;
 
+  @IsOptional()
+  showLocation?: boolean;
+
+  @IsOptional()
+  showProfession?: boolean;
+
+  @IsOptional()
+  showSkills?: boolean;
+
+  @IsOptional()
+  showSocialLinks?: boolean;
+
   @IsString()
   @IsOptional()
   timezone?: string;
@@ -156,6 +168,15 @@ export class UpdateProfileDto {
   @IsString()
   @IsOptional()
   nidBackUrl?: string;
+}
+
+export class CreateUserReviewDto {
+  @IsNotEmpty()
+  rating: number;
+
+  @IsString()
+  @IsOptional()
+  comment?: string;
 }
 
 export class CreatePaymentAccountDto {

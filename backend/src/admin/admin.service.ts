@@ -282,13 +282,41 @@ export class AdminService {
       lastName: u.lastName,
       email: u.email,
       phone: u.phone,
+      additionalPhone: u.additionalPhone,
+      gender: u.gender,
+      dateOfBirth: u.dateOfBirth,
       avatarUrl: u.avatarUrl,
       address: u.address,
       city: u.city,
       country: u.country,
+      division: u.division,
+      district: u.district,
+      upazila: u.upazila,
       postalCode: u.postalCode,
       businessName: u.businessName,
       businessType: u.businessType,
+      profession: u.profession,
+      company: u.company,
+      jobTitle: u.jobTitle,
+      institution: u.institution,
+      department: u.department,
+      educationLevel: u.educationLevel,
+      graduationYear: u.graduationYear,
+      headline: u.headline,
+      bio: u.bio,
+      skills: u.skills,
+      interests: u.interests,
+      languages: u.languages,
+      website: u.website,
+      socialLinks: u.socialLinks,
+      nidNumber: u.nidNumber,
+      nidName: u.nidName,
+      nidFrontUrl: u.nidFrontUrl,
+      nidBackUrl: u.nidBackUrl,
+      verificationStatus: u.verificationStatus,
+      verifiedAt: u.verifiedAt,
+      profileVisibility: u.profileVisibility,
+      twoFactorEnabled: u.twoFactorEnabled,
       isActive: u.isActive,
       isVerified: u.isVerified,
       wallet: u.wallet,
@@ -348,11 +376,11 @@ export class AdminService {
   }
 
   /**
-   * Toggle user active/verified status
+   * Toggle user active/verified status or update KYC verification
    */
   async updateUserStatus(
     userId: string,
-    data: { isActive?: boolean; isVerified?: boolean },
+    data: { isActive?: boolean; isVerified?: boolean; verificationStatus?: string },
     adminId?: string,
     reason?: string,
   ) {
@@ -372,15 +400,42 @@ export class AdminService {
       }
     }
 
-    const beforeState = { isActive: user.isActive, isVerified: user.isVerified };
+    const beforeState = {
+      isActive: user.isActive,
+      isVerified: user.isVerified,
+      verificationStatus: user.verificationStatus,
+    };
+
+    const updatePayload: any = {};
+    if (data.isActive !== undefined) updatePayload.isActive = data.isActive;
+
+    if (data.verificationStatus !== undefined) {
+      updatePayload.verificationStatus = data.verificationStatus;
+      if (data.verificationStatus === 'VERIFIED') {
+        updatePayload.isVerified = true;
+        updatePayload.verifiedAt = new Date();
+      } else if (data.verificationStatus === 'REJECTED') {
+        updatePayload.isVerified = false;
+      }
+    } else if (data.isVerified !== undefined) {
+      updatePayload.isVerified = data.isVerified;
+      if (data.isVerified) {
+        updatePayload.verificationStatus = 'VERIFIED';
+        updatePayload.verifiedAt = new Date();
+      } else {
+        updatePayload.verificationStatus = 'UNVERIFIED';
+      }
+    }
+
     const updated = await this.prisma.user.update({
       where: { id: userId },
-      data: {
-        ...(data.isActive !== undefined && { isActive: data.isActive }),
-        ...(data.isVerified !== undefined && { isVerified: data.isVerified }),
-      },
+      data: updatePayload,
     });
-    const afterState = { isActive: updated.isActive, isVerified: updated.isVerified };
+    const afterState = {
+      isActive: updated.isActive,
+      isVerified: updated.isVerified,
+      verificationStatus: updated.verificationStatus,
+    };
 
     if (adminId) {
       await this.recordAuditLog({
