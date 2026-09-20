@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { invalidateUserCache } from '../auth/jwt.strategy';
 
 @Injectable()
 export class AdminService {
@@ -437,6 +438,21 @@ export class AdminService {
       verificationStatus: updated.verificationStatus,
     };
 
+    // Invalidate user authentication cache immediately
+    invalidateUserCache(userId);
+
+    // If user is deactivated, revoke all refresh tokens and cancel active bids
+    if (data.isActive === false) {
+      await this.prisma.refreshToken.deleteMany({
+        where: { userId },
+      }).catch((err) => console.error('Failed to revoke tokens on deactivate:', err));
+
+      await this.prisma.bid.updateMany({
+        where: { sellerId: userId, status: 'ACTIVE' },
+        data: { status: 'CANCELLED' },
+      }).catch((err) => console.error('Failed to cancel bids on deactivate:', err));
+    }
+
     if (adminId) {
       await this.recordAuditLog({
         actorId: adminId,
@@ -484,6 +500,29 @@ export class AdminService {
       },
     });
 
+    // Invalidate user authentication cache immediately
+    invalidateUserCache(userId);
+
+    // Revoke all refresh tokens so the user cannot generate new access tokens
+    await this.prisma.refreshToken.deleteMany({
+      where: { userId },
+    }).catch((err) => console.error('Failed to delete refresh tokens for deleteUser:', err));
+
+    // Soft-delete all products belonging to this user so they disappear from website
+    await this.prisma.product.updateMany({
+      where: { sellerId: userId },
+      data: {
+        deletedAt: new Date(),
+        status: 'INACTIVE',
+      },
+    }).catch((err) => console.error('Failed to soft-delete products for deleteUser:', err));
+
+    // Cancel all active bids placed by this user
+    await this.prisma.bid.updateMany({
+      where: { sellerId: userId, status: 'ACTIVE' },
+      data: { status: 'CANCELLED' },
+    }).catch((err) => console.error('Failed to cancel bids for deleteUser:', err));
+
     if (currentAdminId) {
       await this.recordAuditLog({
         actorId: currentAdminId,
@@ -514,6 +553,18 @@ export class AdminService {
         isActive: true,
       },
     });
+
+    // Invalidate user authentication cache
+    invalidateUserCache(userId);
+
+    // Restore products belonging to this user
+    await this.prisma.product.updateMany({
+      where: { sellerId: userId, deletedAt: { not: null } },
+      data: {
+        deletedAt: null,
+        status: 'ACTIVE',
+      },
+    }).catch((err) => console.error('Failed to restore products for restoreUser:', err));
 
     if (adminId) {
       await this.recordAuditLog({
@@ -933,8 +984,13 @@ export class AdminService {
     const skip = (page - 1) * limit;
 
     const where: any = {};
-    if (query.status && query.status !== 'ALL') {
-      where.status = query.status;
+    if (query.status === 'TRASH') {
+      where.deletedAt = { not: null };
+    } else {
+      where.deletedAt = null;
+      if (query.status && query.status !== 'ALL') {
+        where.status = query.status;
+      }
     }
     if (query.categoryId && query.categoryId !== 'ALL') {
       where.categoryId = query.categoryId;
@@ -966,7 +1022,7 @@ export class AdminService {
       ];
     }
 
-    const [items, total, pendingCount, activeCount, inactiveCount, rejectedCount] =
+    const [items, total, pendingCount, activeCount, inactiveCount, rejectedCount, trashCount] =
       await Promise.all([
         this.prisma.product.findMany({
           where,
@@ -993,10 +1049,11 @@ export class AdminService {
           take: limit,
         }),
         this.prisma.product.count({ where }),
-        this.prisma.product.count({ where: { status: 'PENDING' } }),
+        this.prisma.product.count({ where: { status: 'PENDING', deletedAt: null } }),
         this.prisma.product.count({ where: { status: 'ACTIVE', deletedAt: null } }),
-        this.prisma.product.count({ where: { status: 'INACTIVE' } }),
-        this.prisma.product.count({ where: { status: 'REJECTED' } }),
+        this.prisma.product.count({ where: { status: 'INACTIVE', deletedAt: null } }),
+        this.prisma.product.count({ where: { status: 'REJECTED', deletedAt: null } }),
+        this.prisma.product.count({ where: { deletedAt: { not: null } } }),
       ]);
 
     const sanitized = JSON.parse(
@@ -1019,6 +1076,7 @@ export class AdminService {
         active: activeCount,
         inactive: inactiveCount,
         rejected: rejectedCount,
+        trash: trashCount,
       },
     };
   }
@@ -1059,15 +1117,83 @@ export class AdminService {
     );
   }
 
-  async deleteProduct(productId: string, adminId: string) {
+  async deleteProduct(productId: string, adminId: string, permanent: boolean = false) {
     const product = await this.prisma.product.findUnique({ where: { id: productId } });
     if (!product) throw new NotFoundException('Product not found');
 
-    await this.prisma.product.update({
+    if (permanent || product.deletedAt !== null) {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.productImage.deleteMany({ where: { productId } });
+        await tx.productFile.deleteMany({ where: { productId } });
+        await tx.productPhysicalMeta.deleteMany({ where: { productId } });
+        await tx.bid.deleteMany({ where: { productId } });
+        await tx.transaction.updateMany({
+          where: { productId },
+          data: { productId: null },
+        });
+        await tx.product.delete({ where: { id: productId } });
+      });
+
+      if (adminId) {
+        await this.recordAuditLog({
+          actorId: adminId,
+          actorType: 'ADMIN',
+          action: 'PRODUCT_PERMANENT_DELETE',
+          targetEntity: 'Product',
+          targetId: productId,
+          beforeState: { title: product.title, status: product.status },
+          afterState: null,
+          reason: 'Product permanently deleted by administrator',
+        }).catch((err) => console.error('Failed to log audit for permanent deleteProduct:', err));
+      }
+
+      return { success: true, message: 'Product permanently deleted successfully' };
+    }
+
+    const updated = await this.prisma.product.update({
       where: { id: productId },
       data: { status: 'INACTIVE', deletedAt: new Date() },
     });
-    return { success: true, message: 'Product deleted successfully' };
+
+    if (adminId) {
+      await this.recordAuditLog({
+        actorId: adminId,
+        actorType: 'ADMIN',
+        action: 'PRODUCT_SOFT_DELETE',
+        targetEntity: 'Product',
+        targetId: productId,
+        beforeState: { status: product.status, deletedAt: product.deletedAt },
+        afterState: { status: updated.status, deletedAt: updated.deletedAt },
+        reason: 'Product moved to trash / soft-deleted by administrator',
+      }).catch((err) => console.error('Failed to log audit for deleteProduct:', err));
+    }
+
+    return { success: true, message: 'Product moved to trash successfully' };
+  }
+
+  async restoreProduct(productId: string, adminId: string) {
+    const product = await this.prisma.product.findUnique({ where: { id: productId } });
+    if (!product) throw new NotFoundException('Product not found');
+
+    const updated = await this.prisma.product.update({
+      where: { id: productId },
+      data: { status: 'ACTIVE', deletedAt: null },
+    });
+
+    if (adminId) {
+      await this.recordAuditLog({
+        actorId: adminId,
+        actorType: 'ADMIN',
+        action: 'PRODUCT_RESTORE',
+        targetEntity: 'Product',
+        targetId: productId,
+        beforeState: { status: product.status, deletedAt: product.deletedAt },
+        afterState: { status: updated.status, deletedAt: updated.deletedAt },
+        reason: 'Product restored from trash by administrator',
+      }).catch((err) => console.error('Failed to log audit for restoreProduct:', err));
+    }
+
+    return { success: true, message: 'Product restored successfully' };
   }
 }
 

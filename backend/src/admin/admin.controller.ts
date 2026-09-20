@@ -154,8 +154,19 @@ export class AdminController {
   async deleteProduct(
     @Param('id') id: string,
     @CurrentUser('id') adminId: string,
+    @Query('permanent') permanent?: string,
   ) {
-    return this.adminService.deleteProduct(id, adminId);
+    const isPermanent = permanent === 'true' || permanent === '1';
+    return this.adminService.deleteProduct(id, adminId, isPermanent);
+  }
+
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  @Patch('products/:id/restore')
+  async restoreProduct(
+    @Param('id') id: string,
+    @CurrentUser('id') adminId: string,
+  ) {
+    return this.adminService.restoreProduct(id, adminId);
   }
 }
 

@@ -245,6 +245,18 @@ export class ProductsService {
    * Get product details by slug
    */
   async getProductBySlug(slug: string) {
+    const sellerSelect = {
+      id: true,
+      uniqueUserId: true,
+      firstName: true,
+      lastName: true,
+      avatarUrl: true,
+      isVerified: true,
+      isActive: true,
+      deletedAt: true,
+      createdAt: true,
+    };
+
     let product = await this.prisma.product.findUnique({
       where: { slug },
       include: {
@@ -253,15 +265,7 @@ export class ProductsService {
         physicalMeta: true,
         category: true,
         seller: {
-          select: {
-            id: true,
-            uniqueUserId: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            isVerified: true,
-            createdAt: true,
-          },
+          select: sellerSelect,
         },
       },
     });
@@ -276,22 +280,20 @@ export class ProductsService {
           physicalMeta: true,
           category: true,
           seller: {
-            select: {
-              id: true,
-              uniqueUserId: true,
-              firstName: true,
-              lastName: true,
-              avatarUrl: true,
-              isVerified: true,
-              createdAt: true,
-            },
+            select: sellerSelect,
           },
         },
       });
     }
 
-    if (!product) {
-      throw new NotFoundException('Product not found');
+    if (
+      !product ||
+      product.deletedAt !== null ||
+      product.status !== 'ACTIVE' ||
+      !product.seller?.isActive ||
+      product.seller?.deletedAt !== null
+    ) {
+      throw new NotFoundException('Product not found or seller is inactive');
     }
 
     // Increment views asynchronously
@@ -328,6 +330,10 @@ export class ProductsService {
     const where: any = {
       status: 'ACTIVE',
       deletedAt: null,
+      seller: {
+        isActive: true,
+        deletedAt: null,
+      },
     };
 
     if (params.categorySlug) {
@@ -394,6 +400,10 @@ export class ProductsService {
       bidType: 'PRODUCT',
       status: 'ACTIVE',
       expiresAt: { gt: new Date() },
+      seller: {
+        isActive: true,
+        deletedAt: null,
+      },
     };
 
     if ((params as any).scope) {

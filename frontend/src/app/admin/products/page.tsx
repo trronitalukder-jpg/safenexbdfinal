@@ -50,6 +50,7 @@ export default function AdminProductsPage() {
     active: 0,
     inactive: 0,
     rejected: 0,
+    trash: 0,
   });
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
@@ -249,19 +250,46 @@ export default function AdminProductsPage() {
     }
   };
 
-  // Confirm and Execute Delete
+  // Confirm and Execute Delete (soft delete to trash or permanent delete)
   const handleConfirmDelete = async () => {
     if (!deleteModalProduct) return;
     setDeleting(true);
     try {
-      await api.delete(`/admin/products/${deleteModalProduct.id}`);
-      showToast(lang === 'bn' ? 'প্রোডাক্টটি সফলভাবে ডিলিট/নিষ্ক্রিয় করা হয়েছে।' : 'Product deleted successfully.');
+      const isPermanent = Boolean(deleteModalProduct.isPermanent || deleteModalProduct.deletedAt);
+      const url = isPermanent
+        ? `/admin/products/${deleteModalProduct.id}?permanent=true`
+        : `/admin/products/${deleteModalProduct.id}`;
+
+      await api.delete(url);
+      showToast(
+        isPermanent
+          ? (lang === 'bn' ? 'প্রোডাক্টটি স্থায়ীভাবে মুছে ফেলা হয়েছে।' : 'Product permanently deleted.')
+          : (lang === 'bn' ? 'প্রোডাক্টটি ট্র্যাশে সরানো হয়েছে (ওয়েবসাইট থেকে মুছে গেছে)।' : 'Product moved to trash.')
+      );
       setDeleteModalProduct(null);
       loadProducts();
     } catch (err: any) {
       showToast(err.message || 'Failed to delete product', 'error');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  // Restore Product from Trash
+  const handleRestoreProduct = async (product: any) => {
+    setActionLoadingId(product.id);
+    try {
+      await api.patch(`/admin/products/${product.id}/restore`);
+      showToast(
+        lang === 'bn'
+          ? `"${product.title}" সফলভাবে পুনরুদ্ধার (Restore) করা হয়েছে!`
+          : `Product "${product.title}" restored successfully!`
+      );
+      loadProducts();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to restore product', 'error');
+    } finally {
+      setActionLoadingId(null);
     }
   };
 
@@ -505,13 +533,14 @@ export default function AdminProductsPage() {
             { key: 'ACTIVE', label: lang === 'bn' ? 'সক্রিয়' : 'Active', count: counts.active },
             { key: 'INACTIVE', label: lang === 'bn' ? 'নিষ্ক্রিয়' : 'Inactive', count: counts.inactive },
             { key: 'REJECTED', label: lang === 'bn' ? 'প্রত্যাখ্যাত' : 'Rejected', count: counts.rejected },
+            { key: 'TRASH', label: lang === 'bn' ? '🗑️ ট্র্যাশ (মুছে ফেলা)' : '🗑️ Trash', count: counts.trash || 0, isTrash: true },
           ].map((tab) => (
             <button
               key={tab.key}
               onClick={() => { setStatusFilter(tab.key); setCurrentPage(1); }}
               className={`px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 ${
                 statusFilter === tab.key
-                  ? 'bg-amber-500 text-slate-950 font-bold'
+                  ? (tab.isTrash ? 'bg-rose-600 text-white font-bold' : 'bg-amber-500 text-slate-950 font-bold')
                   : 'bg-slate-800 text-slate-400 hover:text-white'
               }`}
             >
@@ -519,9 +548,11 @@ export default function AdminProductsPage() {
               <span
                 className={`px-1.5 py-0.2 rounded-full text-[10px] ${
                   statusFilter === tab.key
-                    ? 'bg-slate-950/20 text-slate-950 font-bold'
+                    ? 'bg-slate-950/20 text-current font-bold'
                     : tab.alert
                     ? 'bg-amber-500/20 text-amber-400 font-bold'
+                    : tab.isTrash && tab.count > 0
+                    ? 'bg-rose-500/20 text-rose-400 font-bold'
                     : 'bg-slate-700 text-slate-300'
                 }`}
               >
@@ -686,74 +717,100 @@ export default function AdminProductsPage() {
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* If PENDING: Show Approve & Reject Buttons */}
-                          {product.status === 'PENDING' && (
+                          {/* If in TRASH: Show Restore and Permanent Delete */}
+                          {(statusFilter === 'TRASH' || product.deletedAt) ? (
                             <>
                               <button
                                 type="button"
                                 disabled={isActionBusy}
-                                onClick={() => handleApprove(product)}
+                                onClick={() => handleRestoreProduct(product)}
                                 className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 transition shadow-sm"
-                                title={lang === 'bn' ? 'অনুমোদন করুন' : 'Approve Product'}
+                                title={lang === 'bn' ? 'পুনরুদ্ধার করুন (Restore)' : 'Restore Product'}
                               >
-                                <Check className="w-3.5 h-3.5" />
-                                <span>{lang === 'bn' ? 'অনুমোদন' : 'Approve'}</span>
+                                <RefreshCw className="w-3.5 h-3.5" />
+                                <span>{lang === 'bn' ? 'পুনরুদ্ধার' : 'Restore'}</span>
                               </button>
                               <button
                                 type="button"
-                                disabled={isActionBusy}
-                                onClick={() => handleReject(product)}
-                                className="px-2.5 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-600/40 text-xs flex items-center gap-1 transition"
-                                title={lang === 'bn' ? 'রিজেক্ট করুন' : 'Reject Product'}
+                                onClick={() => setDeleteModalProduct({ ...product, isPermanent: true })}
+                                className="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-700 transition"
+                                title={lang === 'bn' ? 'স্থায়ীভাবে মুছুন (Permanent Delete)' : 'Permanently Delete'}
                               >
-                                <X className="w-3.5 h-3.5" />
-                                <span>{lang === 'bn' ? 'রিজেক্ট' : 'Reject'}</span>
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              {/* If PENDING: Show Approve & Reject Buttons */}
+                              {product.status === 'PENDING' && (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={isActionBusy}
+                                    onClick={() => handleApprove(product)}
+                                    className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 transition shadow-sm"
+                                    title={lang === 'bn' ? 'অনুমোদন করুন' : 'Approve Product'}
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>{lang === 'bn' ? 'অনুমোদন' : 'Approve'}</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={isActionBusy}
+                                    onClick={() => handleReject(product)}
+                                    className="px-2.5 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-600/40 text-xs flex items-center gap-1 transition"
+                                    title={lang === 'bn' ? 'রিজেক্ট করুন' : 'Reject Product'}
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                    <span>{lang === 'bn' ? 'রিজেক্ট' : 'Reject'}</span>
+                                  </button>
+                                </>
+                              )}
+
+                              {/* If ACTIVE or INACTIVE: Toggle Status Switch */}
+                              {(product.status === 'ACTIVE' || product.status === 'INACTIVE') && (
+                                <button
+                                  type="button"
+                                  disabled={isActionBusy}
+                                  onClick={() => handleToggleStatus(product)}
+                                  className={`px-2.5 py-1.5 rounded-lg font-medium text-xs transition border ${
+                                    product.status === 'ACTIVE'
+                                      ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-rose-950/40 hover:text-rose-300 hover:border-rose-700'
+                                      : 'bg-emerald-950/40 text-emerald-300 border-emerald-700/50 hover:bg-emerald-600 hover:text-white'
+                                  }`}
+                                  title={
+                                    product.status === 'ACTIVE'
+                                      ? (lang === 'bn' ? 'নিষ্ক্রিয় করুন' : 'Deactivate')
+                                      : (lang === 'bn' ? 'সক্রিয় করুন' : 'Activate')
+                                  }
+                                >
+                                  {product.status === 'ACTIVE'
+                                    ? (lang === 'bn' ? 'ডিঅ্যাক্টিভ' : 'Deactivate')
+                                    : (lang === 'bn' ? 'অ্যাক্টিভ' : 'Activate')}
+                                </button>
+                              )}
+
+                              {/* External Preview Link */}
+                              <Link
+                                href={`/products/${product.slug}`}
+                                target="_blank"
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 transition"
+                                title={lang === 'bn' ? 'প্রোডাক্ট পেজ দেখুন' : 'View Product Page'}
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </Link>
+
+                              {/* Delete Button (Move to Trash) */}
+                              <button
+                                type="button"
+                                onClick={() => setDeleteModalProduct(product)}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-950/50 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-700 transition"
+                                title={lang === 'bn' ? 'ট্র্যাশে সরান (Delete)' : 'Move to Trash'}
+                              >
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </>
                           )}
-
-                          {/* If ACTIVE or INACTIVE: Toggle Status Switch */}
-                          {(product.status === 'ACTIVE' || product.status === 'INACTIVE') && (
-                            <button
-                              type="button"
-                              disabled={isActionBusy}
-                              onClick={() => handleToggleStatus(product)}
-                              className={`px-2.5 py-1.5 rounded-lg font-medium text-xs transition border ${
-                                product.status === 'ACTIVE'
-                                  ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-rose-950/40 hover:text-rose-300 hover:border-rose-700'
-                                  : 'bg-emerald-950/40 text-emerald-300 border-emerald-700/50 hover:bg-emerald-600 hover:text-white'
-                              }`}
-                              title={
-                                product.status === 'ACTIVE'
-                                  ? (lang === 'bn' ? 'নিষ্ক্রিয় করুন' : 'Deactivate')
-                                  : (lang === 'bn' ? 'সক্রিয় করুন' : 'Activate')
-                              }
-                            >
-                              {product.status === 'ACTIVE'
-                                ? (lang === 'bn' ? 'ডিঅ্যাক্টিভ' : 'Deactivate')
-                                : (lang === 'bn' ? 'অ্যাক্টিভ' : 'Activate')}
-                            </button>
-                          )}
-
-                          {/* External Preview Link */}
-                          <Link
-                            href={`/products/${product.slug}`}
-                            target="_blank"
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 transition"
-                            title={lang === 'bn' ? 'প্রোডাক্ট পেজ দেখুন' : 'View Product Page'}
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </Link>
-
-                          {/* Delete Button */}
-                          <button
-                            type="button"
-                            onClick={() => setDeleteModalProduct(product)}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-950/50 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-700 transition"
-                            title={lang === 'bn' ? 'ডিলিট করুন' : 'Delete Product'}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -930,9 +987,15 @@ export default function AdminProductsPage() {
               </span>
               <div>
                 <h3 className="font-bold text-base text-white">
-                  {lang === 'bn' ? 'প্রোডাক্ট ডিলিট নিশ্চিতকরণ' : 'Confirm Delete Product'}
+                  {deleteModalProduct.isPermanent || deleteModalProduct.deletedAt
+                    ? (lang === 'bn' ? 'স্থায়ীভাবে ডিলিট নিশ্চিতকরণ' : 'Confirm Permanent Delete')
+                    : (lang === 'bn' ? 'প্রোডাক্ট ট্র্যাশে সরানো নিশ্চিতকরণ' : 'Confirm Move to Trash')}
                 </h3>
-                <p className="text-xs text-slate-400">{lang === 'bn' ? 'এই পণ্যটি ডিলিট করতে চান?' : 'Are you sure you want to delete this?'}</p>
+                <p className="text-xs text-slate-400">
+                  {deleteModalProduct.isPermanent || deleteModalProduct.deletedAt
+                    ? (lang === 'bn' ? 'এই পণ্যটি ডাটাবেজ থেকে চিরতরে মুছে যাবে এবং পুনরুদ্ধার করা যাবে না!' : 'This product will be permanently deleted and cannot be recovered!')
+                    : (lang === 'bn' ? 'এই পণ্যটি ওয়েবসাইট থেকে মুছে ট্র্যাশে সংরক্ষণ করা হবে।' : 'This will hide the product from the website and move it to trash.')}
+                </p>
               </div>
             </div>
 
@@ -958,7 +1021,11 @@ export default function AdminProductsPage() {
                 className="px-5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white transition flex items-center gap-1.5 shadow-sm"
               >
                 {deleting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                <span>{lang === 'bn' ? 'হ্যাঁ, ডিলিট করুন' : 'Yes, Delete'}</span>
+                <span>
+                  {deleteModalProduct.isPermanent || deleteModalProduct.deletedAt
+                    ? (lang === 'bn' ? 'স্থায়ীভাবে মুছুন' : 'Permanently Delete')
+                    : (lang === 'bn' ? 'ট্র্যাশে পাঠান' : 'Move to Trash')}
+                </span>
               </button>
             </div>
           </div>

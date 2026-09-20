@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { MessageType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -25,8 +25,16 @@ export class ChatService {
       include: { userRoles: { include: { role: true } } },
     });
 
-    if (!targetUser) {
-      throw new NotFoundException('User not found');
+    const caller = await this.prisma.user.findUnique({
+      where: { id: userId1 },
+      select: { isActive: true, deletedAt: true },
+    });
+    if (!caller || !caller.isActive || caller.deletedAt) {
+      throw new ForbiddenException('আপনার অ্যাকাউন্টটি নিষ্ক্রিয় করা হয়েছে, চ্যাট শুরু করা সম্ভব নয়।');
+    }
+
+    if (!targetUser || !targetUser.isActive || targetUser.deletedAt) {
+      throw new BadRequestException('Target user account is inactive or not found');
     }
 
     const resolvedTargetId = targetUser.id;
@@ -388,6 +396,12 @@ export class ChatService {
         where: { id: params.senderId },
         include: { userRoles: { include: { role: true } } },
       }));
+
+    if (!sender || !sender.isActive || sender.deletedAt) {
+      throw new ForbiddenException(
+        'আপনার অ্যাকাউন্টটি নিষ্ক্রিয় করা হয়েছে, চ্যাট করা সম্ভব নয়।',
+      );
+    }
 
     const senderRoles = sender?.userRoles?.map((ur) => ur.role.name) || [];
     const isStaffOrAdmin =

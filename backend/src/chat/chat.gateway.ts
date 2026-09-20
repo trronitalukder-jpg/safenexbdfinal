@@ -70,6 +70,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const payload: any = this.jwtService.verify(token, {
           secret: process.env.JWT_SECRET || 'safnexbd_super_secret_jwt_access_key_2026_production_grade',
         });
+        const user = await this.prisma.user.findUnique({
+          where: { id: payload.sub },
+          select: { isActive: true, deletedAt: true },
+        });
+        if (!user || !user.isActive || user.deletedAt) {
+          client.disconnect(true);
+          return;
+        }
         client.data.user = payload;
         client.join(`user:${payload.sub}`);
         this.addConnectedUser(payload.sub, client.id);
@@ -232,6 +240,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     if (client.data?.user?.sub) {
       data.senderId = client.data.user.sub;
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: data.senderId },
+      select: { isActive: true, deletedAt: true },
+    });
+    if (!user || !user.isActive || user.deletedAt) {
+      client.emit('error', { message: 'আপনার অ্যাকাউন্টটি নিষ্ক্রিয় করা হয়েছে, চ্যাট করা সম্ভব নয়।' });
+      client.disconnect(true);
+      return;
     }
 
     const savedMessage = await this.chatService.saveMessage({
