@@ -773,16 +773,10 @@ export class WalletService {
 
     const savedAccountsCount = await this.prisma.userPaymentAccount.count({ where: { userId } });
 
-    // 3. Optional Password Verification (if provided by user)
-    if (dto.password && dto.password.trim()) {
-      const isMatch = await bcrypt.compare(dto.password.trim(), userRecord.passwordHash);
-      if (!isMatch) {
-        throw new BadRequestException('ভুল পাসওয়ার্ড! অনুগ্রহ করে আপনার অ্যাকাউন্টের সঠিক পাসওয়ার্ড দিন।');
-      }
-    }
-
     // Validation for Bank vs Mobile banking
     const isBank = method.code.toUpperCase().includes('BANK') || !!dto.bankName;
+    let targetAccountNum = '';
+
     if (isBank) {
       if (!dto.bankName || !dto.bankName.trim()) {
         throw new BadRequestException('Bank Name is required for Bank Transfer withdrawal');
@@ -796,9 +790,44 @@ export class WalletService {
       if (!dto.routingNumber || !dto.routingNumber.trim()) {
         throw new BadRequestException('Bank Routing Number is required for Bank Transfer withdrawal');
       }
+      targetAccountNum = dto.accountNumber.trim();
     } else {
       if (!dto.destinationAccount || !dto.destinationAccount.trim()) {
         throw new BadRequestException('Destination account / mobile number is required');
+      }
+      targetAccountNum = dto.destinationAccount.trim();
+    }
+
+    // Check if destination account is already in user's saved payment accounts
+    const existingSavedAccount = await this.prisma.userPaymentAccount.findFirst({
+      where: {
+        userId,
+        accountNumber: targetAccountNum,
+      },
+    });
+    const isSavedAccount = !!existingSavedAccount;
+
+    // Security check:
+    // If account is NOT saved -> Password is REQUIRED!
+    // If account IS saved -> Password is NOT required.
+    if (!isSavedAccount) {
+      if (!dto.password || !dto.password.trim()) {
+        throw new BadRequestException('নতুন অ্যাকাউন্টে উত্তোলনের জন্য আপনার অ্যাকাউন্টের পাসওয়ার্ড দেওয়া বাধ্যতামূলক।');
+      }
+      if (!userRecord.passwordHash) {
+        throw new BadRequestException('আপনার অ্যাকাউন্টে পাসওয়ার্ড সেট করা নেই। অনুগ্রহ করে প্রোফাইল থেকে পাসওয়ার্ড সেট করুন।');
+      }
+      const isMatch = await bcrypt.compare(dto.password.trim(), userRecord.passwordHash);
+      if (!isMatch) {
+        throw new BadRequestException('ভুল পাসওয়ার্ড! অনুগ্রহ করে আপনার অ্যাকাউন্টের সঠিক পাসওয়ার্ড দিন।');
+      }
+    } else {
+      // Saved account: password not required, but if provided, verify it
+      if (dto.password && dto.password.trim() && userRecord.passwordHash) {
+        const isMatch = await bcrypt.compare(dto.password.trim(), userRecord.passwordHash);
+        if (!isMatch) {
+          throw new BadRequestException('ভুল পাসওয়ার্ড! অনুগ্রহ করে আপনার অ্যাকাউন্টের সঠিক পাসওয়ার্ড দিন।');
+        }
       }
     }
 

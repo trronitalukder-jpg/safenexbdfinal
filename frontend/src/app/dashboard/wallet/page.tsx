@@ -388,6 +388,14 @@ function WalletContent() {
     selectedWithdrawMethod?.code?.toUpperCase().includes('ROCKET') ||
     selectedWithdrawMethod?.name?.toLowerCase().includes('rocket');
 
+  // Check if current entered or selected account is in user's saved payment accounts
+  const isCurrentAccountSaved = Boolean(
+    (isBankWithdraw
+      ? accountNumber.trim() && paymentAccounts.some((acc) => acc.accountNumber?.trim() === accountNumber.trim())
+      : destinationAccount.trim() && paymentAccounts.some((acc) => acc.accountNumber?.trim() === destinationAccount.trim())) ||
+    (selectedSavedAccountId && paymentAccounts.some((acc) => acc.id === selectedSavedAccountId))
+  );
+
   // Withdraw Commission Setting from Admin Panel (/admin/commissions)
   const withdrawCommission = commissionSettings?.withdraw;
   const hasLoadedCommission = !!withdrawCommission;
@@ -511,6 +519,24 @@ function WalletContent() {
       payload.accountType = withdrawAccountType;
     }
 
+    // Security validation:
+    // If withdrawing to an unsaved account, password is MANDATORY!
+    // If withdrawing to a saved account, password is NOT required.
+    if (!isCurrentAccountSaved) {
+      if (!withdrawPassword.trim()) {
+        setWithdrawError(
+          lang === 'bn'
+            ? 'নতুন অ্যাকাউন্টে উত্তোলনের জন্য আপনার অ্যাকাউন্টের পাসওয়ার্ড দেওয়া বাধ্যতামূলক।'
+            : 'Account password is required for withdrawal to a new/unsaved account.'
+        );
+        return;
+      }
+    }
+
+    if (withdrawPassword.trim()) {
+      payload.password = withdrawPassword.trim();
+    }
+
     // DUAL-MODE WITHDRAWAL: Check Security Settings for Withdrawal OTP
     let isOtpRequired = withdrawOtpEnabled;
     try {
@@ -551,11 +577,6 @@ function WalletContent() {
         setIsSubmittingWithdraw(false);
       }
       return;
-    }
-
-    // Attach password only if provided
-    if (withdrawPassword.trim()) {
-      payload.password = withdrawPassword.trim();
     }
 
     // Direct submit when OTP is OFF
@@ -1926,37 +1947,92 @@ function WalletContent() {
                 </div>
               )}
 
-              {/* Optional Password Field */}
-              <div className="space-y-1.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50 border border-slate-200/70 dark:border-slate-800 animate-in fade-in">
-                <div className="flex items-center justify-between">
-                  <label className="font-semibold text-slate-700 dark:text-slate-300 text-xs flex items-center gap-1.5">
-                    <Lock className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{lang === 'bn' ? 'অ্যাকাউন্টের পাসওয়ার্ড (ঐচ্ছিক)' : 'Account Password (Optional)'}</span>
-                  </label>
-                  <span className="text-[10px] text-slate-400">
-                    {lang === 'bn' ? 'ঐচ্ছিক' : 'Optional'}
-                  </span>
+              {/* Password Field / Saved Account Notice */}
+              {isCurrentAccountSaved ? (
+                <div className="space-y-2 animate-in fade-in">
+                  <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-between text-xs text-emerald-700 dark:text-emerald-300">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span className="font-semibold">
+                        {lang === 'bn'
+                          ? 'সেভ করা অ্যাকাউন্ট নির্বাচিত — কোনো পাসওয়ার্ড প্রয়োজন নেই'
+                          : 'Saved account selected — No password required'}
+                      </span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white shrink-0">
+                      1-Click Payout
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50 border border-slate-200/70 dark:border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <label className="font-semibold text-slate-700 dark:text-slate-300 text-xs flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{lang === 'bn' ? 'অ্যাকাউন্টের পাসওয়ার্ড' : 'Account Password'}</span>
+                      </label>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                        {lang === 'bn' ? 'সেভ অ্যাকাউন্টে প্রয়োজন নেই' : 'Not required for saved account'}
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type={showWithdrawPassword ? 'text' : 'password'}
+                        value={withdrawPassword}
+                        onChange={(e) => {
+                          setWithdrawPassword(e.target.value);
+                          if (withdrawError) setWithdrawError('');
+                        }}
+                        placeholder={lang === 'bn' ? 'ঐচ্ছিক (পাসওয়ার্ড ছাড়া সরাসরি উইথড্র হবে)' : 'Optional (Can withdraw directly)'}
+                        className="w-full pr-10 pl-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowWithdrawPassword(!showWithdrawPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      >
+                        {showWithdrawPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="relative">
-                  <input
-                    type={showWithdrawPassword ? 'text' : 'password'}
-                    value={withdrawPassword}
-                    onChange={(e) => {
-                      setWithdrawPassword(e.target.value);
-                      if (withdrawError) setWithdrawError('');
-                    }}
-                    placeholder={lang === 'bn' ? 'পাসওয়ার্ড দিন (যদি চান)' : 'Enter password (optional)'}
-                    className="w-full pr-10 pl-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowWithdrawPassword(!showWithdrawPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                  >
-                    {showWithdrawPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+              ) : (
+                <div className="space-y-1.5 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                      <span>{lang === 'bn' ? 'অ্যাকাউন্টের পাসওয়ার্ড *' : 'Account Password *'}</span>
+                    </label>
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold bg-amber-500/15 px-2 py-0.5 rounded-full">
+                      {lang === 'bn' ? 'নতুন অ্যাকাউন্টে আবশ্যক' : 'Required for new account'}
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showWithdrawPassword ? 'text' : 'password'}
+                      required
+                      value={withdrawPassword}
+                      onChange={(e) => {
+                        setWithdrawPassword(e.target.value);
+                        if (withdrawError) setWithdrawError('');
+                      }}
+                      placeholder={lang === 'bn' ? 'আপনার অ্যাকাউন্টের পাসওয়ার্ড দিন *' : 'Enter your account password *'}
+                      className="w-full pr-10 pl-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-600/50 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowWithdrawPassword(!showWithdrawPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      {showWithdrawPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                    {lang === 'bn'
+                      ? 'নতুন অ্যাকাউন্টে উত্তোলনের নিরাপত্তার স্বার্থে অ্যাকাউন্টের পাসওয়ার্ড দেওয়া বাধ্যতামূলক।'
+                      : 'Password is required for withdrawals to new/unsaved accounts.'}
+                  </p>
                 </div>
-              </div>
+              )}
 
               {/* Payout Calculation Breakdown */}
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-1.5 text-xs">

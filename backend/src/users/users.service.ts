@@ -683,20 +683,20 @@ export class UsersService {
   }
 
   async updatePaymentAccount(userId: string, accountId: string, dto: UpdatePaymentAccountDto) {
-    const withdrawalSettings = await this.settingsService.getWithdrawalSettings();
-    if (withdrawalSettings.requirePasswordForPayoutAccount) {
-      if (!dto.password || !dto.password.trim()) {
-        throw new BadRequestException('নিরাপত্তার জন্য আপনার অ্যাকাউন্টের সঠিক পাসওয়ার্ড দিন।');
-      }
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { passwordHash: true },
-      });
-      if (!user) throw new NotFoundException('User not found');
-      const isMatch = await bcrypt.compare(dto.password, user.passwordHash);
-      if (!isMatch) {
-        throw new BadRequestException('ভুল পাসওয়ার্ড! অনুগ্রহ করে আপনার অ্যাকাউন্টের সঠিক পাসওয়ার্ড দিন।');
-      }
+    if (!dto.password || !dto.password.trim()) {
+      throw new BadRequestException('অ্যাকাউন্ট আপডেট করতে আপনার অ্যাকাউন্টের সঠিক পাসওয়ার্ড দিন।');
+    }
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (!user.passwordHash) {
+      throw new BadRequestException('আপনার অ্যাকাউন্টে পাসওয়ার্ড সেট করা নেই।');
+    }
+    const isMatch = await bcrypt.compare(dto.password.trim(), user.passwordHash);
+    if (!isMatch) {
+      throw new BadRequestException('ভুল পাসওয়ার্ড! অনুগ্রহ করে আপনার অ্যাকাউন্টের সঠিক পাসওয়ার্ড দিন।');
     }
 
     const account = await this.prisma.userPaymentAccount.findFirst({
@@ -755,20 +755,20 @@ export class UsersService {
   }
 
   async deletePaymentAccount(userId: string, accountId: string, password?: string) {
-    const withdrawalSettings = await this.settingsService.getWithdrawalSettings();
-    if (withdrawalSettings.requirePasswordForPayoutAccount) {
-      if (!password || !password.trim()) {
-        throw new BadRequestException('নিরাপত্তার জন্য আপনার অ্যাকাউন্টের সঠিক পাসওয়ার্ড দিন।');
-      }
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { passwordHash: true },
-      });
-      if (!user) throw new NotFoundException('User not found');
-      const isMatch = await bcrypt.compare(password, user.passwordHash);
-      if (!isMatch) {
-        throw new BadRequestException('ভুল পাসওয়ার্ড! অনুগ্রহ করে আপনার অ্যাকাউন্টের সঠিক পাসওয়ার্ড দিন।');
-      }
+    if (!password || !password.trim()) {
+      throw new BadRequestException('অ্যাকাউন্ট মুছতে আপনার অ্যাকাউন্টের সঠিক পাসওয়ার্ড দিন।');
+    }
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (!user.passwordHash) {
+      throw new BadRequestException('আপনার অ্যাকাউন্টে পাসওয়ার্ড সেট করা নেই।');
+    }
+    const isMatch = await bcrypt.compare(password.trim(), user.passwordHash);
+    if (!isMatch) {
+      throw new BadRequestException('ভুল পাসওয়ার্ড! অনুগ্রহ করে আপনার অ্যাকাউন্টের সঠিক পাসওয়ার্ড দিন।');
     }
 
     const account = await this.prisma.userPaymentAccount.findFirst({
