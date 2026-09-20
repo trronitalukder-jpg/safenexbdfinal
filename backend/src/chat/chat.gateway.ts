@@ -21,11 +21,41 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
+  // Track online users: userId -> Set of active socket IDs
+  private connectedUsers = new Map<string, Set<string>>();
+
   constructor(
     private chatService: ChatService,
     private prisma: PrismaService,
     private jwtService: JwtService,
   ) {}
+
+  private addConnectedUser(userId: string, socketId: string) {
+    if (!userId) return;
+    const existing = this.connectedUsers.get(userId) || new Set<string>();
+    const wasEmpty = existing.size === 0;
+    existing.add(socketId);
+    this.connectedUsers.set(userId, existing);
+
+    if (wasEmpty && this.server) {
+      this.server.emit('user:status', { userId, status: 'ONLINE' });
+    }
+  }
+
+  private removeConnectedUser(socketId: string) {
+    for (const [userId, socketSet] of this.connectedUsers.entries()) {
+      if (socketSet.has(socketId)) {
+        socketSet.delete(socketId);
+        if (socketSet.size === 0) {
+          this.connectedUsers.delete(userId);
+          if (this.server) {
+            this.server.emit('user:status', { userId, status: 'OFFLINE' });
+          }
+        }
+        break;
+      }
+    }
+  }
 
   async handleConnection(client: Socket) {
     try {
@@ -42,6 +72,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
         client.data.user = payload;
         client.join(`user:${payload.sub}`);
+        this.addConnectedUser(payload.sub, client.id);
       }
     } catch {
       // Unauthenticated socket connection remains unprivileged
@@ -49,7 +80,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   handleDisconnect(client: Socket) {
-    // Client disconnected
+    this.removeConnectedUser(client.id);
+  }
+
+  @SubscribeMessage('users:get_online')
+  handleGetOnlineUsers(@ConnectedSocket() client: Socket) {
+    const onlineList = Array.from(this.connectedUsers.keys());
+    client.emit('users:online_list', onlineList);
+    return { onlineUsers: onlineList };
   }
 
   @SubscribeMessage('user:join')
@@ -69,6 +107,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = client.data.user?.sub || data?.userId;
     if (userId) {
       client.join(`user:${userId}`);
+      this.addConnectedUser(userId, client.id);
       return { event: 'joined', room: `user:${userId}` };
     }
     return { event: 'error', message: 'Unauthorized: Valid token or userId required' };

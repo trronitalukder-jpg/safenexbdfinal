@@ -736,7 +736,7 @@ export class TransactionsService {
 
     const trackingNumber = this.generateTrackingNumber();
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // 1. Verify sender has sufficient available balance
       const senderWallet = await tx.wallet.findUnique({
         where: { userId: senderId },
@@ -818,8 +818,45 @@ export class TransactionsService {
       return {
         transaction,
         message: inChatMessage,
+        senderUser,
       };
     });
+
+    const gw = this.chatGateway;
+    if (gw) {
+      if (convId) {
+        gw.broadcastNewMessage(result.message, convId, senderId);
+      }
+
+      const senderFullName =
+        `${result.senderUser?.firstName || ''} ${result.senderUser?.lastName || ''}`.trim() ||
+        result.senderUser?.uniqueUserId ||
+        'User';
+
+      gw.notifyUser(dto.receiverId, 'notification:pay_request', {
+        conversationId: convId,
+        transactionId: result.transaction.id,
+        trackingNumber,
+        amount: dto.amount,
+        senderName: senderFullName,
+        senderAvatar: result.senderUser?.avatarUrl,
+        title: 'নতুন পে-রিকোয়েস্ট (Pay Request)',
+        message: `${senderFullName} আপনাকে ৳${dto.amount} এর পে-রিকোয়েস্ট পাঠিয়েছেন।`,
+      });
+
+      gw.notifyAdmins('notification:admin', {
+        type: 'PAY_REQUEST',
+        title: 'নতুন পে-রিকোয়েস্ট',
+        message: `${senderFullName} চ্যাটে ৳${dto.amount} এর পে-রিকোয়েস্ট পাঠিয়েছেন। (TRX: ${trackingNumber})`,
+        targetUrl: `/admin/cms`,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    return {
+      transaction: result.transaction,
+      message: result.message,
+    };
   }
 
 
@@ -849,7 +886,7 @@ export class TransactionsService {
       throw new ForbiddenException('Not authorized to approve this request');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const updatedTx = await this.prisma.$transaction(async (tx) => {
       const senderWallet = await tx.wallet.findUnique({
         where: { userId: transaction.senderId },
       });
@@ -979,6 +1016,28 @@ export class TransactionsService {
 
       return updatedTx;
     });
+
+    const gw = this.chatGateway;
+    if (gw && updatedTx) {
+      if (transaction.conversationId) {
+        gw.server?.to(transaction.conversationId).emit('transaction:update', {
+          conversationId: transaction.conversationId,
+          transaction: updatedTx,
+        });
+      }
+
+      const counterpartId = transaction.senderId === actorId ? transaction.receiverId : transaction.senderId;
+      gw.notifyUser(counterpartId, 'notification:hold_approved', {
+        conversationId: transaction.conversationId,
+        transactionId: transaction.id,
+        trackingNumber: transaction.trackingNumber,
+        amount: Number(transaction.amount),
+        title: '🔒 এসক্রো লক সক্রিয় (Escrow Hold Active)',
+        message: `৳${transaction.amount} সফলভাবে সেফনেক্সবিডি এসক্রো হোল্ডে লক করা হয়েছে। কাজ সন্তোষজনকভাবে সম্পন্ন হলে ক্লায়েন্ট রিলিজ করবেন।`,
+      });
+    }
+
+    return updatedTx;
   }
 
   /**
@@ -1006,7 +1065,7 @@ export class TransactionsService {
       throw new ForbiddenException('Only the sender (or admin) can release held funds to the receiver');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const updatedTx = await this.prisma.$transaction(async (tx) => {
       const senderWallet = transaction.sender.wallet!;
       const receiverWallet = transaction.receiver.wallet!;
 
@@ -1152,6 +1211,38 @@ export class TransactionsService {
 
       return updatedTx;
     });
+
+    const gw = this.chatGateway;
+    if (gw && updatedTx) {
+      if (transaction.conversationId) {
+        gw.server?.to(transaction.conversationId).emit('transaction:update', {
+          conversationId: transaction.conversationId,
+          transaction: updatedTx,
+        });
+      }
+
+      // Notify receiver with celebration notification
+      gw.notifyUser(transaction.receiverId, 'notification:release_approve', {
+        conversationId: transaction.conversationId,
+        transactionId: transaction.id,
+        trackingNumber: transaction.trackingNumber,
+        amount: Number(transaction.amount),
+        title: '🎉 পেমেন্ট রিলিজ সম্পন্ন!',
+        message: `৳${transaction.amount} আপনার মূল ব্যালেন্সে সফলভাবে যুক্ত হয়েছে। (TRX: ${transaction.trackingNumber})`,
+      });
+
+      // Also notify sender
+      gw.notifyUser(transaction.senderId, 'notification:release_approve', {
+        conversationId: transaction.conversationId,
+        transactionId: transaction.id,
+        trackingNumber: transaction.trackingNumber,
+        amount: Number(transaction.amount),
+        title: 'পেমেন্ট রিলিজ সম্পন্ন',
+        message: `৳${transaction.amount} প্রাপকের মূল ব্যালেন্সে সফলভাবে রিলিজ হয়েছে।`,
+      });
+    }
+
+    return updatedTx;
   }
 
   /**
@@ -1215,6 +1306,20 @@ export class TransactionsService {
         where: { id: transaction.conversationId },
         data: { updatedAt: new Date() },
       });
+
+      const gw = this.chatGateway;
+      if (gw) {
+        gw.broadcastNewMessage(msg, transaction.conversationId, actorId);
+        gw.notifyUser(transaction.senderId, 'notification:release_request', {
+          conversationId: transaction.conversationId,
+          transactionId: transaction.id,
+          trackingNumber: transaction.trackingNumber,
+          amount: Number(transaction.amount),
+          receiverName: `${transaction.receiver.firstName} ${transaction.receiver.lastName}`.trim(),
+          title: '🔔 রিলিজের অনুরোধ (Release Request)',
+          message: `${transaction.receiver.firstName} ${transaction.receiver.lastName} কাজ সম্পন্ন করেছেন এবং ৳${transaction.amount} রিলিজ করার অনুরোধ জানিয়েছেন।`,
+        });
+      }
 
       return msg;
     }
@@ -1460,7 +1565,7 @@ export class TransactionsService {
       throw new BadRequestException('Cannot dispute an already completed or rejected transaction');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // 1. Update Transaction status to DISPUTED
       const updatedTx = await tx.transaction.update({
         where: { id: transactionId },
@@ -1577,6 +1682,35 @@ export class TransactionsService {
 
       return { transaction: updatedTx, dispute };
     });
+
+    const gw = this.chatGateway;
+    if (gw) {
+      if (transaction.conversationId) {
+        gw.server?.to(transaction.conversationId).emit('transaction:update', {
+          conversationId: transaction.conversationId,
+          transaction: result.transaction,
+        });
+      }
+
+      const counterpartId = transaction.senderId === userId ? transaction.receiverId : transaction.senderId;
+      gw.notifyUser(counterpartId, 'notification:dispute', {
+        conversationId: transaction.conversationId,
+        transactionId: transaction.id,
+        trackingNumber: transaction.trackingNumber,
+        title: '⚠️ লেনদেনে বিরোধ (Dispute) উত্থাপিত হয়েছে',
+        message: `TRX: ${transaction.trackingNumber} বিরোধের কারণে অ্যাডমিন কলিং কিউতে পাঠানো হয়েছে।`,
+      });
+
+      gw.notifyAdminsAndStaff('notification:admin', {
+        type: 'DISPUTE',
+        title: 'নতুন ডিসপ্যুট / অ্যাডমিন কলিং',
+        message: `TRX: ${transaction.trackingNumber} লেনদেনে বিরোধ তৈরি হয়েছে। কারণ: ${dto.reason}`,
+        targetUrl: `/admin/calling-queue`,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    return result;
   }
 
   /**
@@ -1822,7 +1956,7 @@ export class TransactionsService {
       select: { id: true, firstName: true, lastName: true, uniqueUserId: true, avatarUrl: true },
     });
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // 1. Create Transaction in REQUESTED status (No balance deduction yet)
       const transaction = await tx.transaction.create({
         data: {
@@ -1890,6 +2024,39 @@ export class TransactionsService {
         message: msg,
       };
     });
+
+    const gw = this.chatGateway;
+    if (gw) {
+      if (convId) {
+        gw.broadcastNewMessage(result.message, convId, requesterId);
+      }
+
+      const requesterFullName =
+        `${requester?.firstName || ''} ${requester?.lastName || ''}`.trim() ||
+        requester?.uniqueUserId ||
+        'User';
+
+      gw.notifyUser(dto.targetId, 'notification:receive_request', {
+        conversationId: convId,
+        transactionId: result.transaction.id,
+        trackingNumber,
+        amount: dto.amount,
+        requesterName: requesterFullName,
+        requesterAvatar: requester?.avatarUrl,
+        title: 'নতুন পেমেন্ট রিকোয়েস্ট (Money Request)',
+        message: `${requesterFullName} আপনার কাছে ৳${dto.amount} এর পেমেন্ট চেয়েছেন।`,
+      });
+
+      gw.notifyAdmins('notification:admin', {
+        type: 'RECEIVE_REQUEST',
+        title: 'নতুন রিসিভ রিকোয়েস্ট',
+        message: `${requesterFullName} চ্যাটে ৳${dto.amount} পেমেন্ট চেয়েছেন। (TRX: ${trackingNumber})`,
+        targetUrl: `/admin/cms`,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    return result;
   }
 }
 

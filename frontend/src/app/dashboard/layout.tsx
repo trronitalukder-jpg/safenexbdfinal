@@ -89,9 +89,9 @@ export default function DashboardLayout({
   const available = Number(user?.wallet?.availableBalance || 0);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+    <div className="flex h-[100dvh] w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       {/* 1. Desktop Fixed Left Sidebar */}
-      <div className={`flex-shrink-0 h-screen ${pathname === '/dashboard/chat' ? 'hidden xl:block' : 'hidden md:block'}`}>
+      <div className={`flex-shrink-0 h-full ${pathname === '/dashboard/chat' ? 'hidden xl:block' : 'hidden md:block'}`}>
         <DashboardSidebar />
       </div>
 
@@ -211,7 +211,7 @@ export default function DashboardLayout({
       )}
 
       {/* 3. Main Body Column */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
         {/* Dedicated Clean Dashboard Header Bar */}
         <header className="h-16 flex-shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-3 sm:px-6 lg:px-8 flex items-center justify-between z-10">
           {/* Left: Mobile Menu Toggle & Title */}
@@ -360,7 +360,7 @@ export default function DashboardLayout({
 
         {/* Workspace Body Area */}
         {pathname === '/dashboard/chat' ? (
-          <main className="flex-1 h-[calc(100vh-64px)] overflow-hidden p-0 m-0 bg-slate-50/70 dark:bg-slate-950/70">
+          <main className="flex-1 h-full min-h-0 overflow-hidden p-0 m-0 bg-slate-50/70 dark:bg-slate-950/70">
             {children}
           </main>
         ) : (

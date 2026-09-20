@@ -267,7 +267,91 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       );
     };
 
-    // 2. Listen for withdrawal updates (submission, approval, rejection)
+    // 2. Listen for pay request notifications
+    const handlePayRequestNotification = (data: any) => {
+      if (!data) return;
+      sendNotification(
+        data.title || '💸 নতুন পে-রিকোয়েস্ট (Pay Request)',
+        {
+          body: data.message || `আপনাকে ৳${data.amount || ''} এর পে-রিকোয়েস্ট পাঠানো হয়েছে।`,
+          icon: data.senderAvatar || '/icon-192.png',
+          tag: `pay-${data.transactionId || Date.now()}`,
+        },
+        data.conversationId ? `/dashboard/chat?conversationId=${data.conversationId}` : '/dashboard/chat',
+      );
+    };
+
+    // 3. Listen for receive request notifications
+    const handleReceiveRequestNotification = (data: any) => {
+      if (!data) return;
+      sendNotification(
+        data.title || '💰 নতুন পেমেন্ট রিকোয়েস্ট (Money Request)',
+        {
+          body: data.message || `আপনার কাছে ৳${data.amount || ''} পেমেন্টের অনুরোধ জানানো হয়েছে।`,
+          icon: data.requesterAvatar || '/icon-192.png',
+          tag: `receive-${data.transactionId || Date.now()}`,
+        },
+        data.conversationId ? `/dashboard/chat?conversationId=${data.conversationId}` : '/dashboard/chat',
+      );
+    };
+
+    // 4. Listen for escrow hold approved notifications
+    const handleHoldApprovedNotification = (data: any) => {
+      if (!data) return;
+      sendNotification(
+        data.title || '🔒 এসক্রো লক সক্রিয় (Escrow Hold Active)',
+        {
+          body: data.message || `৳${data.amount || ''} সেফনেক্সবিডি এসক্রো হোল্ডে লক করা হয়েছে।`,
+          icon: '/icon-192.png',
+          tag: `hold-${data.transactionId || Date.now()}`,
+        },
+        data.conversationId ? `/dashboard/chat?conversationId=${data.conversationId}` : '/dashboard/chat',
+      );
+    };
+
+    // 5. Listen for release request notifications
+    const handleReleaseRequestNotification = (data: any) => {
+      if (!data) return;
+      sendNotification(
+        data.title || '🔔 রিলিজের অনুরোধ (Release Request)',
+        {
+          body: data.message || 'কাজ সম্পন্ন হয়েছে, পেমেন্ট রিলিজ করার অনুরোধ এসেছে।',
+          icon: '/icon-192.png',
+          tag: `rel-req-${data.transactionId || Date.now()}`,
+        },
+        data.conversationId ? `/dashboard/chat?conversationId=${data.conversationId}` : '/dashboard/chat',
+      );
+    };
+
+    // 6. Listen for release approve notifications
+    const handleReleaseApproveNotification = (data: any) => {
+      if (!data) return;
+      sendNotification(
+        data.title || '🎉 পেমেন্ট রিলিজ সম্পন্ন!',
+        {
+          body: data.message || `৳${data.amount || ''} মূল ব্যালেন্সে যুক্ত হয়েছে।`,
+          icon: '/icon-192.png',
+          tag: `rel-app-${data.transactionId || Date.now()}`,
+        },
+        data.conversationId ? `/dashboard/chat?conversationId=${data.conversationId}` : '/dashboard/wallet',
+      );
+    };
+
+    // 7. Listen for dispute notifications
+    const handleDisputeNotification = (data: any) => {
+      if (!data) return;
+      sendNotification(
+        data.title || '⚠️ লেনদেনে বিরোধ (Dispute)',
+        {
+          body: data.message || 'লেনদেনে বিরোধ উত্থাপিত হয়েছে এবং অ্যাডমিন কিউতে পাঠানো হয়েছে।',
+          icon: '/icon-192.png',
+          tag: `dispute-${data.transactionId || Date.now()}`,
+        },
+        data.conversationId ? `/dashboard/chat?conversationId=${data.conversationId}` : '/dashboard/disputes',
+      );
+    };
+
+    // 8. Listen for withdrawal updates (submission, approval, rejection)
     const handleWithdrawNotification = (data: any) => {
       if (!data) return;
 
@@ -287,11 +371,23 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
 
     socket.on('notification:message', handleChatMessage);
+    socket.on('notification:pay_request', handlePayRequestNotification);
+    socket.on('notification:receive_request', handleReceiveRequestNotification);
+    socket.on('notification:hold_approved', handleHoldApprovedNotification);
+    socket.on('notification:release_request', handleReleaseRequestNotification);
+    socket.on('notification:release_approve', handleReleaseApproveNotification);
+    socket.on('notification:dispute', handleDisputeNotification);
     socket.on('notification:withdraw', handleWithdrawNotification);
 
     return () => {
       socket.off('connect', handleConnect);
       socket.off('notification:message', handleChatMessage);
+      socket.off('notification:pay_request', handlePayRequestNotification);
+      socket.off('notification:receive_request', handleReceiveRequestNotification);
+      socket.off('notification:hold_approved', handleHoldApprovedNotification);
+      socket.off('notification:release_request', handleReleaseRequestNotification);
+      socket.off('notification:release_approve', handleReleaseApproveNotification);
+      socket.off('notification:dispute', handleDisputeNotification);
       socket.off('notification:withdraw', handleWithdrawNotification);
     };
   }, [user?.id, sendNotification]);
