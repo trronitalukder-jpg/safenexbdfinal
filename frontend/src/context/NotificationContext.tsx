@@ -7,15 +7,31 @@ import { getSocket } from '@/lib/socket';
 
 export type NotificationPermissionState = 'default' | 'granted' | 'denied' | 'unsupported';
 
+export interface UserNotificationItem {
+  id: string;
+  type: 'message' | 'pay_request' | 'receive_request' | 'hold_approved' | 'release_request' | 'release_approve' | 'dispute' | 'withdraw' | 'general';
+  title: string;
+  message: string;
+  url?: string;
+  createdAt: string;
+  read: boolean;
+  metadata?: any;
+}
+
 interface NotificationContextType {
   permission: NotificationPermissionState;
   soundEnabled: boolean;
   toggleSound: () => void;
   requestPermission: () => Promise<NotificationPermissionState>;
-  sendNotification: (title: string, options?: NotificationOptions, targetUrl?: string) => Promise<void>;
+  sendNotification: (title: string, options?: NotificationOptions, targetUrl?: string, type?: UserNotificationItem['type'], metadata?: any) => Promise<void>;
   playNotificationSound: () => void;
   isBannerDismissed: boolean;
   dismissBanner: () => void;
+  notifications: UserNotificationItem[];
+  unreadCount: number;
+  markAsRead: (id: string) => void;
+  markAllAsRead: () => void;
+  clearNotifications: () => void;
 }
 
 const NotificationContext = createContext<NotificationContextType>({
@@ -27,12 +43,18 @@ const NotificationContext = createContext<NotificationContextType>({
   playNotificationSound: () => {},
   isBannerDismissed: false,
   dismissBanner: () => {},
+  notifications: [],
+  unreadCount: 0,
+  markAsRead: () => {},
+  markAllAsRead: () => {},
+  clearNotifications: () => {},
 });
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const router = useRouter();
   const { user } = useAuthStore();
   const [permission, setPermission] = useState<NotificationPermissionState>('default');
+  const [notifications, setNotifications] = useState<UserNotificationItem[]>([]);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('safnexbd_sound_alerts') || localStorage.getItem('safnexbd_sound_alerts');
@@ -169,14 +191,113 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [playNotificationSound]);
 
-  // Send browser notification with target click URL
+  // Persistent User Notifications (backed by localStorage per user)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user?.id) {
+      setNotifications([]);
+      return;
+    }
+    try {
+      const stored = localStorage.getItem(`safnexbd_notifs_${user.id}`);
+      if (stored) {
+        setNotifications(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error('Failed to parse user notifications', e);
+    }
+  }, [user?.id]);
+
+  const addNotification = useCallback(
+    (notif: Omit<UserNotificationItem, 'id' | 'createdAt' | 'read'>) => {
+      const newItem: UserNotificationItem = {
+        ...notif,
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        createdAt: new Date().toISOString(),
+        read: false,
+      };
+
+      setNotifications((prev) => {
+        // Prevent duplicate spam within 3 seconds for identical title & url
+        const isDuplicate = prev.some(
+          (p) =>
+            p.title === newItem.title &&
+            p.message === newItem.message &&
+            Date.now() - new Date(p.createdAt).getTime() < 3000,
+        );
+        if (isDuplicate) return prev;
+
+        const updated = [newItem, ...prev].slice(0, 60);
+        if (typeof window !== 'undefined' && user?.id) {
+          try {
+            localStorage.setItem(`safnexbd_notifs_${user.id}`, JSON.stringify(updated));
+          } catch (e) {}
+        }
+        return updated;
+      });
+    },
+    [user?.id],
+  );
+
+  const markAsRead = useCallback(
+    (id: string) => {
+      setNotifications((prev) => {
+        const updated = prev.map((n) => (n.id === id ? { ...n, read: true } : n));
+        if (typeof window !== 'undefined' && user?.id) {
+          try {
+            localStorage.setItem(`safnexbd_notifs_${user.id}`, JSON.stringify(updated));
+          } catch (e) {}
+        }
+        return updated;
+      });
+    },
+    [user?.id],
+  );
+
+  const markAllAsRead = useCallback(() => {
+    setNotifications((prev) => {
+      const updated = prev.map((n) => ({ ...n, read: true }));
+      if (typeof window !== 'undefined' && user?.id) {
+        try {
+          localStorage.setItem(`safnexbd_notifs_${user.id}`, JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
+    });
+  }, [user?.id]);
+
+  const clearNotifications = useCallback(() => {
+    setNotifications([]);
+    if (typeof window !== 'undefined' && user?.id) {
+      try {
+        localStorage.removeItem(`safnexbd_notifs_${user.id}`);
+      } catch (e) {}
+    }
+  }, [user?.id]);
+
+  // Send browser notification with target click URL and record in in-app notification list
   const sendNotification = useCallback(
-    async (title: string, options?: NotificationOptions, targetUrl = '/dashboard') => {
-      if (typeof window === 'undefined' || !('Notification' in window)) return;
+    async (
+      title: string,
+      options?: NotificationOptions,
+      targetUrl = '/dashboard',
+      type: UserNotificationItem['type'] = 'general',
+      metadata?: any,
+    ) => {
+      // 1. Always record in-app notification history
+      addNotification({
+        type,
+        title,
+        message: typeof options?.body === 'string' ? options.body : '',
+        url: targetUrl,
+        metadata,
+      });
 
-      if (Notification.permission !== 'granted') return;
-
+      // 2. Play sound alert
       playNotificationSound();
+
+      // 3. Dispatch browser push notification if supported and granted
+      if (typeof window === 'undefined' || !('Notification' in window)) return;
+      if (Notification.permission !== 'granted') return;
 
       try {
         const notifOptions: NotificationOptions = {
@@ -210,7 +331,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         console.error('Error dispatching browser notification:', err);
       }
     },
-    [playNotificationSound, router],
+    [addNotification, playNotificationSound, router],
   );
 
   // Real-time socket listener for chat messages and withdrawals
@@ -264,6 +385,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           tag: `chat-${data.conversationId}`,
         },
         notifUrl,
+        'message',
+        data,
       );
     };
 
@@ -278,6 +401,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           tag: `pay-${data.transactionId || Date.now()}`,
         },
         data.conversationId ? `/dashboard/chat?conversationId=${data.conversationId}` : '/dashboard/chat',
+        'pay_request',
+        data,
       );
     };
 
@@ -292,6 +417,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           tag: `receive-${data.transactionId || Date.now()}`,
         },
         data.conversationId ? `/dashboard/chat?conversationId=${data.conversationId}` : '/dashboard/chat',
+        'receive_request',
+        data,
       );
     };
 
@@ -306,6 +433,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           tag: `hold-${data.transactionId || Date.now()}`,
         },
         data.conversationId ? `/dashboard/chat?conversationId=${data.conversationId}` : '/dashboard/chat',
+        'hold_approved',
+        data,
       );
     };
 
@@ -320,6 +449,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           tag: `rel-req-${data.transactionId || Date.now()}`,
         },
         data.conversationId ? `/dashboard/chat?conversationId=${data.conversationId}` : '/dashboard/chat',
+        'release_request',
+        data,
       );
     };
 
@@ -334,6 +465,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           tag: `rel-app-${data.transactionId || Date.now()}`,
         },
         data.conversationId ? `/dashboard/chat?conversationId=${data.conversationId}` : '/dashboard/wallet',
+        'release_approve',
+        data,
       );
     };
 
@@ -348,6 +481,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           tag: `dispute-${data.transactionId || Date.now()}`,
         },
         data.conversationId ? `/dashboard/chat?conversationId=${data.conversationId}` : '/dashboard/disputes',
+        'dispute',
+        data,
       );
     };
 
@@ -367,6 +502,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           tag: `withdraw-${data.id || Date.now()}`,
         },
         notifUrl,
+        'withdraw',
+        data,
       );
     };
 
@@ -392,6 +529,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
   }, [user?.id, sendNotification]);
 
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
   return (
     <NotificationContext.Provider
       value={{
@@ -403,6 +542,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         playNotificationSound,
         isBannerDismissed,
         dismissBanner,
+        notifications,
+        unreadCount,
+        markAsRead,
+        markAllAsRead,
+        clearNotifications,
       }}
     >
       {children}

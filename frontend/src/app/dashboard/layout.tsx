@@ -47,7 +47,7 @@ export default function DashboardLayout({
   const { lang, toggleLang, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const { installApp, isInstalled } = usePwa();
-  const { permission: notifPermission, requestPermission } = useNotification();
+  const { permission: notifPermission, requestPermission, unreadCount } = useNotification();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -68,6 +68,7 @@ export default function DashboardLayout({
     { href: '/dashboard', label: lang === 'bn' ? 'ওভারভিউ' : 'Overview', icon: LayoutDashboard },
     { href: '/dashboard/wallet', label: lang === 'bn' ? 'ওয়ালেট ও লেজার' : 'Wallet & Ledger', icon: Wallet },
     { href: '/dashboard/chat', label: lang === 'bn' ? 'মেসেজ ও লাইভ চ্যাট' : 'Live Chat & Deals', icon: MessageSquare },
+    { href: '/dashboard/notifications', label: lang === 'bn' ? 'নোটিফিকেশন' : 'Notifications', icon: Bell },
     { href: '/dashboard/transactions', label: lang === 'bn' ? 'লেনদেন ইতিহাস' : 'My Transactions', icon: ArrowLeftRight },
     { href: '/dashboard/products', label: lang === 'bn' ? 'আমার প্রোডাক্টসমূহ' : 'My Products', icon: Package },
     { href: '/dashboard/products/new', label: lang === 'bn' ? 'প্রোডাক্ট আপলোড' : 'Upload Product', icon: PlusCircle },
@@ -141,17 +142,23 @@ export default function DashboardLayout({
                       key={l.href}
                       href={l.href}
                       onClick={() => setMobileDrawerOpen(false)}
-                      className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition ${
+                      className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
                         isActive
                           ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 font-bold border border-sky-200 dark:border-sky-800'
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5">
-                        <Icon className="w-4 h-4" />
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-5 h-5 shrink-0" />
                         <span>{l.label}</span>
                       </div>
-                      <ChevronRight className="w-3.5 h-3.5 opacity-40" />
+                      {l.href === '/dashboard/notifications' && unreadCount > 0 ? (
+                        <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-black">
+                          {unreadCount}
+                        </span>
+                      ) : (
+                        <ChevronRight className="w-4 h-4 opacity-40" />
+                      )}
                     </Link>
                   );
                 })}
@@ -225,34 +232,21 @@ export default function DashboardLayout({
             </button>
 
             <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-              {/* On desktop/tablet (sm+): show Workspace / ড্যাশবোর্ড */}
-              <span className="hidden sm:inline-block font-extrabold text-xs sm:text-base text-slate-900 dark:text-white truncate">
-                {lang === 'bn' ? 'ড্যাশবোর্ড' : 'Workspace'}
-              </span>
-              {/* On phone (< sm): show user's name */}
-              <span className="sm:hidden font-extrabold text-sm text-slate-900 dark:text-white truncate">
-                {user.firstName} {user.lastName}
-              </span>
-              <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-                Safe Escrow
-              </span>
+              <div className="flex flex-col min-w-0 justify-center">
+                <span className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white truncate leading-tight">
+                  {user.firstName} {user.lastName}
+                </span>
+                {user.uniqueUserId && (
+                  <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate leading-none mt-0.5">
+                    ID: {user.uniqueUserId}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Right: Balance Pill, Browse Marketplace, and User Avatar */}
+          {/* Right: Browse Marketplace, Language, Theme, Notifications and User Avatar */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-            {/* Available Balance Pill (hidden on phone view < sm, visible on sm+) */}
-            <Link
-              href="/dashboard/wallet"
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 transition shadow-xs"
-              title={lang === 'bn' ? 'ওয়ালেট ব্যালেন্স' : 'Available Balance'}
-            >
-              <Wallet className="w-3.5 h-3.5 shrink-0" />
-              <div className="text-xs font-bold whitespace-nowrap">
-                <span>৳ {available.toLocaleString()}</span>
-              </div>
-            </Link>
-
             {/* Direct Marketplace Link */}
             <Link
               href="/products"
@@ -297,42 +291,23 @@ export default function DashboardLayout({
               )}
             </button>
 
-            {/* Real-time Notification Bell / Status Button */}
-            <button
-              type="button"
-              onClick={async () => {
-                if (notifPermission !== 'granted') {
-                  await requestPermission();
-                } else {
-                  router.push('/dashboard/settings?tab=preferences');
-                }
-              }}
-              title={
-                notifPermission === 'granted'
-                  ? (lang === 'bn' ? 'ব্রাউজার নোটিফিকেশন চালু আছে (সেটিংস)' : 'Notifications Active (Click for Settings)')
-                  : notifPermission === 'denied'
-                  ? (lang === 'bn' ? 'নোটিফিকেশন ব্লক করা আছে' : 'Notifications Blocked in Browser')
-                  : (lang === 'bn' ? 'ব্রাউজার নোটিফিকেশন অন করুন' : 'Enable Push Notifications')
-              }
-              className={`relative p-1.5 sm:p-2 rounded-xl border transition ${
-                notifPermission === 'granted'
-                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  : notifPermission === 'denied'
-                  ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-500 border-rose-200 dark:border-rose-900/60'
-                  : 'bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 border-sky-200 dark:border-sky-800 animate-pulse'
-              }`}
+            {/* Real-time Notification Bell */}
+            <Link
+              href="/dashboard/notifications"
+              title={lang === 'bn' ? 'নোটিফিকেশন সেন্টার' : 'Notification Center'}
+              className="relative p-1.5 sm:p-2 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition shrink-0"
             >
               <Bell className="w-4 h-4" />
-              {notifPermission === 'granted' && (
+              {unreadCount > 0 ? (
+                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-xs">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              ) : notifPermission === 'granted' ? (
                 <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
-              )}
-              {notifPermission === 'default' && (
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900" />
-              )}
-              {notifPermission === 'denied' && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900" />
-              )}
-            </button>
+              ) : notifPermission === 'default' ? (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900" />
+              ) : null}
+            </Link>
 
             {/* Quick Profile Link */}
             <Link

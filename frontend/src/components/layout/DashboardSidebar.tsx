@@ -27,11 +27,13 @@ import {
   BookOpen,
   Smartphone,
   Download,
+  Bell,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguage } from '@/context/LanguageContext';
 import { useTheme } from '@/context/ThemeContext';
 import { usePwa } from '@/context/PwaContext';
+import { useNotification } from '@/context/NotificationContext';
 import { getImageUrl } from '@/lib/imageUtils';
 
 export const DashboardSidebar = () => {
@@ -40,11 +42,13 @@ export const DashboardSidebar = () => {
   const { lang, toggleLang, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const { installApp, isInstalled } = usePwa();
+  const { unreadCount } = useNotification();
 
   const links = [
     { href: '/dashboard', label: lang === 'bn' ? 'ওভারভিউ' : 'Overview', icon: LayoutDashboard },
     { href: '/dashboard/wallet', label: lang === 'bn' ? 'ওয়ালেট ও লেজার' : 'Wallet & Ledger', icon: Wallet },
     { href: '/dashboard/chat', label: lang === 'bn' ? 'মেসেজ ও লাইভ চ্যাট' : 'Live Chat & Deals', icon: MessageSquare },
+    { href: '/dashboard/notifications', label: lang === 'bn' ? 'নোটিফিকেশন' : 'Notifications', icon: Bell },
     { href: '/dashboard/transactions', label: lang === 'bn' ? 'লেনদেন ইতিহাস' : 'My Transactions', icon: ArrowLeftRight },
     { href: '/dashboard/products', label: lang === 'bn' ? 'আমার প্রোডাক্টসমূহ' : 'My Products', icon: Package },
     { href: '/dashboard/products/new', label: lang === 'bn' ? 'প্রোডাক্ট আপলোড' : 'Upload Product', icon: PlusCircle },
@@ -119,14 +123,21 @@ export const DashboardSidebar = () => {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm sm:text-[15px] font-semibold transition ${
                   isActive
                     ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 font-bold border border-sky-200 dark:border-sky-800'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'
                 }`}
               >
-                <Icon className="w-4 h-4 flex-shrink-0" />
-                <span>{link.label}</span>
+                <div className="flex items-center gap-3">
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <span>{link.label}</span>
+                </div>
+                {link.href === '/dashboard/notifications' && unreadCount > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-black">
+                    {unreadCount}
+                  </span>
+                )}
               </Link>
             );
           })}

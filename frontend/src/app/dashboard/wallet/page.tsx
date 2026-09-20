@@ -92,6 +92,13 @@ function WalletContent() {
   const [showRechargeModal, setShowRechargeModal] = useState(initialAction === 'recharge');
   const [showWithdrawModal, setShowWithdrawModal] = useState(initialAction === 'withdraw');
 
+  // Immediately clear URL action query param so page refresh doesn't reopen modal
+  useEffect(() => {
+    if (initialAction && typeof window !== 'undefined') {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [initialAction]);
+
   // Recharge Form state
   const [rechargeMethodId, setRechargeMethodId] = useState('');
   const [rechargeAmount, setRechargeAmount] = useState<number>(500);
