@@ -1,0 +1,354 @@
+import {
+  LayoutDashboard,
+  Users,
+  Package,
+  Coins,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  KeyRound,
+  ShieldAlert,
+  ArrowLeftRight,
+  Compass,
+  Percent,
+  SlidersHorizontal,
+  MessageSquare,
+  BookOpen,
+  FileText,
+  Settings,
+  UserCheck,
+  Bell,
+  MessageSquareCode,
+  Globe,
+  Activity,
+  LucideIcon,
+} from 'lucide-react';
+
+export interface AdminMenuItem {
+  key: string;
+  labelEn: string;
+  labelBn: string;
+  href: string;
+  icon: LucideIcon;
+  descriptionEn: string;
+  descriptionBn: string;
+  superAdminOnly?: boolean;
+  hideFromSidebar?: boolean;
+  category?: 'chat' | 'finance' | 'moderation' | 'system' | 'general';
+}
+
+/**
+ * Quick Role Presets for Super Admin to assign roles to staff in 1-click
+ */
+export interface RolePreset {
+  id: string;
+  nameEn: string;
+  nameBn: string;
+  badgeColor: string;
+  descriptionEn: string;
+  descriptionBn: string;
+  permissions: string[];
+}
+
+export const EMPLOYEE_ROLE_PRESETS: RolePreset[] = [
+  {
+    id: 'support_specialist',
+    nameEn: 'Customer Support Specialist',
+    nameBn: 'কাস্টমার সাপোর্ট স্পেশালিস্ট',
+    badgeColor: 'sky',
+    descriptionEn: 'Live chat monitoring, keyword search, dispute queue & user help guides',
+    descriptionBn: 'লাইভ চ্যাট সহায়তা, চ্যাট সার্চ, কল অ্যাডমিন কিউ ও হেল্প গাইড',
+    permissions: ['cms', 'chat_monitor', 'disputes', 'guides'],
+  },
+  {
+    id: 'finance_officer',
+    nameEn: 'Finance & Accounts Auditor',
+    nameBn: 'ফাইন্যান্স ও অডিট অফিসার',
+    badgeColor: 'emerald',
+    descriptionEn: 'Review recharges, disburse withdrawals, escrow ledger & commissions',
+    descriptionBn: 'রিচার্জ ও উইথড্র অডিট, ক্যাশআউট অনুমোদন, লেনদেন ও কমিশন মেট্রিক্স',
+    permissions: ['recharges', 'withdrawals', 'transactions', 'commissions', 'financial_ops'],
+  },
+  {
+    id: 'dispute_mediator',
+    nameEn: 'Dispute Arbitrator & Mediator',
+    nameBn: 'ডিসপ্যুট আরবিট্রেটর ও মিডিয়টর',
+    badgeColor: 'amber',
+    descriptionEn: 'Resolve calling disputes, chat lock control, and mediate escrow deals',
+    descriptionBn: 'এসক্রো ডিসপ্যুট নিষ্পত্তি, চ্যাট অন/অফ ও লক কন্ট্রোল এবং ইউজার অডিট',
+    permissions: ['disputes', 'cms', 'chat_monitor', 'chat_manage', 'transactions', 'users'],
+  },
+  {
+    id: 'content_moderator',
+    nameEn: 'Marketplace & Content Moderator',
+    nameBn: 'মার্কেটপ্লেস ও কনটেন্ট মডারেটর',
+    badgeColor: 'indigo',
+    descriptionEn: 'Approve product listings, manage promotional bids and categories',
+    descriptionBn: 'প্রোডাক্ট অনুমোদন, বিড ও পজিশন পর্যবেক্ষণ ও পেজ ক্যাটাগরি',
+    permissions: ['products', 'bids', 'categories', 'guides'],
+  },
+  {
+    id: 'operations_supervisor',
+    nameEn: 'Operations Supervisor (Full Access)',
+    nameBn: 'অপারেশন্স ম্যানেজার (ফুল এক্সেস)',
+    badgeColor: 'purple',
+    descriptionEn: 'Full administrative access across all operational modules',
+    descriptionBn: 'সকল অপারেশনাল মডিউল ও ফিচারে সম্পূর্ণ এক্সেস',
+    permissions: ['*'],
+  },
+];
+
+export const adminMenuRegistry: AdminMenuItem[] = [
+  {
+    key: 'overview_analytics',
+    labelEn: 'Overview Analytics',
+    labelBn: 'অ্যাডমিন ড্যাশবোর্ড',
+    href: '/admin',
+    icon: LayoutDashboard,
+    descriptionEn: 'Platform metrics, escrow telemetry and financial summaries',
+    descriptionBn: 'প্ল্যাটফর্ম মেট্রিক্স, এসক্রো ব্যালেন্স ও আর্থিক পরিসংখ্যান',
+    category: 'general',
+  },
+  {
+    key: 'users',
+    labelEn: 'User Management',
+    labelBn: 'ইউজার ম্যানেজমেন্ট',
+    href: '/admin/users',
+    icon: Users,
+    descriptionEn: 'View, verify, activate/deactivate, and audit user accounts',
+    descriptionBn: 'ইউজার অ্যাকাউন্ট দেখা, ভেরিফাই, সক্রিয়/নিষ্ক্রিয় ও অডিট করা',
+    category: 'moderation',
+  },
+  {
+    key: 'products',
+    labelEn: 'Products',
+    labelBn: 'প্রোডাক্টস (Products)',
+    href: '/admin/products',
+    icon: Package,
+    descriptionEn: 'Manage, review, approve, and moderate listings',
+    descriptionBn: 'প্রোডাক্ট অনুমোদন, রিভিউ ও ম্যানেজ করা',
+    category: 'moderation',
+  },
+  {
+    key: 'bids',
+    labelEn: 'Bids & Positioning',
+    labelBn: 'বিড ও পজিশন (Bids)',
+    href: '/admin/bids',
+    icon: Coins,
+    descriptionEn: 'Auction slots, promotional positions and bidding ledger',
+    descriptionBn: 'মার্কেটপ্লেস বিড ও প্রিমিয়াম পজিশনিং লেজার',
+    category: 'moderation',
+  },
+  {
+    key: 'recharges',
+    labelEn: 'Recharge Requests',
+    labelBn: 'রিচার্জ রিকোয়েস্ট',
+    href: '/admin/recharges',
+    icon: ArrowDownCircle,
+    descriptionEn: 'Review, approve, or reject manual wallet deposit requests',
+    descriptionBn: 'ব্যবহারকারীদের ডিপোজিট ও রিচার্জ রিকোয়েস্ট অনুমোদন/বাতিল',
+    category: 'finance',
+  },
+  {
+    key: 'withdrawals',
+    labelEn: 'Withdrawal Requests',
+    labelBn: 'উইথড্র রিকোয়েস্ট',
+    href: '/admin/withdrawals',
+    icon: ArrowUpCircle,
+    descriptionEn: 'Process, audit, and disburse wallet cashout requests',
+    descriptionBn: 'ব্যবহারকারীদের উইথড্র রিকোয়েস্ট অডিট ও প্রসেস করা',
+    category: 'finance',
+  },
+  {
+    key: 'financial_ops',
+    labelEn: 'Financial & Ledger Audit',
+    labelBn: 'ফাইন্যান্সিয়াল ও ব্যালেন্স অডিট',
+    href: '/admin/transactions',
+    icon: Coins,
+    descriptionEn: 'Audit wallet holds, ledger entries, and dispute financial adjustments',
+    descriptionBn: 'ব্যবহারকারীদের ওয়ালেট ব্যালেন্স, হোল্ড ও আর্থিক অ্যাডজাস্টমেন্ট অডিট',
+    category: 'finance',
+    hideFromSidebar: true,
+  },
+  {
+    key: 'password_reset',
+    labelEn: 'Password Reset',
+    labelBn: 'পাসওয়ার্ড রিসেট',
+    href: '/admin/holds',
+    icon: KeyRound,
+    descriptionEn: 'Manage recovery tickets and generate temporary credentials',
+    descriptionBn: 'পাসওয়ার্ড রিকভারি রিকোয়েস্ট ও ক্রেডেনশিয়াল ম্যানেজ করা',
+    category: 'general',
+  },
+  {
+    key: 'disputes',
+    labelEn: 'Disputes / Admin Calling',
+    labelBn: 'কল অ্যাডমিন ও ডিসপ্যুট',
+    href: '/admin/calling-queue',
+    icon: ShieldAlert,
+    descriptionEn: 'Live escrow dispute queue, arbitration and emergency assistance',
+    descriptionBn: 'লাইভ এসক্রো ডিসপ্যুট কল কিউ ও মধ্যস্থতা সেবা',
+    category: 'chat',
+  },
+  {
+    key: 'transactions',
+    labelEn: 'All Transactions',
+    labelBn: 'সব ট্রানজ্যাকশন',
+    href: '/admin/transactions',
+    icon: ArrowLeftRight,
+    descriptionEn: 'Complete immutable ledger of all marketplace escrow deals',
+    descriptionBn: 'প্ল্যাটফর্মের সকল লেনদেন ও এসক্রো ডিলের হিসাব',
+    category: 'finance',
+  },
+  {
+    key: 'categories',
+    labelEn: 'Pages & Menus',
+    labelBn: 'পেজ ও মেনু ম্যানেজমেন্ট',
+    href: '/admin/categories',
+    icon: Compass,
+    descriptionEn: 'Configure navigation hierarchy, categories and link destinations',
+    descriptionBn: 'ন্যাভিগেশন মেনু, পেজ ক্যাটাগরি ও লিংক স্ট্রাকচার',
+    category: 'moderation',
+  },
+  {
+    key: 'commissions',
+    labelEn: 'Commission Rules',
+    labelBn: 'কমিশন মেট্রিক্স',
+    href: '/admin/commissions',
+    icon: Percent,
+    descriptionEn: 'Manage escrow fees, percentage tiers and flat rate rules',
+    descriptionBn: 'এসক্রো ফি, শতকরা হার ও প্ল্যাটফর্ম কমিশন সেটিংস',
+    category: 'finance',
+  },
+  {
+    key: 'cms',
+    labelEn: 'Live Chat',
+    labelBn: 'লাইভ চ্যাট',
+    href: '/admin/cms',
+    icon: MessageSquare,
+    descriptionEn: 'Real-time user conversation monitoring, chat intervention, and deal supervision',
+    descriptionBn: 'লাইভ ইউজার চ্যাট মনিটরিং, চ্যাটে অংশগ্রহণ এবং লেনদেন ও রিকোয়েস্ট পর্যবেক্ষণ',
+    category: 'chat',
+  },
+  {
+    key: 'chat_monitor',
+    labelEn: 'Chat Message Search & Audit',
+    labelBn: 'চ্যাট সার্চ ও অডিট',
+    href: '/admin/cms',
+    icon: MessageSquare,
+    descriptionEn: 'Deep-search any conversation messages, chat history, and keywords',
+    descriptionBn: 'সকল কথোপকথনের টেক্সট মেসেজ সার্চ ও কিওয়ার্ড অডিট করা',
+    category: 'chat',
+    hideFromSidebar: true,
+  },
+  {
+    key: 'chat_manage',
+    labelEn: 'Chat On/Off & Lock Control',
+    labelBn: 'চ্যাট অন/অফ ও লক কন্ট্রোল',
+    href: '/admin/cms',
+    icon: ShieldAlert,
+    descriptionEn: 'Turn user conversations ON/OFF, lock messaging, and broadcast notices',
+    descriptionBn: 'চ্যাট অন বা সাময়িক বন্ধ করা, কনভারসেশন লক ও অ্যাডমিন হস্তক্ষেপ',
+    category: 'chat',
+    hideFromSidebar: true,
+  },
+  {
+    key: 'guides',
+    labelEn: 'Guides & Instructions',
+    labelBn: 'গাইডস (Guides)',
+    href: '/admin/guides',
+    icon: BookOpen,
+    descriptionEn: 'Publish video tutorials and rich HTML instructions for users',
+    descriptionBn: 'ব্যবহারকারীদের জন্য নির্দেশিকা ও ভিডিও টিউটোরিয়াল প্রকাশ',
+    category: 'moderation',
+  },
+  {
+    key: 'audit_logs',
+    labelEn: 'Audit Logs',
+    labelBn: 'অডিট লগ',
+    href: '/admin/audit-logs',
+    icon: FileText,
+    descriptionEn: 'Tamper-evident logs of administrative actions and security events',
+    descriptionBn: 'অ্যাডমিনিস্ট্রেটিভ অ্যাকশন ও নিরাপত্তা ইভেন্টের লগ',
+    category: 'system',
+  },
+  {
+    key: 'operations',
+    labelEn: 'Live Operations & Workload',
+    labelBn: 'লাইভ অপারেশনস ও ওয়ার্কলোড',
+    href: '/admin/operations',
+    icon: Activity,
+    descriptionEn: 'Real-time staff workload balancing, claim queue, and queue health',
+    descriptionBn: 'রিয়েল-টাইম স্টাফ অ্যাক্টিভিটি, পেন্ডিং কিউ ও ওয়ার্কলোড সমবণ্টন',
+    category: 'system',
+  },
+  {
+    key: 'settings',
+    labelEn: 'Website Settings',
+    labelBn: 'ওয়েবসাইট সেটিংস',
+    href: '/admin/settings',
+    icon: Settings,
+    descriptionEn: 'Configure brand identity, logo, favicon, pixels and SEO',
+    descriptionBn: 'ব্র্যান্ডিং, লোগো, ফেভিকন, পিক্সেল ট্র্যাকিং ও এসইও কনফিগারেশন',
+    category: 'system',
+  },
+  {
+    key: 'notifications',
+    labelEn: 'Notifications',
+    labelBn: 'নোটিফিকেশন কনফিগ',
+    href: '/admin/notifications',
+    icon: Bell,
+    descriptionEn: 'Configure real-time alerts for Super Admin, Staff, and Users',
+    descriptionBn: 'সুপার অ্যাডমিন, স্টাফ ও ইউজারদের লাইভ নোটিফিকেশন কনফিগারেশন',
+    category: 'system',
+  },
+  {
+    key: 'sms',
+    labelEn: 'SMS & Gateways',
+    labelBn: 'এসএমএস ও গেটওয়ে',
+    href: '/admin/sms',
+    icon: MessageSquareCode,
+    descriptionEn: 'Configure SMS API, SMTP mail gateway, OTP modes and auto triggers',
+    descriptionBn: 'এসএমএস গেটওয়ে, মেইল গেটওয়ে, ওটিপি মোড এবং অটোমেটিক নোটিফিকেশন',
+    category: 'system',
+  },
+  {
+    key: 'partners',
+    labelEn: 'Merchant & API Partners',
+    labelBn: 'মার্চেন্ট ও এপিআই পার্টনার্স',
+    href: '/admin/partners',
+    icon: Globe,
+    descriptionEn: 'Manage external merchant apps, API credentials, Webhooks and SDK integration',
+    descriptionBn: 'এক্সটার্নাল মার্চেন্ট অ্যাপ, এপিআই কি, ওয়েবহুক ও এসডিকে ইন্টিগ্রেশন ম্যানেজমেন্ট',
+    category: 'system',
+  },
+  {
+    key: 'admin_docs',
+    labelEn: 'API & Operations Manual',
+    labelBn: 'এপিআই ও অপারেশন গাইড',
+    href: '/admin/docs',
+    icon: BookOpen,
+    descriptionEn: 'Step-by-step developer integration manuals & workload engine instructions',
+    descriptionBn: 'পার্টনার এপিআই ইন্টিগ্রেশন ও মাল্টি-স্টাফ অপারেশনাল নির্দেশিকা',
+    category: 'system',
+  },
+  {
+    key: 'employees',
+    labelEn: 'Employees & Staff',
+    labelBn: 'কর্মচারী ও স্টাফ',
+    href: '/admin/employees',
+    icon: UserCheck,
+    descriptionEn: 'Super Admin: Manage employee access, roles and permissions',
+    descriptionBn: 'সুপার অ্যাডমিন: কর্মচারীদের পারমিশন ও এক্সেস কন্ট্রোল',
+    superAdminOnly: true,
+    category: 'system',
+  },
+];
+
+/**
+ * Returns all permission modules eligible for employee assignment.
+ * Excludes superAdminOnly modules like 'employees'.
+ */
+export function getAssignablePermissions(): AdminMenuItem[] {
+  return adminMenuRegistry.filter((item) => !item.superAdminOnly);
+}
+

@@ -1,0 +1,192 @@
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import {
+  LayoutDashboard,
+  User,
+  Search,
+  MessageSquare,
+  Package,
+  PlusCircle,
+  ArrowLeftRight,
+  Wallet,
+  Coins,
+  ShieldAlert,
+  Settings,
+  CreditCard,
+  LogOut,
+  ShieldCheck,
+  ShoppingBag,
+  ArrowRight,
+  Sun,
+  Moon,
+  Globe,
+  ExternalLink,
+  BookOpen,
+  Smartphone,
+  Download,
+} from 'lucide-react';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useLanguage } from '@/context/LanguageContext';
+import { useTheme } from '@/context/ThemeContext';
+import { usePwa } from '@/context/PwaContext';
+import { getImageUrl } from '@/lib/imageUtils';
+
+export const DashboardSidebar = () => {
+  const pathname = usePathname();
+  const { user, logout } = useAuthStore();
+  const { lang, toggleLang, t } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
+  const { installApp, isInstalled } = usePwa();
+
+  const links = [
+    { href: '/dashboard', label: lang === 'bn' ? 'ওভারভিউ' : 'Overview', icon: LayoutDashboard },
+    { href: '/dashboard/wallet', label: lang === 'bn' ? 'ওয়ালেট ও লেজার' : 'Wallet & Ledger', icon: Wallet },
+    { href: '/dashboard/chat', label: lang === 'bn' ? 'মেসেজ ও লাইভ চ্যাট' : 'Live Chat & Deals', icon: MessageSquare },
+    { href: '/dashboard/transactions', label: lang === 'bn' ? 'লেনদেন ইতিহাস' : 'My Transactions', icon: ArrowLeftRight },
+    { href: '/dashboard/products', label: lang === 'bn' ? 'আমার প্রোডাক্টসমূহ' : 'My Products', icon: Package },
+    { href: '/dashboard/products/new', label: lang === 'bn' ? 'প্রোডাক্ট আপলোড' : 'Upload Product', icon: PlusCircle },
+    { href: '/dashboard/bids', label: lang === 'bn' ? 'আমার বিডসমূহ' : 'My Bids', icon: Coins },
+    { href: '/dashboard/disputes', label: lang === 'bn' ? 'ডিসপ্যুট / কল অ্যাডমিন' : 'Disputes', icon: ShieldAlert },
+    { href: '/guides', label: lang === 'bn' ? 'গাইডস ও টিউটোরিয়াল' : 'Guides & Tutorials', icon: BookOpen },
+    { href: '/users', label: lang === 'bn' ? 'ইউজার খুঁজুন' : 'Search Users', icon: Search },
+    { href: '/dashboard/settings', label: lang === 'bn' ? 'অ্যাকাউন্ট সেটিংস' : 'Account Settings', icon: Settings },
+  ];
+
+  return (
+    <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between p-4 h-full min-h-screen">
+      <div>
+        {/* Brand Logo */}
+        <div className="flex items-center justify-between pb-4 mb-3 border-b border-slate-100 dark:border-slate-800">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-sky-600 flex items-center justify-center text-white font-black shadow-sm">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <span className="text-base font-black text-slate-900 dark:text-white">
+              Safnex<span className="text-sky-500">BD</span>
+            </span>
+          </Link>
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-50 dark:bg-sky-950 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800">
+            DASHBOARD
+          </span>
+        </div>
+
+        {/* Back to Public Marketplace Action */}
+        <Link
+          href="/shop"
+          className="w-full mb-3 px-3 py-2 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex items-center justify-between text-xs font-bold transition group"
+        >
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="w-4 h-4 text-sky-500 group-hover:scale-110 transition" />
+            <span>{lang === 'bn' ? 'শপ পেজে যান (SHOP)' : 'Visit SHOP'}</span>
+          </div>
+          <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+        </Link>
+
+        {/* User Profile Card */}
+        {user && (
+          <div className="p-3 mb-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-3">
+            {user.avatarUrl ? (
+              <img
+                src={getImageUrl(user.avatarUrl)}
+                alt={user.firstName}
+                className="w-10 h-10 rounded-full object-cover border border-sky-500/30 flex-shrink-0"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-sky-600 text-white font-bold flex items-center justify-center flex-shrink-0">
+                {user.firstName.charAt(0)}
+              </div>
+            )}
+            <div className="overflow-hidden flex-1">
+              <div className="font-semibold text-xs text-slate-900 dark:text-slate-100 truncate">
+                {user.firstName} {user.lastName}
+              </div>
+              <div className="text-[11px] font-mono text-sky-600 dark:text-sky-400 font-semibold truncate">
+                {user.uniqueUserId}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation Links */}
+        <nav className="space-y-1">
+          {links.map((link) => {
+            const Icon = link.icon;
+            const isActive = pathname === link.href;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  isActive
+                    ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 font-bold border border-sky-200 dark:border-sky-800'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'
+                }`}
+              >
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                <span>{link.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* App Install Button in Dashboard Sidebar */}
+      <div className="pt-2">
+        <button
+          type="button"
+          onClick={installApp}
+          className="w-full mb-2 p-2 rounded-2xl bg-gradient-to-r from-sky-500/10 to-indigo-500/10 hover:from-sky-500/20 hover:to-indigo-500/20 border border-sky-500/25 flex items-center justify-between text-left transition group shadow-xs"
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-xl bg-sky-600 text-white flex items-center justify-center group-hover:scale-105 transition shadow-xs">
+              <Smartphone className="w-3.5 h-3.5" />
+            </div>
+            <div>
+              <div className="text-[11px] font-bold text-slate-900 dark:text-white leading-tight">
+                {isInstalled ? (lang === 'bn' ? '✓ অ্যাপ ইনস্টলড' : '✓ App Installed') : (lang === 'bn' ? 'অ্যাপ ইনস্টল করুন' : 'Install App')}
+              </div>
+              <div className="text-[9px] text-slate-400">
+                {isInstalled ? (lang === 'bn' ? 'অফিসিয়াল PWA' : 'Official PWA') : (lang === 'bn' ? '১-ট্যাপে ব্যবহারের জন্য' : 'For 1-tap access')}
+              </div>
+            </div>
+          </div>
+          <Download className="w-3.5 h-3.5 text-sky-500 group-hover:translate-y-0.5 transition shrink-0" />
+        </button>
+      </div>
+
+      {/* Footer Controls: Language, Theme & Logout */}
+      <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+        <div className="flex items-center justify-between px-1">
+          {/* Language Switch */}
+          <button
+            onClick={toggleLang}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition"
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span>{lang === 'bn' ? 'বাংলা' : 'EN'}</span>
+          </button>
+
+          {/* Theme Switch */}
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition"
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+          </button>
+        </div>
+
+        {/* Logout button */}
+        <button
+          onClick={logout}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition text-left"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>{t('logout')}</span>
+        </button>
+      </div>
+    </aside>
+  );
+};
