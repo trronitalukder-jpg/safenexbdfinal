@@ -34,6 +34,14 @@ import {
   Users,
   GitFork,
   Workflow,
+  Zap,
+  Database,
+  Trash2,
+  HardDrive,
+  Cpu,
+  Gauge,
+  AlertTriangle,
+  Flame,
 } from 'lucide-react';
 
 const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -72,7 +80,7 @@ export default function AdminSettingsPage() {
   const { lang } = useLanguage();
   const { refreshSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<
-    'general' | 'seo' | 'tracking' | 'localization' | 'footer' | 'system' | 'withdrawal' | 'operations'
+    'general' | 'seo' | 'tracking' | 'localization' | 'footer' | 'system' | 'withdrawal' | 'operations' | 'performance'
   >('general');
 
   const [loading, setLoading] = useState(true);
@@ -81,6 +89,12 @@ export default function AdminSettingsPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [showCapiToken, setShowCapiToken] = useState(false);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
+
+  // Maintenance & Database Health state
+  const [maintenanceStats, setMaintenanceStats] = useState<any>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [cleaningAction, setCleaningAction] = useState<string | null>(null);
+  const [cleanupMessage, setCleanupMessage] = useState('');
 
   // Settings State
   const [settings, setSettings] = useState<any>({
@@ -179,6 +193,23 @@ export default function AdminSettingsPage() {
       slaWarningMinutes: 15,
       slaBreachMinutes: 30,
     },
+    performance: {
+      maxImageSizeMb: 2,
+      enableClientCompression: true,
+      compressionQuality: 80,
+      maxChatAttachmentsPerMsg: 4,
+      maxLoginAttemptsBeforeLockout: 5,
+      lockoutDurationMinutes: 15,
+      otpCooldownSeconds: 60,
+      maxDailyOtpPerUser: 5,
+      maxDailyWithdrawRequests: 5,
+      maxDailyRechargeRequests: 10,
+      defaultPageSize: 20,
+      maxPageSize: 50,
+      chatHistoryInitialLimit: 30,
+      autoCleanExpiredOtpDays: 30,
+      autoCleanAuditLogsDays: 180,
+    },
   });
 
   const fetchSettings = async () => {
@@ -197,6 +228,7 @@ export default function AdminSettingsPage() {
           system: { ...prev.system, ...(data.system || {}) },
           withdrawal: { ...prev.withdrawal, ...(data.withdrawal || {}) },
           operations: { ...prev.operations, ...(data.operations || {}) },
+          performance: { ...prev.performance, ...(data.performance || {}) },
         }));
       }
     } catch (err: any) {
@@ -211,9 +243,90 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const fetchMaintenanceStats = async () => {
+    setLoadingStats(true);
+    try {
+      const res: any = await api.get('/settings/maintenance/stats');
+      const data = res?.data !== undefined ? res.data : res;
+      setMaintenanceStats(data);
+    } catch (err) {
+      console.error('Failed to load maintenance stats:', err);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
   useEffect(() => {
     fetchSettings();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'performance') {
+      fetchMaintenanceStats();
+    }
+  }, [activeTab]);
+
+  const handleCleanExpiredOtps = async () => {
+    if (!confirm(lang === 'bn' ? 'আপনি কি সকল এক্সপায়ার্ড ওটিপি রেকর্ড মুছে ফেলতে চান?' : 'Are you sure you want to clean all expired OTPs?')) return;
+    setCleaningAction('otps');
+    setCleanupMessage('');
+    try {
+      const res: any = await api.post('/settings/maintenance/clean-otps', {
+        days: Number(settings.performance?.autoCleanExpiredOtpDays) || 7,
+      });
+      const data = res?.data !== undefined ? res.data : res;
+      setCleanupMessage(
+        lang === 'bn'
+          ? `সফলভাবে ${data.deletedCount || 0}টি এক্সপায়ার্ড ওটিপি রেকর্ড ক্লিন করা হয়েছে!`
+          : `Successfully cleaned ${data.deletedCount || 0} expired OTP records!`
+      );
+      fetchMaintenanceStats();
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Failed to clean OTPs');
+    } finally {
+      setCleaningAction(null);
+    }
+  };
+
+  const handleCleanAuditLogs = async () => {
+    if (!confirm(lang === 'bn' ? 'আপনি কি পুরনো সিস্টেম অডিট লগ মুছে ফেলতে চান? (আর্থিক লেনদেন ছাড়া)' : 'Are you sure you want to clean old non-financial audit logs?')) return;
+    setCleaningAction('audit');
+    setCleanupMessage('');
+    try {
+      const res: any = await api.post('/settings/maintenance/clean-audit-logs', {
+        days: Number(settings.performance?.autoCleanAuditLogsDays) || 180,
+      });
+      const data = res?.data !== undefined ? res.data : res;
+      setCleanupMessage(
+        lang === 'bn'
+          ? `সফলভাবে ${data.deletedCount || 0}টি পুরনো সিস্টেম লগ ক্লিন করা হয়েছে!`
+          : `Successfully cleaned ${data.deletedCount || 0} old system logs!`
+      );
+      fetchMaintenanceStats();
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Failed to clean audit logs');
+    } finally {
+      setCleaningAction(null);
+    }
+  };
+
+  const handleFlushServerLogs = async () => {
+    if (!confirm(lang === 'bn' ? 'সার্ভার লগ ফ্লাশ করতে চান?' : 'Do you want to flush server logs?')) return;
+    setCleaningAction('logs');
+    setCleanupMessage('');
+    try {
+      await api.post('/settings/maintenance/flush-logs', {});
+      setCleanupMessage(
+        lang === 'bn'
+          ? 'সার্ভার লগ ফাইল সফলভাবে ফ্লাশ ও পরিষ্কার করা হয়েছে!'
+          : 'Server log files successfully flushed!'
+      );
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Failed to flush logs');
+    } finally {
+      setCleaningAction(null);
+    }
+  };
 
   const handleSave = async (categoryToSave?: string) => {
     setSaving(true);
@@ -239,6 +352,8 @@ export default function AdminSettingsPage() {
           footer: { ...prev.footer, ...(data.footer || {}) },
           system: { ...prev.system, ...(data.system || {}) },
           withdrawal: { ...prev.withdrawal, ...(data.withdrawal || {}) },
+          operations: { ...prev.operations, ...(data.operations || {}) },
+          performance: { ...prev.performance, ...(data.performance || {}) },
         }));
       }
 
@@ -339,6 +454,12 @@ export default function AdminSettingsPage() {
       label: lang === 'bn' ? 'ওয়ার্কলোড ও স্টাফ' : 'Operations & Workload',
       icon: Users,
       desc: lang === 'bn' ? 'অটো-বণ্টন, ক্লেইম কিউ, এসকেলেশন ও SLA' : 'Auto-distribution, claim queue, reassignment & SLA',
+    },
+    {
+      id: 'performance' as const,
+      label: lang === 'bn' ? 'স্পিড ও লিমিট কন্ট্রোল' : 'Speed & Limits Control',
+      icon: Zap,
+      desc: lang === 'bn' ? 'ইমেজ কম্প্রেশন, এপিআই/ওটিপি রেট লিমিট ও ডাটা ক্লিনআপ' : 'Image compression, rate limits, OTP limits & cleanup',
     },
   ];
 
@@ -2451,6 +2572,617 @@ export default function AdminSettingsPage() {
                     }
                     className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white"
                   />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 9. SPEED, RATE LIMITS & MAINTENANCE CONTROL TAB                           */}
+      {/* ========================================================================= */}
+      {activeTab === 'performance' && (
+        <div className="space-y-6 animate-in fade-in">
+          {/* Header Card */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="p-3 rounded-2xl bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                <Zap className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>{lang === 'bn' ? 'স্পিড, রেট লিমিট ও সিস্টেম মেইনটেন্যান্স' : 'Speed, Limits & System Maintenance'}</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                    Performance Engine
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  {lang === 'bn'
+                    ? 'ওয়েবসাইট সবসময় দ্রুত রাখা, ইমেজ কম্প্রেশন, ব্যবহারকারীদের রিকোয়েস্ট লিমিট এবং ডাটাবেজ স্বাস্থ্য পরিচালনা করুন।'
+                    : 'Configure image compression, user rate limits, pagination constraints and 1-click database maintenance.'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => handleSave('performance')}
+              disabled={saving}
+              className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs shadow-md shadow-amber-600/20 flex items-center justify-center gap-2 transition shrink-0"
+            >
+              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              <span>{lang === 'bn' ? 'সেটিংস সংরক্ষণ করুন' : 'Save Limits'}</span>
+            </button>
+          </div>
+
+          {/* Cleanup Success / Alert Message */}
+          {cleanupMessage && (
+            <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{cleanupMessage}</span>
+            </div>
+          )}
+
+          {/* Section 1: Image & Media Upload Limits */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4">
+            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <UploadCloud className="w-4 h-4 text-amber-500" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                {lang === 'bn' ? '১. ছবি ও ফাইল আপলোড নিয়ন্ত্রণ (Image & Media Limits)' : '1. Image & Media Upload Limits'}
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Max Image Size */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'সর্বোচ্চ ইমেজ সাইজ (MB)' : 'Max Image Size (MB)'}
+                </label>
+                <select
+                  value={settings.performance?.maxImageSizeMb ?? 2}
+                  onChange={(e) =>
+                    setSettings((p: any) => ({
+                      ...p,
+                      performance: {
+                        ...p.performance,
+                        maxImageSizeMb: Number(e.target.value) || 2,
+                      },
+                    }))
+                  }
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
+                >
+                  <option value={1}>1 MB ({lang === 'bn' ? 'সুপার ফাস্ট' : 'Super Fast'})</option>
+                  <option value={2}>2 MB ({lang === 'bn' ? 'সুপারিশকৃত / ডিফল্ট' : 'Recommended'})</option>
+                  <option value={3}>3 MB</option>
+                  <option value={5}>5 MB</option>
+                  <option value={10}>10 MB</option>
+                </select>
+                <p className="text-[10px] text-slate-400">
+                  {lang === 'bn' ? 'বড় ছবি সার্ভার স্লো করে, ২ MB রাখা উত্তম।' : 'Prevents bandwidth bloat.'}
+                </p>
+              </div>
+
+              {/* Client-side Auto Compression */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'ব্রাউজারে অটো-কম্প্রেশন' : 'Auto Browser Compression'}
+                </label>
+                <div className="flex items-center gap-3 pt-1">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settings.performance?.enableClientCompression !== false}
+                      onChange={(e) =>
+                        setSettings((p: any) => ({
+                          ...p,
+                          performance: {
+                            ...p.performance,
+                            enableClientCompression: e.target.checked,
+                          },
+                        }))
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-amber-600"></div>
+                  </label>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {settings.performance?.enableClientCompression !== false
+                      ? (lang === 'bn' ? 'সক্রিয় (Active)' : 'Enabled')
+                      : (lang === 'bn' ? 'নিষ্ক্রিয় (Disabled)' : 'Disabled')}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400">
+                  {lang === 'bn' ? '১০-১৫ MB ছবি স্বয়ংক্রিয়ভাবে ৫০-৮০ KB-তে নামিয়ে আনবে।' : 'Compresses huge phone photos.'}
+                </p>
+              </div>
+
+              {/* Compression Quality */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'কম্প্রেশন কোয়ালিটি (%)' : 'Compression Quality (%)'}
+                </label>
+                <input
+                  type="number"
+                  min={50}
+                  max={100}
+                  value={settings.performance?.compressionQuality ?? 80}
+                  onChange={(e) =>
+                    setSettings((p: any) => ({
+                      ...p,
+                      performance: {
+                        ...p.performance,
+                        compressionQuality: Math.min(100, Math.max(50, parseInt(e.target.value) || 80)),
+                      },
+                    }))
+                  }
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white"
+                />
+                <p className="text-[10px] text-slate-400">
+                  {lang === 'bn' ? 'ডিফল্ট: ৮০% (ছবি স্পষ্ট ও হালকা থাকে)' : 'Default: 80%'}
+                </p>
+              </div>
+
+              {/* Max Chat Attachments */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'প্রতি চ্যাটে সর্বোচ্চ ফাইল সংখ্যা' : 'Max Chat Files / Message'}
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={settings.performance?.maxChatAttachmentsPerMsg ?? 4}
+                  onChange={(e) =>
+                    setSettings((p: any) => ({
+                      ...p,
+                      performance: {
+                        ...p.performance,
+                        maxChatAttachmentsPerMsg: parseInt(e.target.value) || 4,
+                      },
+                    }))
+                  }
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white"
+                />
+                <p className="text-[10px] text-slate-400">
+                  {lang === 'bn' ? 'এক মেসেজে একসাথে সর্বোচ্চ কতটি ছবি/ফাইল পাঠানো যাবে।' : 'Chat attachment throttle.'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Security & User Rate Limits */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4">
+            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <ShieldCheck className="w-4 h-4 text-amber-500" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                {lang === 'bn' ? '২. সিকিউরিটি ও ইউজার রিকোয়েস্ট লিমিট (Rate Limits)' : '2. Security & User Rate Limits'}
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Max Login Attempts */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'লগইনে ভুল পাসওয়ার্ড লিমিট' : 'Max Failed Logins Before Lockout'}
+                </label>
+                <input
+                  type="number"
+                  min={3}
+                  max={20}
+                  value={settings.performance?.maxLoginAttemptsBeforeLockout ?? 5}
+                  onChange={(e) =>
+                    setSettings((p: any) => ({
+                      ...p,
+                      performance: {
+                        ...p.performance,
+                        maxLoginAttemptsBeforeLockout: parseInt(e.target.value) || 5,
+                      },
+                    }))
+                  }
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white"
+                />
+                <p className="text-[10px] text-slate-400">
+                  {lang === 'bn' ? 'কয়বার ভুল পাসওয়ার্ড দিলে অ্যাকাউন্ট সাময়িক লক হবে (ডিফল্ট: ৫)' : 'Brute-force protection.'}
+                </p>
+              </div>
+
+              {/* Lockout Duration */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'লকআউট সময়কাল (মিনিট)' : 'Lockout Duration (Minutes)'}
+                </label>
+                <input
+                  type="number"
+                  min={5}
+                  max={120}
+                  value={settings.performance?.lockoutDurationMinutes ?? 15}
+                  onChange={(e) =>
+                    setSettings((p: any) => ({
+                      ...p,
+                      performance: {
+                        ...p.performance,
+                        lockoutDurationMinutes: parseInt(e.target.value) || 15,
+                      },
+                    }))
+                  }
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white"
+                />
+                <p className="text-[10px] text-slate-400">
+                  {lang === 'bn' ? 'লক হওয়ার পর কতক্ষণ অপেক্ষা করতে হবে (ডিফল্ট: ১৫ মিনিট)' : 'Lockout freeze window.'}
+                </p>
+              </div>
+
+              {/* OTP Cooldown Seconds */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'ওটিপি পুনরায় পাঠানোর বিরতি (সেকেন্ড)' : 'OTP Resend Cooldown (Seconds)'}
+                </label>
+                <input
+                  type="number"
+                  min={30}
+                  max={300}
+                  value={settings.performance?.otpCooldownSeconds ?? 60}
+                  onChange={(e) =>
+                    setSettings((p: any) => ({
+                      ...p,
+                      performance: {
+                        ...p.performance,
+                        otpCooldownSeconds: parseInt(e.target.value) || 60,
+                      },
+                    }))
+                  }
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white"
+                />
+                <p className="text-[10px] text-slate-400">
+                  {lang === 'bn' ? 'এক ওটিপি চাওয়ার পর পরের ওটিপির বিরতি (ডিফল্ট: ৬০ সেকেন্ড)' : 'Prevents SMS flooding.'}
+                </p>
+              </div>
+
+              {/* Max Daily OTPs */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'দৈনিক সর্বোচ্চ ওটিপি প্রতি ইউজার' : 'Max Daily OTP / User'}
+                </label>
+                <input
+                  type="number"
+                  min={3}
+                  max={20}
+                  value={settings.performance?.maxDailyOtpPerUser ?? 5}
+                  onChange={(e) =>
+                    setSettings((p: any) => ({
+                      ...p,
+                      performance: {
+                        ...p.performance,
+                        maxDailyOtpPerUser: parseInt(e.target.value) || 5,
+                      },
+                    }))
+                  }
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white"
+                />
+                <p className="text-[10px] text-slate-400">
+                  {lang === 'bn' ? '২৪ ঘণ্টায় একজন ইউজার সর্বোচ্চ কয়টি ওটিপি পাবে (ডিফল্ট: ৫)' : 'SMS bill control.'}
+                </p>
+              </div>
+
+              {/* Max Daily Withdraw Requests */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'দৈনিক সর্বোচ্চ উইথড্র রিকোয়েস্ট' : 'Max Daily Withdrawals / User'}
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={settings.performance?.maxDailyWithdrawRequests ?? 5}
+                  onChange={(e) =>
+                    setSettings((p: any) => ({
+                      ...p,
+                      performance: {
+                        ...p.performance,
+                        maxDailyWithdrawRequests: parseInt(e.target.value) || 5,
+                      },
+                    }))
+                  }
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white"
+                />
+                <p className="text-[10px] text-slate-400">
+                  {lang === 'bn' ? 'একজন ইউজার দিনে সর্বোচ্চ কয়টি উইথড্র দিতে পারবে।' : 'Prevents withdrawal spam.'}
+                </p>
+              </div>
+
+              {/* Max Daily Recharge Requests */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'দৈনিক সর্বোচ্চ রিচার্জ রিকোয়েস্ট' : 'Max Daily Recharges / User'}
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={settings.performance?.maxDailyRechargeRequests ?? 10}
+                  onChange={(e) =>
+                    setSettings((p: any) => ({
+                      ...p,
+                      performance: {
+                        ...p.performance,
+                        maxDailyRechargeRequests: parseInt(e.target.value) || 10,
+                      },
+                    }))
+                  }
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white"
+                />
+                <p className="text-[10px] text-slate-400">
+                  {lang === 'bn' ? 'একজন ইউজার দিনে সর্বোচ্চ কয়টি রিচার্জ দিতে পারবে।' : 'Prevents recharge spam.'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Pagination & Query Speed Tuning */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4">
+            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <Gauge className="w-4 h-4 text-amber-500" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                {lang === 'bn' ? '৩. পেজিনেশন ও কুয়েরি স্পিড নিয়ন্ত্রণ (Query & Display Limits)' : '3. Pagination & Query Limits'}
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Default Page Size */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'ডিফল্ট পেজ সাইজ (প্রতি পেজে আইটেম)' : 'Default Page Size (Items/Page)'}
+                </label>
+                <select
+                  value={settings.performance?.defaultPageSize ?? 20}
+                  onChange={(e) =>
+                    setSettings((p: any) => ({
+                      ...p,
+                      performance: {
+                        ...p.performance,
+                        defaultPageSize: Number(e.target.value) || 20,
+                      },
+                    }))
+                  }
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
+                >
+                  <option value={10}>10 {lang === 'bn' ? 'টি (খুব হালকা)' : 'Items (Light)'}</option>
+                  <option value={20}>20 {lang === 'bn' ? 'টি (আদর্শ / ডিফল্ট)' : 'Items (Optimal)'}</option>
+                  <option value={30}>30 {lang === 'bn' ? 'টি' : 'Items'}</option>
+                  <option value={50}>50 {lang === 'bn' ? 'টি' : 'Items'}</option>
+                </select>
+                <p className="text-[10px] text-slate-400">
+                  {lang === 'bn' ? 'শপ, প্রোডাক্ট ও ট্রানজ্যাকশন লিস্টে লোড হওয়ার সংখ্যা।' : 'Items loaded per page request.'}
+                </p>
+              </div>
+
+              {/* Max Page Size */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'সর্বোচ্চ অনুমোদিত পেজ সাইজ' : 'Max Allowed Page Size'}
+                </label>
+                <select
+                  value={settings.performance?.maxPageSize ?? 50}
+                  onChange={(e) =>
+                    setSettings((p: any) => ({
+                      ...p,
+                      performance: {
+                        ...p.performance,
+                        maxPageSize: Number(e.target.value) || 50,
+                      },
+                    }))
+                  }
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
+                >
+                  <option value={30}>30 {lang === 'bn' ? 'টি' : 'Items'}</option>
+                  <option value={50}>50 {lang === 'bn' ? 'টি (ডিফল্ট)' : 'Items'}</option>
+                  <option value={100}>100 {lang === 'bn' ? 'টি' : 'Items'}</option>
+                </select>
+                <p className="text-[10px] text-slate-400">
+                  {lang === 'bn' ? 'কোনো ইউজার এপিআই দিয়ে এর বেশি আইটেম একবারে টানতে পারবে না।' : 'Hard cap on API query limit.'}
+                </p>
+              </div>
+
+              {/* Chat Initial Messages */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'চ্যাটে প্রাথমিক মেসেজ লোড সংখ্যা' : 'Initial Chat Messages Loaded'}
+                </label>
+                <select
+                  value={settings.performance?.chatHistoryInitialLimit ?? 30}
+                  onChange={(e) =>
+                    setSettings((p: any) => ({
+                      ...p,
+                      performance: {
+                        ...p.performance,
+                        chatHistoryInitialLimit: Number(e.target.value) || 30,
+                      },
+                    }))
+                  }
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
+                >
+                  <option value={20}>20 {lang === 'bn' ? 'টি' : 'Messages'}</option>
+                  <option value={30}>30 {lang === 'bn' ? 'টি (সুপারিশকৃত)' : 'Messages (Optimal)'}</option>
+                  <option value={50}>50 {lang === 'bn' ? 'টি' : 'Messages'}</option>
+                </select>
+                <p className="text-[10px] text-slate-400">
+                  {lang === 'bn' ? 'ইনবক্স দ্রুত খোলার জন্য প্রাথমিক লোড সংখ্যা (স্ক্রল করলে পুরনো মেসেজ আসবে)।' : 'Faster chat opening.'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Database Health & 1-Click Maintenance Center */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-emerald-500" />
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  {lang === 'bn' ? '৪. ডাটাবেজ স্বাস্থ্য ও ওয়ান-ক্লিক ক্লিনআপ সেন্টার (Maintenance Center)' : '4. Database Health & 1-Click Cleanup Center'}
+                </h3>
+              </div>
+              <button
+                onClick={fetchMaintenanceStats}
+                disabled={loadingStats}
+                className="text-xs text-slate-500 hover:text-amber-500 flex items-center gap-1 transition"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingStats ? 'animate-spin' : ''}`} />
+                <span>{lang === 'bn' ? 'রিফ্রেশ ডাটা' : 'Refresh'}</span>
+              </button>
+            </div>
+
+            {/* Live Stats Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Financial Records Card */}
+              <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                    {lang === 'bn' ? 'আর্থিক লেজার ও লেনদেন' : 'Financial Records'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-600 text-white">
+                    {lang === 'bn' ? 'আজীবন সুরক্ষিত' : 'Protected'}
+                  </span>
+                </div>
+                <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
+                  {maintenanceStats ? (maintenanceStats.totalLedgers + maintenanceStats.totalTransactions).toLocaleString() : '...'}
+                </div>
+                <p className="text-[10px] text-emerald-700 dark:text-emerald-400">
+                  {lang === 'bn'
+                    ? 'ব্যালেন্স হিসেব ও অডিটের স্বার্থে এই ডাটা কখনো ডিলিট করা হবে না।'
+                    : 'Permanently preserved for audit & balance ledger.'}
+                </p>
+              </div>
+
+              {/* Expired OTPs Card */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {lang === 'bn' ? 'মেয়াদোত্তীর্ণ ওটিপি (Expired)' : 'Expired OTP Logs'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                    {lang === 'bn' ? 'ক্লিনযোগ্য' : 'Cleanable'}
+                  </span>
+                </div>
+                <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
+                  {maintenanceStats ? maintenanceStats.expiredOtps.toLocaleString() : '...'}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCleanExpiredOtps}
+                  disabled={cleaningAction === 'otps' || !maintenanceStats?.expiredOtps}
+                  className="w-full py-1.5 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white font-bold text-[10px] transition flex items-center justify-center gap-1.5"
+                >
+                  {cleaningAction === 'otps' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                  <span>{lang === 'bn' ? 'এখনই ক্লিন করুন' : 'Clean Now'}</span>
+                </button>
+              </div>
+
+              {/* System Audit Logs Card */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {lang === 'bn' ? 'সিস্টেম অডিট লগ' : 'System Audit Logs'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/20 text-blue-600 dark:text-blue-400">
+                    {lang === 'bn' ? 'অডিট রেকর্ড' : 'Audit'}
+                  </span>
+                </div>
+                <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
+                  {maintenanceStats ? maintenanceStats.totalAuditLogs.toLocaleString() : '...'}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCleanAuditLogs}
+                  disabled={cleaningAction === 'audit' || !maintenanceStats?.totalAuditLogs}
+                  className="w-full py-1.5 px-3 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 disabled:opacity-40 text-slate-800 dark:text-slate-200 font-bold text-[10px] transition flex items-center justify-center gap-1.5"
+                >
+                  {cleaningAction === 'audit' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                  <span>{lang === 'bn' ? '১৮০ দিনের পুরনো মুছুন' : 'Clean 180d+ Old'}</span>
+                </button>
+              </div>
+
+              {/* Server Memory & PM2 Logs Card */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {lang === 'bn' ? 'সার্ভার ও লগ ফাইল' : 'Server & Memory'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                    Live
+                  </span>
+                </div>
+                <div className="text-xs font-mono font-bold text-slate-900 dark:text-white space-y-0.5">
+                  <div>RAM Heap: {maintenanceStats ? `${maintenanceStats.memoryUsageMb} MB` : '...'}</div>
+                  <div className="text-[10px] text-slate-400">
+                    Uptime: {maintenanceStats ? `${Math.floor(maintenanceStats.serverUptimeSeconds / 3600)}h ${Math.floor((maintenanceStats.serverUptimeSeconds % 3600) / 60)}m` : '...'}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleFlushServerLogs}
+                  disabled={cleaningAction === 'logs'}
+                  className="w-full py-1.5 px-3 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white font-bold text-[10px] transition flex items-center justify-center gap-1.5"
+                >
+                  {cleaningAction === 'logs' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Flame className="w-3 h-3" />}
+                  <span>{lang === 'bn' ? 'সার্ভার লগ ফ্লাশ করুন' : 'Flush PM2 Logs'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Retention Policies */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+              <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-3">
+                {lang === 'bn' ? 'স্বয়ংক্রিয় ডাটা রিটেনশন পলিসি (Auto-Clean Policies):' : 'Automated Data Retention Policies:'}
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {lang === 'bn' ? 'এক্সপায়ার্ড ওটিপি স্বয়ংক্রিয় ডিলিট (দিন)' : 'Auto Clean Expired OTPs (Days)'}
+                  </label>
+                  <input
+                    type="number"
+                    min={3}
+                    max={90}
+                    value={settings.performance?.autoCleanExpiredOtpDays ?? 30}
+                    onChange={(e) =>
+                      setSettings((p: any) => ({
+                        ...p,
+                        performance: {
+                          ...p.performance,
+                          autoCleanExpiredOtpDays: parseInt(e.target.value) || 30,
+                        },
+                      }))
+                    }
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white"
+                  />
+                  <p className="text-[10px] text-slate-400">
+                    {lang === 'bn' ? 'কতদিনের পুরনো এক্সপায়ার্ড ওটিপি মুছে ফেলা হবে (ডিফল্ট: ৩০ দিন)' : 'Auto-purge interval.'}
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {lang === 'bn' ? 'সাধারণ অডিট লগ স্বয়ংক্রিয় ডিলিট (দিন)' : 'Auto Clean Audit Logs (Days)'}
+                  </label>
+                  <input
+                    type="number"
+                    min={30}
+                    max={730}
+                    value={settings.performance?.autoCleanAuditLogsDays ?? 180}
+                    onChange={(e) =>
+                      setSettings((p: any) => ({
+                        ...p,
+                        performance: {
+                          ...p.performance,
+                          autoCleanAuditLogsDays: parseInt(e.target.value) || 180,
+                        },
+                      }))
+                    }
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white"
+                  />
+                  <p className="text-[10px] text-slate-400">
+                    {lang === 'bn' ? 'কতদিনের পুরনো সাধারণ অডিট লগ মুছে ফেলা হবে (আর্থিক লেনদেন ছাড়া, ডিফল্ট: ১৮০ দিন)' : 'Non-financial audit retention.'}
+                  </p>
                 </div>
               </div>
             </div>

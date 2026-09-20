@@ -97,6 +97,23 @@ export const DEFAULT_SETTINGS = {
     slaWarningMinutes: 15,
     slaBreachMinutes: 30,
   },
+  performance: {
+    maxImageSizeMb: 2,
+    enableClientCompression: true,
+    compressionQuality: 80,
+    maxChatAttachmentsPerMsg: 4,
+    maxLoginAttemptsBeforeLockout: 5,
+    lockoutDurationMinutes: 15,
+    otpCooldownSeconds: 60,
+    maxDailyOtpPerUser: 5,
+    maxDailyWithdrawRequests: 5,
+    maxDailyRechargeRequests: 10,
+    defaultPageSize: 20,
+    maxPageSize: 50,
+    chatHistoryInitialLimit: 30,
+    autoCleanExpiredOtpDays: 30,
+    autoCleanAuditLogsDays: 180,
+  },
 };
 
 export const DEFAULT_NOTIFICATION_SETTINGS = {
@@ -140,6 +157,7 @@ const CATEGORY_KEYS: Record<string, string> = {
   system: 'WEBSITE_SYSTEM',
   withdrawal: 'WEBSITE_WITHDRAWAL',
   operations: 'WEBSITE_OPERATIONS',
+  performance: 'WEBSITE_PERFORMANCE',
 };
 
 @Injectable()
@@ -177,6 +195,10 @@ export class SettingsService {
         ...DEFAULT_SETTINGS.operations,
         ...(settingsMap.get(CATEGORY_KEYS.operations) || {}),
       },
+      performance: {
+        ...DEFAULT_SETTINGS.performance,
+        ...(settingsMap.get(CATEGORY_KEYS.performance) || {}),
+      },
     };
   }
 
@@ -212,6 +234,14 @@ export class SettingsService {
       operations: {
         workloadDistributionEnabled: all.operations.workloadDistributionEnabled,
         distributionAlgorithm: all.operations.distributionAlgorithm,
+      },
+      performance: {
+        maxImageSizeMb: all.performance.maxImageSizeMb,
+        enableClientCompression: all.performance.enableClientCompression,
+        compressionQuality: all.performance.compressionQuality,
+        maxChatAttachmentsPerMsg: all.performance.maxChatAttachmentsPerMsg,
+        otpCooldownSeconds: all.performance.otpCooldownSeconds,
+        defaultPageSize: all.performance.defaultPageSize,
       },
     };
   }
@@ -425,5 +455,107 @@ export class SettingsService {
     } catch {
       return true;
     }
+  }
+
+  /**
+   * Get maintenance & database health statistics for Admin Dashboard
+   */
+  async getMaintenanceStats() {
+    const now = new Date();
+    const [
+      totalUsers,
+      totalTransactions,
+      totalLedgers,
+      totalOtps,
+      expiredOtps,
+      totalAuditLogs,
+    ] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.transaction.count(),
+      this.prisma.walletLedger.count(),
+      this.prisma.otp.count(),
+      this.prisma.otp.count({
+        where: {
+          OR: [
+            { expiresAt: { lt: now } },
+            { isUsed: true },
+          ],
+        },
+      }),
+      this.prisma.auditLog.count(),
+    ]);
+
+    return {
+      totalUsers,
+      totalTransactions,
+      totalLedgers,
+      totalOtps,
+      expiredOtps,
+      totalAuditLogs,
+      serverUptimeSeconds: Math.floor(process.uptime()),
+      memoryUsageMb: Math.round((process.memoryUsage().heapUsed / 1024 / 1024) * 100) / 100,
+    };
+  }
+
+  /**
+   * Clean expired OTP records
+   */
+  async cleanExpiredOtps(days = 7, adminId?: string) {
+    const threshold = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const result = await this.prisma.otp.deleteMany({
+      where: {
+        OR: [
+          { expiresAt: { lt: new Date() }, createdAt: { lt: threshold } },
+          { isUsed: true, createdAt: { lt: threshold } },
+        ],
+      },
+    });
+
+    if (adminId) {
+      await this.prisma.auditLog
+        .create({
+          data: {
+            actorId: adminId,
+            actorType: 'ADMIN',
+            action: 'MAINTENANCE_CLEAN_EXPIRED_OTPS',
+            targetEntity: 'Otp',
+            targetId: 'ALL_EXPIRED',
+            reason: `Cleaned ${result.count} expired OTP records older than ${days} days`,
+          },
+        })
+        .catch(() => {});
+    }
+
+    return { deletedCount: result.count };
+  }
+
+  /**
+   * Clean old non-financial audit logs
+   */
+  async cleanOldAuditLogs(days = 180, adminId?: string) {
+    const threshold = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const result = await this.prisma.auditLog.deleteMany({
+      where: {
+        createdAt: { lt: threshold },
+        action: { notIn: ['WITHDRAWAL_CONFIRM', 'RECHARGE_APPROVE', 'DISPUTE_ACTION', 'WALLET_ADJUSTMENT'] },
+      },
+    });
+
+    if (adminId) {
+      await this.prisma.auditLog
+        .create({
+          data: {
+            actorId: adminId,
+            actorType: 'ADMIN',
+            action: 'MAINTENANCE_CLEAN_AUDIT_LOGS',
+            targetEntity: 'AuditLog',
+            targetId: 'OLD_LOGS',
+            reason: `Cleaned ${result.count} old system audit logs older than ${days} days`,
+          },
+        })
+        .catch(() => {});
+    }
+
+    return { deletedCount: result.count };
   }
 }

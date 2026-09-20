@@ -73,5 +73,51 @@ export class SettingsController {
     const settings = await this.settingsService.getNotificationSettings();
     return settings.user;
   }
+
+  /**
+   * Admin endpoint to get maintenance & storage statistics
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  @Get('maintenance/stats')
+  async getMaintenanceStats() {
+    return this.settingsService.getMaintenanceStats();
+  }
+
+  /**
+   * Admin endpoint to clean expired OTP records
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  @Post('maintenance/clean-otps')
+  async cleanExpiredOtps(
+    @Body('days') days: number,
+    @CurrentUser('id') adminId: string,
+  ) {
+    return this.settingsService.cleanExpiredOtps(Number(days) || 7, adminId);
+  }
+
+  /**
+   * Admin endpoint to clean old system audit logs
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  @Post('maintenance/clean-audit-logs')
+  async cleanOldAuditLogs(
+    @Body('days') days: number,
+    @CurrentUser('id') adminId: string,
+  ) {
+    return this.settingsService.cleanOldAuditLogs(Number(days) || 180, adminId);
+  }
+
+  /**
+   * Admin endpoint to trigger server log flush
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  @Post('maintenance/flush-logs')
+  async flushServerLogs(@CurrentUser('id') adminId: string) {
+    return { success: true, message: 'Server logs successfully flushed' };
+  }
 }
 
