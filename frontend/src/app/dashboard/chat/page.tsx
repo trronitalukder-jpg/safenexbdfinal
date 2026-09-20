@@ -649,10 +649,20 @@ function MessengerChatContent() {
 
       if (fileToSend) {
         setUploadingAttachment(true);
-        const base64Data = await fileToBase64(fileToSend);
+        let base64Data: string;
+        let fileName = fileToSend.name;
+
+        if (fileToSend.type.startsWith('image/')) {
+          const compressed = await compressImage(fileToSend, 1200, 1200, 0.85);
+          base64Data = compressed.base64Data;
+          fileName = compressed.fileName;
+        } else {
+          base64Data = await fileToBase64(fileToSend);
+        }
+
         const uploadRes: any = await api.post('/uploads', {
           base64Data,
-          fileName: fileToSend.name,
+          fileName,
           folder: 'chat',
         });
         const uploadData = unwrap(uploadRes);
@@ -2401,9 +2411,14 @@ function MessengerChatContent() {
                               {/* Text content */}
                               {msg.content && <p className="whitespace-pre-wrap break-words">{msg.content}</p>}
 
-                              {/* Image Attachments */}
+                              {/* Attachments */}
                               {msg.attachments?.map((att: any, idx: number) => {
-                                if (att.fileType === 'IMAGE') {
+                                const isImage =
+                                  att.fileType === 'IMAGE' ||
+                                  att.fileType?.toLowerCase() === 'image' ||
+                                  /\.(jpg|jpeg|png|webp|gif)$/i.test(att.fileUrl || '');
+
+                                if (isImage) {
                                   return (
                                     <div key={idx} className="mt-2 rounded-xl overflow-hidden cursor-pointer">
                                       <img

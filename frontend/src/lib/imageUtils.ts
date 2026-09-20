@@ -80,14 +80,17 @@ export async function compressImage(
 
 /**
  * Resolves an image URL to an absolute path pointing to the backend static file server,
- * or returns the URL directly if already absolute or base64.
+ * or returns the URL directly if already absolute, base64, or blob.
  */
 export function getImageUrl(url?: string | null): string {
   if (!url) return '';
-  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) {
     return url;
   }
   const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return cleanPath;
+  }
   const backendBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:5000';
   return `${backendBase}${cleanPath}`;
 }
