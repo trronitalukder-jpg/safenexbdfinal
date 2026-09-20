@@ -27,6 +27,50 @@ model User {
   postalCode      String?   @db.VarChar(30)
   businessName    String?   @db.VarChar(200)
   businessType    String?   @db.VarChar(100)
+  
+  // Additional Basic Profile
+  additionalPhone String?   @db.VarChar(30)
+  gender          String?   @db.VarChar(20) // MALE, FEMALE, OTHER
+
+  // Address & Location
+  division        String?   @db.VarChar(100)
+  district        String?   @db.VarChar(100)
+  upazila         String?   @db.VarChar(100)
+
+  // Education & Profession
+  profession      String?   @db.VarChar(150)
+  company         String?   @db.VarChar(200)
+  jobTitle        String?   @db.VarChar(150)
+  institution     String?   @db.VarChar(200)
+  department      String?   @db.VarChar(150)
+  educationLevel  String?   @db.VarChar(100)
+  graduationYear  String?   @db.VarChar(20)
+
+  // About / Personal
+  headline        String?   @db.VarChar(200)
+  bio             String?   @db.Text
+  skills          String?   @db.Text
+  interests       String?   @db.Text
+  languages       String?   @db.VarChar(255)
+  website         String?   @db.VarChar(255)
+  socialLinks     Json?
+
+  // Account, Privacy & Security
+  twoFactorEnabled  Boolean @default(false)
+  profileVisibility String  @default("PUBLIC") @db.VarChar(20) // PUBLIC, PRIVATE
+  whoCanMessage     String  @default("EVERYONE") @db.VarChar(20) // EVERYONE, VERIFIED, NO_ONE
+  showPhone         Boolean @default(false)
+  showEmail         Boolean @default(false)
+  timezone          String? @default("Asia/Dhaka") @db.VarChar(50)
+
+  // Verification (NID)
+  nidNumber         String?   @db.VarChar(50)
+  nidName           String?   @db.VarChar(150)
+  nidFrontUrl       String?   @db.VarChar(500)
+  nidBackUrl        String?   @db.VarChar(500)
+  verificationStatus String   @default("UNVERIFIED") @db.VarChar(30) // UNVERIFIED, PENDING, VERIFIED, REJECTED
+  verifiedAt        DateTime?
+
   isActive        Boolean   @default(true)
   isVerified      Boolean   @default(false)
   isEmployee      Boolean   @default(false)

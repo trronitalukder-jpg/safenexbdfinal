@@ -16,7 +16,101 @@ export class UpdateProfileDto {
 
   @IsString()
   @IsOptional()
+  phone?: string;
+
+  @IsString()
+  @IsOptional()
+  additionalPhone?: string;
+
+  @IsOptional()
+  dateOfBirth?: string | Date;
+
+  @IsString()
+  @IsOptional()
+  gender?: string;
+
+  @IsString()
+  @IsOptional()
+  country?: string;
+
+  @IsString()
+  @IsOptional()
+  division?: string;
+
+  @IsString()
+  @IsOptional()
+  district?: string;
+
+  @IsString()
+  @IsOptional()
+  upazila?: string;
+
+  @IsString()
+  @IsOptional()
+  city?: string;
+
+  @IsString()
+  @IsOptional()
   address?: string;
+
+  @IsString()
+  @IsOptional()
+  postalCode?: string;
+
+  @IsString()
+  @IsOptional()
+  profession?: string;
+
+  @IsString()
+  @IsOptional()
+  company?: string;
+
+  @IsString()
+  @IsOptional()
+  jobTitle?: string;
+
+  @IsString()
+  @IsOptional()
+  institution?: string;
+
+  @IsString()
+  @IsOptional()
+  department?: string;
+
+  @IsString()
+  @IsOptional()
+  educationLevel?: string;
+
+  @IsString()
+  @IsOptional()
+  graduationYear?: string;
+
+  @IsString()
+  @IsOptional()
+  headline?: string;
+
+  @IsString()
+  @IsOptional()
+  bio?: string;
+
+  @IsString()
+  @IsOptional()
+  skills?: string;
+
+  @IsString()
+  @IsOptional()
+  interests?: string;
+
+  @IsString()
+  @IsOptional()
+  languages?: string;
+
+  @IsString()
+  @IsOptional()
+  website?: string;
+
+  @IsOptional()
+  socialLinks?: any;
 
   @IsString()
   @IsOptional()
@@ -25,6 +119,43 @@ export class UpdateProfileDto {
   @IsString()
   @IsOptional()
   businessType?: string;
+
+  @IsOptional()
+  twoFactorEnabled?: boolean;
+
+  @IsString()
+  @IsOptional()
+  profileVisibility?: string;
+
+  @IsString()
+  @IsOptional()
+  whoCanMessage?: string;
+
+  @IsOptional()
+  showPhone?: boolean;
+
+  @IsOptional()
+  showEmail?: boolean;
+
+  @IsString()
+  @IsOptional()
+  timezone?: string;
+
+  @IsString()
+  @IsOptional()
+  nidNumber?: string;
+
+  @IsString()
+  @IsOptional()
+  nidName?: string;
+
+  @IsString()
+  @IsOptional()
+  nidFrontUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  nidBackUrl?: string;
 }
 
 export class CreatePaymentAccountDto {

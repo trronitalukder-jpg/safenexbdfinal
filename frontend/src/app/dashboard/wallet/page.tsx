@@ -193,7 +193,7 @@ function WalletContent() {
   const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
   const [selectedSavedAccountId, setSelectedSavedAccountId] = useState<string | null>(null);
 
-  const handleSelectSavedAccount = (acc: any) => {
+  const handleSelectSavedAccount = (acc: any, methodsList?: any[]) => {
     setSelectedSavedAccountId(acc.id);
     setWithdrawError('');
     const isBk = acc.methodType === 'BKASH';
@@ -201,7 +201,8 @@ function WalletContent() {
     const isRk = acc.methodType === 'ROCKET';
     const isBank = acc.methodType === 'BANK';
 
-    const matchMethod = withdrawalMethods.find((w) => {
+    const listToSearch = (methodsList && methodsList.length > 0) ? methodsList : withdrawalMethods;
+    const matchMethod = listToSearch.find((w) => {
       const code = (w.code || '').toUpperCase();
       const name = (w.name || '').toUpperCase();
       if (isBk) return code.includes('BKASH') || name.includes('BKASH');
@@ -263,6 +264,12 @@ function WalletContent() {
         setCommissionSettings(commData);
         const accountsList = Array.isArray(savedAccounts) ? savedAccounts : savedAccounts?.data || [];
         setPaymentAccounts(accountsList);
+
+        // Auto-select default payment account if available
+        const defaultAccount = accountsList.find((a: any) => a.isDefault) || accountsList[0];
+        if (defaultAccount) {
+          handleSelectSavedAccount(defaultAccount, withList);
+        }
 
         // Fetch public security modes (Withdrawal OTP status)
         api
@@ -546,18 +553,22 @@ function WalletContent() {
       return;
     }
 
-    // First-time / Unsaved Destination: Prompt for password ("নিরাপত্তার জন্য আপনার পাসওয়ার্ড দিন")
+    // First-time / Unsaved Destination: Require password inline without breaking modal
     if (paymentAccounts.length === 0) {
-      setPendingWithdrawPayload(payload);
-      setWithdrawPassword('');
-      setShowWithdrawPassword(false);
-      setWithdrawPasswordError('');
-      setShowWithdrawModal(false);
-      setShowWithdrawPasswordModal(true);
-      return;
+      if (!withdrawPassword.trim()) {
+        setWithdrawError(
+          lang === 'bn'
+            ? 'নিরাপত্তার জন্য আপনার অ্যাকাউন্টের পাসওয়ার্ড দিন'
+            : 'Enter your account password for security'
+        );
+        return;
+      }
+      payload.password = withdrawPassword.trim();
+    } else if (withdrawPassword.trim()) {
+      payload.password = withdrawPassword.trim();
     }
 
-    // Direct submit when OTP is OFF & User already has saved account
+    // Direct submit when OTP is OFF
     setIsSubmittingWithdraw(true);
     try {
       await api.post('/wallet/withdraw', payload);
@@ -1922,6 +1933,46 @@ function WalletContent() {
                         : 'Ensure accurate phone number; payout will be sent directly here'}
                     </p>
                   </div>
+                </div>
+              )}
+
+              {/* Inline Password Field for First-time / Unsaved Destination */}
+              {paymentAccounts.length === 0 && (
+                <div className="space-y-1.5 p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-slate-700 dark:text-slate-300 text-xs flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                      <span>{lang === 'bn' ? 'অ্যাকাউন্টের পাসওয়ার্ড *' : 'Account Password *'}</span>
+                    </label>
+                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
+                      {lang === 'bn' ? 'নিরাপত্তা যাচাই' : 'Security Check'}
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showWithdrawPassword ? 'text' : 'password'}
+                      required
+                      value={withdrawPassword}
+                      onChange={(e) => {
+                        setWithdrawPassword(e.target.value);
+                        if (withdrawError) setWithdrawError('');
+                      }}
+                      placeholder={lang === 'bn' ? 'আপনার অ্যাকাউন্টের পাসওয়ার্ড দিন' : 'Enter account password'}
+                      className="w-full pr-10 pl-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowWithdrawPassword(!showWithdrawPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      {showWithdrawPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                    {lang === 'bn'
+                      ? 'নিরাপত্তার জন্য প্রথম উত্তোলনে পাসওয়ার্ড প্রয়োজন। অ্যাকাউন্টটি ভবিষ্যতে ব্যবহারের জন্য স্বয়ংক্রিয়ভাবে সেভ হবে।'
+                      : 'First-time withdrawal requires your password for security. Account will be auto-saved for 1-click payouts.'}
+                  </p>
                 </div>
               )}
 

@@ -31,6 +31,13 @@ import {
   Laptop,
   CheckSquare,
   Pencil,
+  MapPin,
+  GraduationCap,
+  Briefcase,
+  Share2,
+  Award,
+  ExternalLink,
+  FileText,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguage } from '@/context/LanguageContext';
@@ -71,7 +78,18 @@ const BANGLADESH_BANKS = [
   'OTHER',
 ];
 
-type TabType = 'profile' | 'password' | 'payouts' | 'preferences' | 'security';
+const BD_DIVISIONS = [
+  'Dhaka',
+  'Chattogram',
+  'Rajshahi',
+  'Khulna',
+  'Barishal',
+  'Sylhet',
+  'Rangpur',
+  'Mymensingh',
+];
+
+type TabType = 'profile' | 'address' | 'profession' | 'about' | 'verification' | 'payouts' | 'security' | 'preferences';
 
 function SettingsContent() {
   const searchParams = useSearchParams();
@@ -85,10 +103,15 @@ function SettingsContent() {
 
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
 
-  // Profile Form state
+  // 1. Basic Profile Form state
   const [firstName, setFirstName] = useState(user?.firstName || '');
   const [lastName, setLastName] = useState(user?.lastName || '');
-  const [address, setAddress] = useState(user?.address || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [additionalPhone, setAdditionalPhone] = useState(user?.additionalPhone || '');
+  const [dateOfBirth, setDateOfBirth] = useState(
+    user?.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split('T')[0] : ''
+  );
+  const [gender, setGender] = useState(user?.gender || '');
   const [businessName, setBusinessName] = useState(user?.businessName || '');
   const [businessType, setBusinessType] = useState(user?.businessType || '');
   const [profileMessage, setProfileMessage] = useState('');
@@ -100,6 +123,70 @@ function SettingsContent() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarMessage, setAvatarMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 2. Address & Location state
+  const [country, setCountry] = useState(user?.country || 'Bangladesh');
+  const [division, setDivision] = useState(user?.division || '');
+  const [district, setDistrict] = useState(user?.district || '');
+  const [upazila, setUpazila] = useState(user?.upazila || '');
+  const [city, setCity] = useState(user?.city || '');
+  const [address, setAddress] = useState(user?.address || '');
+  const [postalCode, setPostalCode] = useState(user?.postalCode || '');
+  const [addressMessage, setAddressMessage] = useState('');
+  const [addressError, setAddressError] = useState('');
+  const [savingAddress, setSavingAddress] = useState(false);
+
+  // 3. Education & Profession state
+  const [profession, setProfession] = useState(user?.profession || '');
+  const [company, setCompany] = useState(user?.company || '');
+  const [jobTitle, setJobTitle] = useState(user?.jobTitle || '');
+  const [institution, setInstitution] = useState(user?.institution || '');
+  const [department, setDepartment] = useState(user?.department || '');
+  const [educationLevel, setEducationLevel] = useState(user?.educationLevel || '');
+  const [graduationYear, setGraduationYear] = useState(user?.graduationYear || '');
+  const [educationMessage, setEducationMessage] = useState('');
+  const [educationError, setEducationError] = useState('');
+  const [savingEducation, setSavingEducation] = useState(false);
+
+  // 4. About / Personal state
+  const [headline, setHeadline] = useState(user?.headline || '');
+  const [bio, setBio] = useState(user?.bio || '');
+  const [skills, setSkills] = useState(user?.skills || '');
+  const [interests, setInterests] = useState(user?.interests || '');
+  const [languages, setLanguages] = useState(user?.languages || '');
+  const [website, setWebsite] = useState(user?.website || '');
+  const [socialFacebook, setSocialFacebook] = useState(user?.socialLinks?.facebook || '');
+  const [socialTwitter, setSocialTwitter] = useState(user?.socialLinks?.twitter || '');
+  const [socialTelegram, setSocialTelegram] = useState(user?.socialLinks?.telegram || '');
+  const [socialWhatsapp, setSocialWhatsapp] = useState(user?.socialLinks?.whatsapp || '');
+  const [socialLinkedin, setSocialLinkedin] = useState(user?.socialLinks?.linkedin || '');
+  const [socialGithub, setSocialGithub] = useState(user?.socialLinks?.github || '');
+  const [socialYoutube, setSocialYoutube] = useState(user?.socialLinks?.youtube || '');
+  const [aboutMessage, setAboutMessage] = useState('');
+  const [aboutError, setAboutError] = useState('');
+  const [savingAbout, setSavingAbout] = useState(false);
+
+  // 5. Verification (NID) state
+  const [nidName, setNidName] = useState(user?.nidName || '');
+  const [nidNumber, setNidNumber] = useState(user?.nidNumber || '');
+  const [nidFrontUrl, setNidFrontUrl] = useState(user?.nidFrontUrl || '');
+  const [nidBackUrl, setNidBackUrl] = useState(user?.nidBackUrl || '');
+  const [isUploadingNidFront, setIsUploadingNidFront] = useState(false);
+  const [isUploadingNidBack, setIsUploadingNidBack] = useState(false);
+  const [nidMessage, setNidMessage] = useState('');
+  const [nidError, setNidError] = useState('');
+  const [submittingNid, setSubmittingNid] = useState(false);
+
+  // 6. Privacy & Preferences state
+  const [profileVisibility, setProfileVisibility] = useState(user?.profileVisibility || 'PUBLIC');
+  const [whoCanMessage, setWhoCanMessage] = useState(user?.whoCanMessage || 'EVERYONE');
+  const [showPhone, setShowPhone] = useState(Boolean(user?.showPhone));
+  const [showEmail, setShowEmail] = useState(Boolean(user?.showEmail));
+  const [timezone, setTimezone] = useState(user?.timezone || 'Asia/Dhaka');
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(Boolean(user?.twoFactorEnabled));
+  const [privacyMessage, setPrivacyMessage] = useState('');
+  const [privacyError, setPrivacyError] = useState('');
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
 
   // Password Change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -243,7 +330,47 @@ function SettingsContent() {
     if (user) {
       setFirstName(user.firstName || '');
       setLastName(user.lastName || '');
+      setPhone(user.phone || '');
+      setAdditionalPhone(user.additionalPhone || '');
+      setDateOfBirth(user.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split('T')[0] : '');
+      setGender(user.gender || '');
+      setCountry(user.country || 'Bangladesh');
+      setDivision(user.division || '');
+      setDistrict(user.district || '');
+      setUpazila(user.upazila || '');
+      setCity(user.city || '');
       setAddress(user.address || '');
+      setPostalCode(user.postalCode || '');
+      setProfession(user.profession || '');
+      setCompany(user.company || '');
+      setJobTitle(user.jobTitle || '');
+      setInstitution(user.institution || '');
+      setDepartment(user.department || '');
+      setEducationLevel(user.educationLevel || '');
+      setGraduationYear(user.graduationYear || '');
+      setHeadline(user.headline || '');
+      setBio(user.bio || '');
+      setSkills(user.skills || '');
+      setInterests(user.interests || '');
+      setLanguages(user.languages || '');
+      setWebsite(user.website || '');
+      setSocialFacebook(user.socialLinks?.facebook || '');
+      setSocialTwitter(user.socialLinks?.twitter || '');
+      setSocialTelegram(user.socialLinks?.telegram || '');
+      setSocialWhatsapp(user.socialLinks?.whatsapp || '');
+      setSocialLinkedin(user.socialLinks?.linkedin || '');
+      setSocialGithub(user.socialLinks?.github || '');
+      setSocialYoutube(user.socialLinks?.youtube || '');
+      setNidName(user.nidName || '');
+      setNidNumber(user.nidNumber || '');
+      setNidFrontUrl(user.nidFrontUrl || '');
+      setNidBackUrl(user.nidBackUrl || '');
+      setProfileVisibility(user.profileVisibility || 'PUBLIC');
+      setWhoCanMessage(user.whoCanMessage || 'EVERYONE');
+      setShowPhone(Boolean(user.showPhone));
+      setShowEmail(Boolean(user.showEmail));
+      setTimezone(user.timezone || 'Asia/Dhaka');
+      setTwoFactorEnabled(Boolean(user.twoFactorEnabled));
       setBusinessName(user.businessName || '');
       setBusinessType(user.businessType || '');
       setAvatarPreview(user.avatarUrl || null);
@@ -328,8 +455,8 @@ function SettingsContent() {
     }
   };
 
-  // Update Profile
-  const handleUpdateProfile = async (e: React.FormEvent) => {
+  // 1. Update Basic Profile
+  const handleUpdateBasicProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setProfileMessage('');
     setProfileError('');
@@ -337,19 +464,217 @@ function SettingsContent() {
 
     try {
       await api.patch('/users/profile', {
-        firstName,
-        lastName,
-        address,
-        businessName,
-        businessType,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phone: phone.trim() || undefined,
+        additionalPhone: additionalPhone.trim() || undefined,
+        dateOfBirth: dateOfBirth || undefined,
+        gender: gender || undefined,
+        businessName: businessName.trim() || undefined,
+        businessType: businessType.trim() || undefined,
       });
       await refreshMe();
-      setProfileMessage(lang === 'bn' ? 'প্রোফাইল তথ্য সফলভাবে সংরক্ষিত হয়েছে!' : 'Profile information updated successfully!');
+      setProfileMessage(lang === 'bn' ? 'বেসিক প্রোফাইল সফলভাবে সংরক্ষিত হয়েছে!' : 'Basic profile saved successfully!');
       setTimeout(() => setProfileMessage(''), 4000);
     } catch (err: any) {
       setProfileError(err.response?.data?.message || err.message || 'Update failed');
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  // 2. Update Address & Location
+  const handleUpdateAddress = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddressMessage('');
+    setAddressError('');
+    setSavingAddress(true);
+
+    try {
+      await api.patch('/users/profile', {
+        country: country.trim() || 'Bangladesh',
+        division: division.trim() || undefined,
+        district: district.trim() || undefined,
+        upazila: upazila.trim() || undefined,
+        city: city.trim() || undefined,
+        address: address.trim() || undefined,
+        postalCode: postalCode.trim() || undefined,
+      });
+      await refreshMe();
+      setAddressMessage(lang === 'bn' ? 'ঠিকানা ও অবস্থান সফলভাবে সংরক্ষিত হয়েছে!' : 'Address details saved successfully!');
+      setTimeout(() => setAddressMessage(''), 4000);
+    } catch (err: any) {
+      setAddressError(err.response?.data?.message || err.message || 'Update failed');
+    } finally {
+      setSavingAddress(false);
+    }
+  };
+
+  // 3. Update Education & Profession
+  const handleUpdateEducation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEducationMessage('');
+    setEducationError('');
+    setSavingEducation(true);
+
+    try {
+      await api.patch('/users/profile', {
+        profession: profession.trim() || undefined,
+        company: company.trim() || undefined,
+        jobTitle: jobTitle.trim() || undefined,
+        institution: institution.trim() || undefined,
+        department: department.trim() || undefined,
+        educationLevel: educationLevel.trim() || undefined,
+        graduationYear: graduationYear.trim() || undefined,
+      });
+      await refreshMe();
+      setEducationMessage(lang === 'bn' ? 'শিক্ষা ও পেশাগত তথ্য সংরক্ষিত হয়েছে!' : 'Education & profession saved successfully!');
+      setTimeout(() => setEducationMessage(''), 4000);
+    } catch (err: any) {
+      setEducationError(err.response?.data?.message || err.message || 'Update failed');
+    } finally {
+      setSavingEducation(false);
+    }
+  };
+
+  // 4. Update About & Personal
+  const handleUpdateAbout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAboutMessage('');
+    setAboutError('');
+    setSavingAbout(true);
+
+    try {
+      const links = {
+        facebook: socialFacebook.trim() || undefined,
+        twitter: socialTwitter.trim() || undefined,
+        telegram: socialTelegram.trim() || undefined,
+        whatsapp: socialWhatsapp.trim() || undefined,
+        linkedin: socialLinkedin.trim() || undefined,
+        github: socialGithub.trim() || undefined,
+        youtube: socialYoutube.trim() || undefined,
+      };
+
+      await api.patch('/users/profile', {
+        headline: headline.trim() || undefined,
+        bio: bio.trim() || undefined,
+        skills: skills.trim() || undefined,
+        interests: interests.trim() || undefined,
+        languages: languages.trim() || undefined,
+        website: website.trim() || undefined,
+        socialLinks: links,
+      });
+      await refreshMe();
+      setAboutMessage(lang === 'bn' ? 'ব্যক্তিগত ও সোশ্যাল লিংক সংরক্ষিত হয়েছে!' : 'About and social links saved successfully!');
+      setTimeout(() => setAboutMessage(''), 4000);
+    } catch (err: any) {
+      setAboutError(err.response?.data?.message || err.message || 'Update failed');
+    } finally {
+      setSavingAbout(false);
+    }
+  };
+
+  // 5. Update Verification / NID
+  const handleUpdateNid = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNidMessage('');
+    setNidError('');
+
+    if (!nidName.trim()) {
+      setNidError(lang === 'bn' ? 'এনআইডি কার্ডে থাকা নাম লিখুন' : 'Enter name as on NID card');
+      return;
+    }
+    if (!nidNumber.trim()) {
+      setNidError(lang === 'bn' ? 'এনআইডি নম্বর দিন' : 'Enter NID number');
+      return;
+    }
+    if (!nidFrontUrl) {
+      setNidError(lang === 'bn' ? 'এনআইডি কার্ডের সামনের অংশের ছবি আপলোড করুন' : 'Upload NID front photo');
+      return;
+    }
+
+    setSubmittingNid(true);
+    try {
+      await api.patch('/users/profile', {
+        nidName: nidName.trim(),
+        nidNumber: nidNumber.trim(),
+        nidFrontUrl,
+        nidBackUrl: nidBackUrl || undefined,
+      });
+      await refreshMe();
+      setNidMessage(
+        lang === 'bn'
+          ? 'এনআইডি তথ্য ও ছবি সফলভাবে জমা দেওয়া হয়েছে! এডমিন যাচাই করে আপনার অ্যাকাউন্ট ভেরিফাই করবেন।'
+          : 'NID details submitted! Admin will review and verify your account.'
+      );
+      setTimeout(() => setNidMessage(''), 5000);
+    } catch (err: any) {
+      setNidError(err.response?.data?.message || err.message || 'Submission failed');
+    } finally {
+      setSubmittingNid(false);
+    }
+  };
+
+  // 6. Update Privacy & Preferences
+  const handleUpdatePrivacy = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPrivacyMessage('');
+    setPrivacyError('');
+    setSavingPrivacy(true);
+
+    try {
+      await api.patch('/users/profile', {
+        profileVisibility,
+        whoCanMessage,
+        showPhone,
+        showEmail,
+        timezone,
+        twoFactorEnabled,
+      });
+      await refreshMe();
+      setPrivacyMessage(lang === 'bn' ? 'প্রাইভেসি ও সিকিউরিটি সেটিংস সংরক্ষিত হয়েছে!' : 'Privacy and security settings saved!');
+      setTimeout(() => setPrivacyMessage(''), 4000);
+    } catch (err: any) {
+      setPrivacyError(err.response?.data?.message || err.message || 'Save failed');
+    } finally {
+      setSavingPrivacy(false);
+    }
+  };
+
+  // NID Image Upload helpers
+  const handleNidFrontUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingNidFront(true);
+    setNidError('');
+    try {
+      const { base64Data, fileName } = await compressImage(file, 1200, 1200, 0.85);
+      const res: any = await api.post('/uploads', { base64Data, fileName, folder: 'nid' });
+      const url = res?.fileUrl || res?.data?.fileUrl || res?.url;
+      if (url) setNidFrontUrl(url);
+    } catch (err: any) {
+      setNidError(lang === 'bn' ? 'এনআইডি সামনের ছবি আপলোড ব্যর্থ হয়েছে' : 'Failed to upload NID front photo');
+    } finally {
+      setIsUploadingNidFront(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleNidBackUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingNidBack(true);
+    setNidError('');
+    try {
+      const { base64Data, fileName } = await compressImage(file, 1200, 1200, 0.85);
+      const res: any = await api.post('/uploads', { base64Data, fileName, folder: 'nid' });
+      const url = res?.fileUrl || res?.data?.fileUrl || res?.url;
+      if (url) setNidBackUrl(url);
+    } catch (err: any) {
+      setNidError(lang === 'bn' ? 'এনআইডি পেছনের ছবি আপলোড ব্যর্থ হয়েছে' : 'Failed to upload NID back photo');
+    } finally {
+      setIsUploadingNidBack(false);
+      e.target.value = '';
     }
   };
 
@@ -646,87 +971,58 @@ function SettingsContent() {
 
       {/* Navigation Tabs */}
       <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 overflow-x-auto custom-scrollbar">
-        <button
-          type="button"
-          onClick={() => setActiveTab('profile')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition ${
-            activeTab === 'profile'
-              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <User className="w-4 h-4" />
-          <span>{lang === 'bn' ? 'প্রোফাইল তথ্য' : 'Profile Details'}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('password')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition ${
-            activeTab === 'password'
-              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <Lock className="w-4 h-4" />
-          <span>{lang === 'bn' ? 'পাসওয়ার্ড পরিবর্তন' : 'Change Password'}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('payouts')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition ${
-            activeTab === 'payouts'
-              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <CreditCard className="w-4 h-4" />
-          <span>{lang === 'bn' ? 'উইথড্র অ্যাকাউন্ট' : 'Saved Payouts'}</span>
-          {paymentAccounts.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-sky-100 dark:bg-sky-950 text-sky-600 dark:text-sky-300 font-extrabold">
-              {paymentAccounts.length}
-            </span>
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('preferences')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition ${
-            activeTab === 'preferences'
-              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>{lang === 'bn' ? 'পছন্দ ও ডিসপ্লে' : 'Preferences & Display'}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('security')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition ${
-            activeTab === 'security'
-              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <ShieldCheck className="w-4 h-4" />
-          <span>{lang === 'bn' ? 'নিরাপত্তা ও অ্যাক্টিভিটি' : 'Security & Activity'}</span>
-        </button>
+        {[
+          { id: 'profile', icon: User, label: lang === 'bn' ? 'বেসিক প্রোফাইল' : 'Basic Profile' },
+          { id: 'address', icon: MapPin, label: lang === 'bn' ? 'ঠিকানা ও অবস্থান' : 'Address & Location' },
+          { id: 'profession', icon: GraduationCap, label: lang === 'bn' ? 'শিক্ষা ও পেশা' : 'Education & Career' },
+          { id: 'about', icon: FileText, label: lang === 'bn' ? 'ব্যক্তিগত ও সোশ্যাল' : 'About & Social' },
+          { id: 'verification', icon: Award, label: lang === 'bn' ? 'এনআইডি ভেরিফিকেশন' : 'NID Verification', badge: user?.isVerified ? 'Verified' : user?.verificationStatus === 'PENDING' ? 'Pending' : undefined },
+          { id: 'payouts', icon: CreditCard, label: lang === 'bn' ? 'উইথড্র একাউন্ট' : 'Payout Accounts', count: paymentAccounts.length },
+          { id: 'security', icon: Lock, label: lang === 'bn' ? 'পাসওয়ার্ড ও সিকিউরিটি' : 'Security' },
+          { id: 'preferences', icon: Sparkles, label: lang === 'bn' ? 'প্রাইভেসি ও সেটিংস' : 'Privacy & Settings' },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id as TabType)}
+              className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition shrink-0 ${
+                isActive
+                  ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+              {tab.badge && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${
+                  tab.badge === 'Verified' ? 'bg-emerald-500/15 text-emerald-600' : 'bg-amber-500/15 text-amber-600'
+                }`}>
+                  {tab.badge}
+                </span>
+              )}
+              {tab.count !== undefined && tab.count > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-sky-100 dark:bg-sky-950 text-sky-600 dark:text-sky-300 font-extrabold">
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      {/* TAB 1: PROFILE DETAILS */}
+      {/* TAB 1: BASIC PROFILE */}
       {activeTab === 'profile' && (
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-6 text-xs animate-in fade-in">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <User className="w-4 h-4 text-sky-500" />
-              <span>{lang === 'bn' ? 'ব্যক্তিগত তথ্য ও প্রোফাইল ছবি' : 'Personal Details & Profile Picture'}</span>
+              <span>{lang === 'bn' ? '১. বেসিক প্রোফাইল (Basic Profile)' : '1. Basic Profile'}</span>
             </h2>
             <span className="text-[11px] text-slate-400">
-              {lang === 'bn' ? 'আপনার তথ্য ক্রেতা ও বিক্রেতারা দেখতে পাবেন' : 'Visible on public trade profiles'}
+              {lang === 'bn' ? 'আপনার মূল পরিচয় ও যোগাযোগ তথ্য' : 'Identity & Contact Info'}
             </span>
           </div>
 
@@ -751,7 +1047,6 @@ function SettingsContent() {
                 )}
               </div>
 
-              {/* Quick Camera Click Button */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -776,11 +1071,10 @@ function SettingsContent() {
 
               <p className="text-slate-500 dark:text-slate-400 text-[11px] max-w-md">
                 {lang === 'bn'
-                  ? 'একটি স্পষ্ট প্রোফাইল ছবি যুক্ত করুন যাতে ট্রেডার ও বায়াররা সহজেই আপনাকে চিনতে পারে। সমর্থিত ফরম্যাট: JPG, PNG, WebP (সর্বোচ্চ ২০MB, স্বয়ংক্রিয় কম্প্রেস)।'
-                  : 'Upload a clear profile photo to build trust with buyers and traders. Supported: JPG, PNG, WebP (Max 20MB, auto-compressed).'}
+                  ? 'একটি স্পষ্ট প্রোফাইল ছবি যুক্ত করুন যাতে ট্রেডার ও বায়াররা সহজেই আপনাকে চিনতে পারে।'
+                  : 'Upload a clear profile photo to build trust with buyers and traders.'}
               </p>
 
-              {/* Hidden file input */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -812,7 +1106,6 @@ function SettingsContent() {
                 )}
               </div>
 
-              {/* Avatar feedback */}
               {avatarMessage && (
                 <div
                   className={`p-2.5 rounded-xl text-[11px] flex items-center gap-2 mt-2 ${
@@ -828,7 +1121,6 @@ function SettingsContent() {
             </div>
           </div>
 
-          {/* Feedback messages */}
           {profileMessage && (
             <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 font-semibold flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
@@ -842,8 +1134,8 @@ function SettingsContent() {
             </div>
           )}
 
-          {/* Profile Form */}
-          <form onSubmit={handleUpdateProfile} className="space-y-4 pt-2">
+          <form onSubmit={handleUpdateBasicProfile} className="space-y-4 pt-2">
+            {/* Full Name */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
                 <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
@@ -871,41 +1163,111 @@ function SettingsContent() {
               </div>
             </div>
 
+            {/* Username / User ID & Email */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
                 <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
-                  {lang === 'bn' ? 'ফোন নম্বর (নিরাপত্তার কারণে লকড)' : 'Phone Number (Locked)'}
+                  {lang === 'bn' ? 'ইউজারনেম / ইউজার আইডি (Username / User ID)' : 'Username / User ID'}
                 </label>
-                <input
-                  type="text"
-                  disabled
-                  value={user?.phone || ''}
-                  className="w-full p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-mono opacity-80 cursor-not-allowed"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    disabled
+                    value={user?.uniqueUserId || ''}
+                    className="w-full p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-sky-600 dark:text-sky-400 font-mono font-bold opacity-90 cursor-not-allowed"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCopyUserId}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-sky-600"
+                    title="Copy User ID"
+                  >
+                    {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
-                  {lang === 'bn' ? 'ইমেইল অ্যাড্রেস' : 'Email Address'}
+                  {lang === 'bn' ? 'ইমেইল অ্যাড্রেস (Email Address)' : 'Email Address'}
                 </label>
                 <input
                   type="email"
                   disabled
                   value={user?.email || ''}
-                  className="w-full p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 opacity-80 cursor-not-allowed"
+                  className="w-full p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 opacity-80 cursor-not-allowed font-medium"
                 />
               </div>
             </div>
 
+            {/* Phone & Additional Phone */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
                 <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
-                  {lang === 'bn' ? 'ব্যবসা বা দোকানের নাম (ঐচ্ছিক)' : 'Business / Store Name (Optional)'}
+                  {lang === 'bn' ? 'ফোন নম্বর (Primary Phone)' : 'Primary Phone Number'}
+                </label>
+                <input
+                  type="text"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="01712345678"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'অতিরিক্ত ফোন নম্বর (Additional Phone)' : 'Additional Phone Number'}
+                </label>
+                <input
+                  type="text"
+                  value={additionalPhone}
+                  onChange={(e) => setAdditionalPhone(e.target.value)}
+                  placeholder="e.g. 01812345678"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Date of Birth & Gender */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'জন্ম তারিখ (Date of Birth)' : 'Date of Birth'}
+                </label>
+                <input
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'লিঙ্গ (Gender)' : 'Gender'}
+                </label>
+                <select
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                >
+                  <option value="">{lang === 'bn' ? '-- নির্বাচন করুন --' : '-- Select Gender --'}</option>
+                  <option value="MALE">{lang === 'bn' ? 'পুরুষ (Male)' : 'Male'}</option>
+                  <option value="FEMALE">{lang === 'bn' ? 'মহিলা (Female)' : 'Female'}</option>
+                  <option value="OTHER">{lang === 'bn' ? 'অন্যান্য (Other)' : 'Other'}</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Business info */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'ব্যবসা বা ব্র্যান্ডের নাম (ঐচ্ছিক)' : 'Business / Brand Name (Optional)'}
                 </label>
                 <input
                   type="text"
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
-                  placeholder="e.g. TrustTech Solutions"
+                  placeholder="e.g. CryptoKing BD"
                   className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
                 />
               </div>
@@ -928,19 +1290,6 @@ function SettingsContent() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
-                {lang === 'bn' ? 'ঠিকানা (Address)' : 'Address'}
-              </label>
-              <input
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="e.g. House 12, Road 4, Banani, Dhaka"
-                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
-              />
-            </div>
-
             <div className="pt-2">
               <button
                 type="submit"
@@ -948,169 +1297,686 @@ function SettingsContent() {
                 className="px-6 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold transition flex items-center gap-2 shadow-sm active:scale-95 disabled:opacity-50"
               >
                 {savingProfile && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                <span>{lang === 'bn' ? 'প্রোফাইল পরিবর্তন সংরক্ষণ করুন' : 'Save Profile Changes'}</span>
+                <span>{lang === 'bn' ? 'বেসিক তথ্য সংরক্ষণ করুন' : 'Save Basic Profile'}</span>
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* TAB 2: CHANGE PASSWORD */}
-      {activeTab === 'password' && (
+      {/* TAB 2: ADDRESS & LOCATION */}
+      {activeTab === 'address' && (
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-6 text-xs animate-in fade-in">
-          <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Lock className="w-4 h-4 text-sky-500" />
-              <span>{lang === 'bn' ? 'পাসওয়ার্ড পরিবর্তন করুন' : 'Change Your Password'}</span>
+              <MapPin className="w-4 h-4 text-emerald-500" />
+              <span>{lang === 'bn' ? '২. ঠিকানা ও অবস্থান (Address & Location)' : '2. Address & Location'}</span>
             </h2>
             <span className="text-[11px] text-slate-400">
-              {lang === 'bn' ? 'নিয়মিত পাসওয়ার্ড পরিবর্তন অ্যাকাউন্ট সুরক্ষিত রাখে' : 'Protects your wallet & escrow deals'}
+              {lang === 'bn' ? 'আপনার সঠিক ঠিকানা ও ভৌগোলিক তথ্য' : 'Geographical location'}
             </span>
           </div>
 
-          {passwordMessage && (
+          {addressMessage && (
             <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 font-semibold flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-              <span>{passwordMessage}</span>
+              <span>{addressMessage}</span>
             </div>
           )}
-
-          {passwordError && (
+          {addressError && (
             <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 font-semibold flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{passwordError}</span>
+              <span>{addressError}</span>
             </div>
           )}
 
-          <form onSubmit={handleChangePassword} className="space-y-4 max-w-lg">
-            {/* Current Password */}
-            <div>
-              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
-                {lang === 'bn' ? 'বর্তমান পাসওয়ার্ড (Current Password) *' : 'Current Password *'}
-              </label>
-              <div className="relative">
+          <form onSubmit={handleUpdateAddress} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'দেশ (Country)' : 'Country'}
+                </label>
                 <input
-                  type={showCurrentPassword ? 'text' : 'password'}
-                  required
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder={lang === 'bn' ? 'বর্তমান পাসওয়ার্ড দিন' : 'Enter current password'}
-                  className="w-full pr-10 pl-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  type="text"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  placeholder="Bangladesh"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'বিভাগ (Division)' : 'Division'}
+                </label>
+                <select
+                  value={division}
+                  onChange={(e) => setDivision(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 >
-                  {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                  <option value="">{lang === 'bn' ? '-- বিভাগ নির্বাচন করুন --' : '-- Select Division --'}</option>
+                  {BD_DIVISIONS.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            {/* New Password */}
-            <div>
-              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
-                {lang === 'bn' ? 'নতুন পাসওয়ার্ড (New Password) *' : 'New Password *'}
-              </label>
-              <div className="relative">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'জেলা (District)' : 'District'}
+                </label>
                 <input
-                  type={showNewPassword ? 'text' : 'password'}
-                  required
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder={lang === 'bn' ? 'কমপক্ষে ৬ অক্ষরের নতুন পাসওয়ার্ড' : 'At least 6 characters'}
-                  className="w-full pr-10 pl-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  type="text"
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                  placeholder="e.g. Dhaka, Chittagong, Sylhet"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                >
-                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
               </div>
 
-              {/* Password Strength Bar */}
-              {newPassword && (
-                <div className="mt-2 space-y-1.5 animate-in fade-in">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-slate-500">
-                      {lang === 'bn' ? 'পাসওয়ার্ড শক্তি:' : 'Password Strength:'}
-                    </span>
-                    <span className="font-bold text-slate-700 dark:text-slate-300">{pwdStrength.label}</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex gap-1">
-                    <div
-                      className={`h-full rounded-full transition-all duration-300 ${pwdStrength.color}`}
-                      style={{ width: `${(pwdStrength.score / 4) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              )}
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'উপজেলা / থানা (Upazila / Thana)' : 'Upazila / Thana'}
+                </label>
+                <input
+                  type="text"
+                  value={upazila}
+                  onChange={(e) => setUpazila(e.target.value)}
+                  placeholder="e.g. Mirpur, Gulshan, Sadar"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'এলাকা / শহর (Area / City)' : 'Area / City'}
+                </label>
+                <input
+                  type="text"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="e.g. Dhanmondi, Agrabad"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
             </div>
 
-            {/* Confirm New Password */}
-            <div>
-              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
-                {lang === 'bn' ? 'নতুন পাসওয়ার্ড পুনরায় লিখুন (Confirm Password) *' : 'Confirm New Password *'}
-              </label>
-              <div className="relative">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              <div className="sm:col-span-2">
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'সম্পূর্ণ ঠিকানা (Full Address)' : 'Full Address'}
+                </label>
                 <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder={lang === 'bn' ? 'একই পাসওয়ার্ড পুনরায় দিন' : 'Re-type new password'}
-                  className="w-full pr-10 pl-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="e.g. House #14, Road #5, Sector #3, Uttara"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                >
-                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
               </div>
 
-              {confirmPassword && newPassword !== confirmPassword && (
-                <p className="text-[11px] text-rose-500 mt-1 font-medium">
-                  {lang === 'bn' ? 'পাসওয়ার্ড দুটি মিলছে না' : 'Passwords do not match'}
-                </p>
-              )}
-            </div>
-
-            {/* Guidelines Checklist */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/60 space-y-1 text-[11px] text-slate-500">
-              <div className="font-bold text-slate-700 dark:text-slate-300 mb-1">
-                {lang === 'bn' ? 'পাসওয়ার্ড সিকিউরিটি নির্দেশিকা:' : 'Password Security Rules:'}
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Check className={`w-3 h-3 ${newPassword.length >= 6 ? 'text-emerald-500' : 'text-slate-400'}`} />
-                <span>{lang === 'bn' ? 'কমপক্ষে ৬টি ক্যারেক্টার' : 'At least 6 characters'}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Check className={`w-3 h-3 ${/[A-Z]/.test(newPassword) ? 'text-emerald-500' : 'text-slate-400'}`} />
-                <span>{lang === 'bn' ? 'কমপক্ষে একটি বড় হাতের অক্ষর (A-Z)' : 'At least one uppercase letter'}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Check className={`w-3 h-3 ${/[0-9]/.test(newPassword) ? 'text-emerald-500' : 'text-slate-400'}`} />
-                <span>{lang === 'bn' ? 'কমপক্ষে একটি সংখ্যা (0-9)' : 'At least one numeric digit'}</span>
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'পোস্টাল কোড (Postal Code)' : 'Postal Code'}
+                </label>
+                <input
+                  type="text"
+                  value={postalCode}
+                  onChange={(e) => setPostalCode(e.target.value)}
+                  placeholder="e.g. 1230"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
               </div>
             </div>
 
             <div className="pt-2">
               <button
                 type="submit"
-                disabled={passwordLoading}
-                className="px-6 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold transition flex items-center gap-2 shadow-sm active:scale-95 disabled:opacity-50"
+                disabled={savingAddress}
+                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition flex items-center gap-2 shadow-sm active:scale-95 disabled:opacity-50"
               >
-                {passwordLoading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                <span>{lang === 'bn' ? 'পাসওয়ার্ড আপডেট করুন' : 'Update Password'}</span>
+                {savingAddress && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                <span>{lang === 'bn' ? 'ঠিকানা সংরক্ষণ করুন' : 'Save Address'}</span>
               </button>
             </div>
           </form>
         </div>
       )}
+
+      {/* TAB 3: EDUCATION & PROFESSION */}
+      {activeTab === 'profession' && (
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-6 text-xs animate-in fade-in">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <GraduationCap className="w-4 h-4 text-purple-500" />
+              <span>{lang === 'bn' ? '৩. শিক্ষা ও পেশা (Education & Profession)' : '3. Education & Profession'}</span>
+            </h2>
+            <span className="text-[11px] text-slate-400">
+              {lang === 'bn' ? 'আপনার পেশা ও শিক্ষাগত যোগ্যতা' : 'Career and academic credentials'}
+            </span>
+          </div>
+
+          {educationMessage && (
+            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 font-semibold flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+              <span>{educationMessage}</span>
+            </div>
+          )}
+          {educationError && (
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{educationError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleUpdateEducation} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'পেশা (Profession)' : 'Profession'}
+                </label>
+                <input
+                  type="text"
+                  value={profession}
+                  onChange={(e) => setProfession(e.target.value)}
+                  placeholder="e.g. Freelancer, Trader, Software Engineer"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'প্রতিষ্ঠান / কোম্পানি (Company / Org)' : 'Company / Organization'}
+                </label>
+                <input
+                  type="text"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  placeholder="e.g. TechCorp BD / Self-Employed"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'পদবী (Job Title / Designation)' : 'Job Title / Designation'}
+                </label>
+                <input
+                  type="text"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  placeholder="e.g. Senior Trader / Graphic Designer"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'স্কুল / কলেজ / বিশ্ববিদ্যালয় (Institution)' : 'School / College / University'}
+                </label>
+                <input
+                  type="text"
+                  value={institution}
+                  onChange={(e) => setInstitution(e.target.value)}
+                  placeholder="e.g. University of Dhaka"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'বিভাগ / বিষয় (Department / Subject)' : 'Department / Subject'}
+                </label>
+                <input
+                  type="text"
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  placeholder="e.g. Computer Science / Business Studies"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'শিক্ষাগত যোগ্যতা (Education Level)' : 'Education Level'}
+                </label>
+                <select
+                  value={educationLevel}
+                  onChange={(e) => setEducationLevel(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                >
+                  <option value="">{lang === 'bn' ? '-- নির্বাচন করুন --' : '-- Select Level --'}</option>
+                  <option value="Secondary (SSC)">Secondary (SSC)</option>
+                  <option value="Higher Secondary (HSC)">Higher Secondary (HSC)</option>
+                  <option value="Diploma">Diploma</option>
+                  <option value="Bachelor's Degree">Bachelor's Degree (স্নাতক)</option>
+                  <option value="Master's Degree">Master's Degree (স্নাতকোত্তর)</option>
+                  <option value="Doctorate (PhD)">Doctorate (PhD)</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'পাসের বছর (Graduation Year)' : 'Graduation Year'}
+                </label>
+                <input
+                  type="text"
+                  value={graduationYear}
+                  onChange={(e) => setGraduationYear(e.target.value)}
+                  placeholder="e.g. 2024"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={savingEducation}
+                className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition flex items-center gap-2 shadow-sm active:scale-95 disabled:opacity-50"
+              >
+                {savingEducation && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                <span>{lang === 'bn' ? 'শিক্ষা ও পেশা সংরক্ষণ করুন' : 'Save Education & Profession'}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* TAB 4: ABOUT / PERSONAL */}
+      {activeTab === 'about' && (
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-6 text-xs animate-in fade-in">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <FileText className="w-4 h-4 text-sky-500" />
+              <span>{lang === 'bn' ? '৪. ব্যক্তিগত ও সোশ্যাল (About & Personal)' : '4. About & Personal'}</span>
+            </h2>
+            <span className="text-[11px] text-slate-400">
+              {lang === 'bn' ? 'আপনার বায়ো, স্কিলস এবং সোশ্যাল মিডিয়া প্রোফাইল' : 'Bio, skills, and social presence'}
+            </span>
+          </div>
+
+          {aboutMessage && (
+            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 font-semibold flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+              <span>{aboutMessage}</span>
+            </div>
+          )}
+          {aboutError && (
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{aboutError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleUpdateAbout} className="space-y-4">
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                {lang === 'bn' ? 'হেডলাইন / পদবী ট্যাগ (Headline / Title)' : 'Profile Headline'}
+              </label>
+              <input
+                type="text"
+                value={headline}
+                onChange={(e) => setHeadline(e.target.value)}
+                placeholder="e.g. Trusted Crypto Trader | Full Stack Developer | Fast Delivery"
+                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">
+                {lang === 'bn' ? 'এটি ইউজার সার্চে এবং পাবলিক প্রোফাইলে আপনার নামের নিচে দেখাবে।' : 'Displayed below your name in search results and public profile.'}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                {lang === 'bn' ? 'সংক্ষিপ্ত বায়ো (Short Bio / Description)' : 'Short Bio / Description'}
+              </label>
+              <textarea
+                rows={3}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="e.g. 5+ years of experience in P2P escrow trading. Instant releases and 24/7 fast support."
+                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none resize-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'দক্ষতাসমূহ (Skills - কমা দিয়ে লিখুন)' : 'Skills (Comma separated)'}
+                </label>
+                <input
+                  type="text"
+                  value={skills}
+                  onChange={(e) => setSkills(e.target.value)}
+                  placeholder="e.g. P2P Trading, Crypto, Next.js, SEO"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'আগ্রহ / শখ (Interests)' : 'Interests'}
+                </label>
+                <input
+                  type="text"
+                  value={interests}
+                  onChange={(e) => setInterests(e.target.value)}
+                  placeholder="e.g. Blockchain, Gaming, E-commerce"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'ভাষাসমূহ (Languages)' : 'Languages'}
+                </label>
+                <input
+                  type="text"
+                  value={languages}
+                  onChange={(e) => setLanguages(e.target.value)}
+                  placeholder="e.g. Bengali, English, Hindi"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'ওয়েবসাইট / পোর্টফোলিও (Website / Portfolio)' : 'Website / Portfolio'}
+                </label>
+                <input
+                  type="url"
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  placeholder="https://example.com"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Social Media Links */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/60 space-y-3">
+              <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <Share2 className="w-4 h-4 text-sky-500" />
+                <span>{lang === 'bn' ? 'সোশ্যাল মিডিয়া লিংকসমূহ (Social Media Links)' : 'Social Media Profiles'}</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Facebook</label>
+                  <input
+                    type="url"
+                    value={socialFacebook}
+                    onChange={(e) => setSocialFacebook(e.target.value)}
+                    placeholder="https://facebook.com/username"
+                    className="w-full p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Twitter / X</label>
+                  <input
+                    type="url"
+                    value={socialTwitter}
+                    onChange={(e) => setSocialTwitter(e.target.value)}
+                    placeholder="https://x.com/username"
+                    className="w-full p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Telegram</label>
+                  <input
+                    type="text"
+                    value={socialTelegram}
+                    onChange={(e) => setSocialTelegram(e.target.value)}
+                    placeholder="@username or https://t.me/username"
+                    className="w-full p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">WhatsApp</label>
+                  <input
+                    type="text"
+                    value={socialWhatsapp}
+                    onChange={(e) => setSocialWhatsapp(e.target.value)}
+                    placeholder="e.g. +8801712345678"
+                    className="w-full p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">LinkedIn</label>
+                  <input
+                    type="url"
+                    value={socialLinkedin}
+                    onChange={(e) => setSocialLinkedin(e.target.value)}
+                    placeholder="https://linkedin.com/in/username"
+                    className="w-full p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">GitHub</label>
+                  <input
+                    type="url"
+                    value={socialGithub}
+                    onChange={(e) => setSocialGithub(e.target.value)}
+                    placeholder="https://github.com/username"
+                    className="w-full p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={savingAbout}
+                className="px-6 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold transition flex items-center gap-2 shadow-sm active:scale-95 disabled:opacity-50"
+              >
+                {savingAbout && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                <span>{lang === 'bn' ? 'ব্যক্তিগত তথ্য সংরক্ষণ করুন' : 'Save About & Social'}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* TAB 5: VERIFICATION / NID */}
+      {activeTab === 'verification' && (
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-6 text-xs animate-in fade-in">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Award className="w-4 h-4 text-emerald-500" />
+              <span>{lang === 'bn' ? '৫. জাতীয় পরিচয়পত্র (NID) ভেরিফিকেশন' : '5. NID Verification'}</span>
+            </h2>
+            <span className="text-[11px] text-slate-400">
+              {lang === 'bn' ? 'ভেরিফাইড ব্যাজ ও আনলিমিটেড উইথড্র লিমিট পান' : 'Get verified badge & higher limits'}
+            </span>
+          </div>
+
+          {/* Verification Status Card */}
+          <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="space-y-1 text-center sm:text-left">
+              <div className="flex items-center justify-center sm:justify-start gap-2">
+                <span className="font-bold text-slate-900 dark:text-white text-sm">
+                  {lang === 'bn' ? 'বর্তমান ভেরিফিকেশন স্ট্যাটাস:' : 'Current Status:'}
+                </span>
+                {user?.isVerified ? (
+                  <span className="px-3 py-1 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-black text-xs flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>VERIFIED (ভেরিফাইড)</span>
+                  </span>
+                ) : user?.verificationStatus === 'PENDING' ? (
+                  <span className="px-3 py-1 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-black text-xs flex items-center gap-1.5">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>PENDING (যাচাই প্রক্রিয়াধীন)</span>
+                  </span>
+                ) : user?.verificationStatus === 'REJECTED' ? (
+                  <span className="px-3 py-1 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-black text-xs flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    <span>REJECTED (প্রত্যাখ্যাত)</span>
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs">
+                    UNVERIFIED (আনভেরিফাইড)
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {user?.isVerified
+                  ? (lang === 'bn' ? 'আপনার অ্যাকাউন্ট সম্পূর্ণ ভেরিফাইড। আপনি আনলিমিটেড উইথড্র ও বায়ার ট্রাস্ট পাবেন।' : 'Account is verified with verified badge and priority support.')
+                  : (lang === 'bn' ? 'জাতীয় পরিচয়পত্র (NID) সাবমিট করে অ্যাকাউন্ট ভেরিফাই করুন।' : 'Submit your NID card to get verified.')}
+              </p>
+            </div>
+
+            {user?.isVerified && (
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center border border-emerald-500/20">
+                <CheckCircle2 className="w-7 h-7" />
+              </div>
+            )}
+          </div>
+
+          {nidMessage && (
+            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 font-semibold flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+              <span>{nidMessage}</span>
+            </div>
+          )}
+          {nidError && (
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{nidError}</span>
+            </div>
+          )}
+
+          {!user?.isVerified && (
+            <form onSubmit={handleUpdateNid} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                    {lang === 'bn' ? 'এনআইডি কার্ডে থাকা নাম (NID Full Name) *' : 'Full Name (as in NID) *'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={nidName}
+                    onChange={(e) => setNidName(e.target.value)}
+                    placeholder="e.g. Md. Rahim Ahmed"
+                    className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                    {lang === 'bn' ? 'এনআইডি নম্বর (১০ বা ১৭ ডিজিট) *' : 'NID Number (10 or 17 digits) *'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={nidNumber}
+                    onChange={(e) => setNidNumber(e.target.value.replace(/\D/g, ''))}
+                    placeholder="e.g. 19901234567890123"
+                    className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Front & Back Photo Uploads */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Front Photo */}
+                <div className="p-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 text-center space-y-2">
+                  <div className="font-bold text-slate-800 dark:text-slate-200">
+                    {lang === 'bn' ? 'এনআইডি সামনের অংশ (Front Side) *' : 'NID Front Photo *'}
+                  </div>
+                  {nidFrontUrl ? (
+                    <div className="relative group rounded-xl overflow-hidden aspect-video border border-slate-200 dark:border-slate-700">
+                      <img src={getImageUrl(nidFrontUrl)} alt="NID Front" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setNidFrontUrl('')}
+                        className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white hover:bg-black"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                      <input type="file" accept="image/*" onChange={handleNidFrontUpload} className="hidden" disabled={isUploadingNidFront} />
+                      {isUploadingNidFront ? (
+                        <RefreshCw className="w-6 h-6 animate-spin text-emerald-500" />
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-slate-400 mb-1" />
+                          <span className="font-semibold text-xs text-slate-600 dark:text-slate-300">
+                            {lang === 'bn' ? 'ছবি আপলোড করুন' : 'Upload Front Image'}
+                          </span>
+                        </>
+                      )}
+                    </label>
+                  )}
+                </div>
+
+                {/* Back Photo */}
+                <div className="p-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 text-center space-y-2">
+                  <div className="font-bold text-slate-800 dark:text-slate-200">
+                    {lang === 'bn' ? 'এনআইডি পেছনের অংশ (Back Side)' : 'NID Back Photo (Optional)'}
+                  </div>
+                  {nidBackUrl ? (
+                    <div className="relative group rounded-xl overflow-hidden aspect-video border border-slate-200 dark:border-slate-700">
+                      <img src={getImageUrl(nidBackUrl)} alt="NID Back" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setNidBackUrl('')}
+                        className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white hover:bg-black"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                      <input type="file" accept="image/*" onChange={handleNidBackUpload} className="hidden" disabled={isUploadingNidBack} />
+                      {isUploadingNidBack ? (
+                        <RefreshCw className="w-6 h-6 animate-spin text-emerald-500" />
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-slate-400 mb-1" />
+                          <span className="font-semibold text-xs text-slate-600 dark:text-slate-300">
+                            {lang === 'bn' ? 'ছবি আপলোড করুন' : 'Upload Back Image'}
+                          </span>
+                        </>
+                      )}
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={submittingNid || !nidNumber || !nidFrontUrl}
+                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition flex items-center gap-2 shadow-sm active:scale-95 disabled:opacity-50"
+                >
+                  {submittingNid && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{lang === 'bn' ? 'ভেরিফিকেশন আবেদন জমা দিন' : 'Submit for Verification'}</span>
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
+
+
 
       {/* TAB 3: SAVED PAYOUT / WITHDRAWAL ACCOUNTS */}
       {activeTab === 'payouts' && (
@@ -1293,317 +2159,663 @@ function SettingsContent() {
         </div>
       )}
 
-      {/* TAB 4: PREFERENCES & DISPLAY */}
-      {activeTab === 'preferences' && (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-6 text-xs animate-in fade-in">
-          <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-sky-500" />
-              <span>{lang === 'bn' ? 'পছন্দ ও ডিসপ্লে সেটিংস' : 'Display & App Preferences'}</span>
-            </h2>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              {lang === 'bn' ? 'থিম, ভাষা ও নোটিফিকেশন নিয়ন্ত্রণ করুন' : 'Control theme, language and sound alert preferences'}
-            </p>
+      {/* TAB 7: PASSWORD & SECURITY */}
+      {activeTab === 'security' && (
+        <div className="space-y-6 animate-in fade-in">
+          {/* Change Password Card */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-6 text-xs">
+            <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Lock className="w-4 h-4 text-sky-500" />
+                <span>{lang === 'bn' ? '৭. পাসওয়ার্ড পরিবর্তন (Change Password)' : '7. Change Password'}</span>
+              </h2>
+              <span className="text-[11px] text-slate-400">
+                {lang === 'bn' ? 'নিয়মিত পাসওয়ার্ড পরিবর্তন অ্যাকাউন্ট সুরক্ষিত রাখে' : 'Protects your wallet & escrow deals'}
+              </span>
+            </div>
+
+            {passwordMessage && (
+              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 font-semibold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <span>{passwordMessage}</span>
+              </div>
+            )}
+
+            {passwordError && (
+              <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{passwordError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleChangePassword} className="space-y-4 max-w-lg">
+              {/* Current Password */}
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'বর্তমান পাসওয়ার্ড (Current Password) *' : 'Current Password *'}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    required
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder={lang === 'bn' ? 'বর্তমান পাসওয়ার্ড দিন' : 'Enter current password'}
+                    className="w-full pr-10 pl-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                  >
+                    {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* New Password */}
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'নতুন পাসওয়ার্ড (New Password) *' : 'New Password *'}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder={lang === 'bn' ? 'কমপক্ষে ৬ অক্ষরের নতুন পাসওয়ার্ড' : 'At least 6 characters'}
+                    className="w-full pr-10 pl-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {/* Password Strength Bar */}
+                {newPassword && (
+                  <div className="mt-2 space-y-1.5 animate-in fade-in">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-500">
+                        {lang === 'bn' ? 'পাসওয়ার্ড শক্তি:' : 'Password Strength:'}
+                      </span>
+                      <span className="font-bold text-slate-700 dark:text-slate-300">{pwdStrength.label}</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex gap-1">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${pwdStrength.color}`}
+                        style={{ width: `${(pwdStrength.score / 4) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Confirm New Password */}
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'নতুন পাসওয়ার্ড পুনরায় লিখুন (Confirm Password) *' : 'Confirm New Password *'}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder={lang === 'bn' ? 'একই পাসওয়ার্ড পুনরায় দিন' : 'Re-type new password'}
+                    className="w-full pr-10 pl-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {confirmPassword && newPassword !== confirmPassword && (
+                  <p className="text-[11px] text-rose-500 mt-1 font-medium">
+                    {lang === 'bn' ? 'পাসওয়ার্ড দুটি মিলছে না' : 'Passwords do not match'}
+                  </p>
+                )}
+              </div>
+
+              {/* Guidelines Checklist */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/60 space-y-1 text-[11px] text-slate-500">
+                <div className="font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  {lang === 'bn' ? 'পাসওয়ার্ড সিকিউরিটি নির্দেশিকা:' : 'Password Security Rules:'}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Check className={`w-3 h-3 ${newPassword.length >= 6 ? 'text-emerald-500' : 'text-slate-400'}`} />
+                  <span>{lang === 'bn' ? 'কমপক্ষে ৬টি ক্যারেক্টার' : 'At least 6 characters'}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Check className={`w-3 h-3 ${/[A-Z]/.test(newPassword) ? 'text-emerald-500' : 'text-slate-400'}`} />
+                  <span>{lang === 'bn' ? 'কমপক্ষে একটি বড় হাতের অক্ষর (A-Z)' : 'At least one uppercase letter'}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Check className={`w-3 h-3 ${/[0-9]/.test(newPassword) ? 'text-emerald-500' : 'text-slate-400'}`} />
+                  <span>{lang === 'bn' ? 'কমপক্ষে একটি সংখ্যা (0-9)' : 'At least one numeric digit'}</span>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={passwordLoading}
+                  className="px-6 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold transition flex items-center gap-2 shadow-sm active:scale-95 disabled:opacity-50"
+                >
+                  {passwordLoading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{lang === 'bn' ? 'পাসওয়ার্ড আপডেট করুন' : 'Update Password'}</span>
+                </button>
+              </div>
+            </form>
           </div>
 
-          <div className="space-y-5 max-w-xl">
-            {/* Theme Preference */}
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
+          {/* Security & Activity Center Card */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-6 text-xs">
+            <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                <span>{lang === 'bn' ? 'নিরাপত্তা ও অ্যাক্টিভিটি সেন্টার' : 'Security & Activity Center'}</span>
+              </h2>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                {lang === 'bn' ? 'আপনার অ্যাকাউন্ট স্ট্যাটাস ও সেফনেক্সবিডি এসক্রো সুরক্ষা' : 'SafnexBD escrow protection and account verification telemetry'}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Account Status Card */}
+              <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 space-y-3">
                 <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  {theme === 'dark' ? <Moon className="w-4 h-4 text-indigo-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
-                  <span>{lang === 'bn' ? 'অ্যাপের থিম (Theme)' : 'App Theme'}</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  {lang === 'bn' ? 'লাইট বা ডার্ক মোড বেছে নিন' : 'Choose between Light and Dark mode'}
-                </p>
-              </div>
-
-              <div className="inline-flex p-1 bg-slate-200/70 dark:bg-slate-700/80 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => setTheme('light')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-                    theme === 'light'
-                      ? 'bg-white text-slate-900 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400'
-                  }`}
-                >
-                  <Sun className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Light</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTheme('dark')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-                    theme === 'dark'
-                      ? 'bg-slate-900 text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400'
-                  }`}
-                >
-                  <Moon className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Dark</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Language Preference */}
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-sky-500" />
-                  <span>{lang === 'bn' ? 'ভাষা নির্বাচন (Language)' : 'Language Selection'}</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  {lang === 'bn' ? 'বাংলা অথবা ইংরেজি নির্বাচন করুন' : 'Select English or Bengali'}
-                </p>
-              </div>
-
-              <div className="inline-flex p-1 bg-slate-200/70 dark:bg-slate-700/80 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => setLang('bn')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-                    lang === 'bn'
-                      ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400'
-                  }`}
-                >
-                  <span>🇧🇩 বাংলা</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLang('en')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-                    lang === 'en'
-                      ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400'
-                  }`}
-                >
-                  <span>🇬🇧 English</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Sound Alerts */}
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 flex items-center justify-between">
-              <div>
-                <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-amber-500" />
-                  <span>{lang === 'bn' ? 'সাউন্ড অ্যালার্ট ও রিংটোন' : 'Sound & Audio Alerts'}</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  {lang === 'bn' ? 'নতুন চ্যাট মেসেজ ও উইথড্র নোটিফিকেশনে রিংটোন বাজবে' : 'Play synthetic audio chime on chat and withdrawal alerts'}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={toggleSound}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  soundEnabled ? 'bg-sky-600' : 'bg-slate-300 dark:bg-slate-700'
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    soundEnabled ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Email Notifications */}
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 flex items-center justify-between">
-              <div>
-                <div className="font-bold text-slate-900 dark:text-white">
-                  {lang === 'bn' ? 'ইমেইল নোটিফিকেশন' : 'Email Notifications'}
-                </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  {lang === 'bn' ? 'গুরুত্বপূর্ণ লেনদেন ও ওয়ালেট আপডেটের ইমেইল পান' : 'Receive receipts and important dispute updates via email'}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleToggleEmail}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  emailAlerts ? 'bg-sky-600' : 'bg-slate-300 dark:bg-slate-700'
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    emailAlerts ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Push / Desktop Notifications */}
-            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div>
-                  <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Bell className="w-4 h-4 text-sky-500" />
-                    <span>{lang === 'bn' ? 'ব্রাউজার পুশ নোটিফিকেশন (ফোন ও কম্পিউটার)' : 'Browser Push Notifications (Mobile & Desktop)'}</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    {lang === 'bn'
-                      ? 'নতুন চ্যাট মেসেজ (কে পাঠিয়েছে সহ) এবং উইথড্র অনুমোদনের সাথে সাথে নোটিফিকেশন পান'
-                      : 'Get real-time alerts when someone messages you or your withdrawal status updates'}
-                  </p>
+                  <CheckSquare className="w-4 h-4 text-sky-500" />
+                  <span>{lang === 'bn' ? 'অ্যাকাউন্ট ভেরিফিকেশন স্ট্যাটাস' : 'Account Status'}</span>
                 </div>
 
-                {/* Status Badge or Request Action */}
-                {notifPermission === 'granted' && (
-                  <span className="px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 font-bold text-[11px] flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>{lang === 'bn' ? 'চালু আছে (অনুমোদিত)' : 'Active & Allowed'}</span>
-                  </span>
-                )}
-                {notifPermission === 'denied' && (
-                  <span className="px-3 py-1 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25 font-bold text-[11px] flex items-center gap-1.5">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    <span>{lang === 'bn' ? 'ব্লক করা আছে (Blocked)' : 'Blocked in Browser'}</span>
-                  </span>
-                )}
-                {notifPermission === 'default' && (
-                  <button
-                    type="button"
-                    onClick={() => requestPermission()}
-                    className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-sm transition active:scale-95 flex items-center gap-2"
-                  >
-                    <Bell className="w-3.5 h-3.5" />
-                    <span>{lang === 'bn' ? 'নোটিফিকেশন অন করুন' : 'Enable Notifications'}</span>
-                  </button>
-                )}
-                {notifPermission === 'unsupported' && (
-                  <span className="px-3 py-1 rounded-xl bg-slate-500/10 text-slate-500 border border-slate-500/25 font-bold text-[11px]">
-                    {lang === 'bn' ? 'ডিভাইসে সমর্থিত নয়' : 'Not Supported'}
-                  </span>
-                )}
-              </div>
-
-              {/* Action/Info row when granted */}
-              {notifPermission === 'granted' && (
-                <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between flex-wrap gap-2">
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                    {lang === 'bn'
-                      ? 'ট্যাব ব্যাকগ্রাউন্ডে থাকলেও বা ফোন লক থাকলেও মেসেজ ও উইথড্র বার্তা আসবে।'
-                      : 'You will receive notifications even when this tab is in the background.'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleTestNotification}
-                    disabled={testingNotif}
-                    className="px-3 py-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 text-sky-600 dark:text-sky-300 font-bold text-[11px] hover:bg-sky-100 dark:hover:bg-sky-900 transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    {testingNotif ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 text-sky-500" />}
-                    <span>{lang === 'bn' ? 'টেস্ট নোটিফিকেশন পাঠান' : 'Send Test Notification'}</span>
-                  </button>
+                <div className="flex items-center gap-2">
+                  {user?.isVerified ? (
+                    <span className="px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 font-bold flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'ভেরিফাইড অ্যাকাউন্ট (KYC Verified)' : 'Verified User'}</span>
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 font-bold flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'আনভেরিফাইড (সাধারণ ব্যবহারকারী)' : 'Basic User'}</span>
+                    </span>
+                  )}
                 </div>
-              )}
 
-              {/* Help message when blocked */}
-              {notifPermission === 'denied' && (
-                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-[11px]">
+                <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
                   {lang === 'bn'
-                    ? '⚠️ আপনার ব্রাউজারে নোটিফিকেশন ব্লক করা রয়েছে। চালু করতে ব্রাউজারের URL বারে তালার (Lock) আইকনে ক্লিক করে Notification "Allow" করুন।'
-                    : '⚠️ Notifications are blocked in your browser settings. To unblock, click the lock icon in your browser URL address bar and set Notifications to "Allow".'}
+                    ? 'আপনার ফোন নম্বর ও আইডি সেফনেক্সবিডি সেন্ট্রাল ডাটাবেজে এনক্রিপ্ট করে সংরক্ষিত আছে।'
+                    : 'Your phone number and identity are securely encrypted in the SafnexBD system.'}
+                </p>
+              </div>
+
+              {/* Escrow Protection Card */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-sky-500/10 via-indigo-500/5 to-transparent border border-sky-500/25 space-y-3">
+                <div className="font-bold text-sky-900 dark:text-sky-300 flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+                  <span>{lang === 'bn' ? '১০০% এসক্রো সুরক্ষা কার্যকর' : '100% Escrow Protection Active'}</span>
                 </div>
-              )}
+                <p className="text-slate-600 dark:text-slate-300 text-[11px] leading-relaxed">
+                  {lang === 'bn'
+                    ? 'SafnexBD প্ল্যাটফর্মে আপনার প্রতিটি লেনদেন ও টাকা অ্যাডমিন তত্ত্বাবধানে সম্পূর্ণ সুরক্ষিত। কাজ সন্তোষজনক হওয়া ছাড়া বায়ারের টাকা বিক্রেতা তুলতে পারে না।'
+                    : 'Every transaction is guarded by SafnexBD Mediation Escrow. Funds are locked safely until buyer approves satisfaction.'}
+                </p>
+              </div>
+
+              {/* Active Session Info */}
+              <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 space-y-3">
+                <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Laptop className="w-4 h-4 text-indigo-500" />
+                  <span>{lang === 'bn' ? 'বর্তমান সেশন ও ডিভাইস' : 'Current Active Session'}</span>
+                </div>
+                <div className="space-y-1 text-slate-600 dark:text-slate-300 text-[11px]">
+                  <div>
+                    <span className="text-slate-400">Status: </span>
+                    <span className="text-emerald-500 font-bold">● Active Session</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">User ID: </span>
+                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{user?.uniqueUserId}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Phone: </span>
+                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{user?.phone}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Best Security Practices */}
+              <div className="p-5 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-2.5">
+                <div className="font-bold text-amber-800 dark:text-amber-400 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span>{lang === 'bn' ? 'নিরাপত্তা সতর্কতা' : 'Security Best Practices'}</span>
+                </div>
+                <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-600 dark:text-slate-300">
+                  <li>{lang === 'bn' ? 'কখনও আপনার ওটিপি (OTP) বা পাসওয়ার্ড কারো সাথে শেয়ার করবেন না।' : 'Never share your password or OTP.'}</li>
+                  <li>{lang === 'bn' ? 'প্ল্যাটফর্মের বাইরে কোনো পেমেন্ট করবেন না।' : 'Never transact outside SafnexBD escrow.'}</li>
+                  <li>{lang === 'bn' ? 'কোনো সন্দেহ হলে চ্যাট রুম থেকে "কল অ্যাডমিন" বোতাম চাপুন।' : 'Use Call Admin if any suspicious activity occurs.'}</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 5: SECURITY & ACTIVITY */}
-      {activeTab === 'security' && (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-6 text-xs animate-in fade-in">
-          <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              <span>{lang === 'bn' ? 'নিরাপত্তা ও অ্যাক্টিভিটি সেন্টার' : 'Security & Activity Center'}</span>
-            </h2>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              {lang === 'bn' ? 'আপনার অ্যাকাউন্ট স্ট্যাটাস ও সেফনেক্সবিডি এসক্রো সুরক্ষা' : 'SafnexBD escrow protection and account verification telemetry'}
-            </p>
+      {/* TAB 8: PRIVACY & APP PREFERENCES */}
+      {activeTab === 'preferences' && (
+        <div className="space-y-6 animate-in fade-in">
+          {/* Privacy & Profile Visibility Form */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-6 text-xs">
+            <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-sky-500" />
+                <span>{lang === 'bn' ? '৮. প্রোফাইল প্রাইভেসি ও দৃশ্যমানতা (Privacy & Visibility)' : '8. Profile Privacy & Visibility'}</span>
+              </h2>
+              <span className="text-[11px] text-slate-400">
+                {lang === 'bn' ? 'পাবলিক প্রোফাইলে কী তথ্য দেখাবেন তা নিয়ন্ত্রণ করুন' : 'Control your visibility & data'}
+              </span>
+            </div>
+
+            {privacyMessage && (
+              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 font-semibold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <span>{privacyMessage}</span>
+              </div>
+            )}
+            {privacyError && (
+              <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{privacyError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleUpdatePrivacy} className="space-y-4 max-w-xl">
+              {/* Profile Visibility */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/70 dark:border-slate-800 space-y-2">
+                <div className="font-bold text-slate-900 dark:text-white">
+                  {lang === 'bn' ? 'প্রোফাইল দৃশ্যমানতা (Profile Visibility)' : 'Profile Visibility'}
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  {lang === 'bn'
+                    ? 'পাবলিক রাখলে যেকোনো ইউজার আপনার স্কিল, বায়ো ও প্রোডাক্ট দেখতে পাবে। প্রাইভেট রাখলে গোপন থাকবে।'
+                    : 'Public lets users see your bio, skills & products. Private hides them.'}
+                </p>
+                <div className="flex gap-3 pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="visibility"
+                      value="PUBLIC"
+                      checked={profileVisibility === 'PUBLIC'}
+                      onChange={() => setProfileVisibility('PUBLIC')}
+                      className="text-sky-600 focus:ring-sky-500"
+                    />
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      {lang === 'bn' ? 'পাবলিক (Public)' : 'Public'}
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="visibility"
+                      value="PRIVATE"
+                      checked={profileVisibility === 'PRIVATE'}
+                      onChange={() => setProfileVisibility('PRIVATE')}
+                      className="text-sky-600 focus:ring-sky-500"
+                    />
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      {lang === 'bn' ? 'প্রাইভেট (Private)' : 'Private'}
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Who can message me */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/70 dark:border-slate-800 space-y-2">
+                <div className="font-bold text-slate-900 dark:text-white">
+                  {lang === 'bn' ? 'কে আপনাকে সরাসরি মেসেজ দিতে পারবে?' : 'Who Can Send You Direct Messages?'}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                  {[
+                    { id: 'EVERYONE', label: lang === 'bn' ? 'যে কেউ (Everyone)' : 'Everyone' },
+                    { id: 'TRADERS_ONLY', label: lang === 'bn' ? 'শুধুমাত্র ট্রেডাররা' : 'Traders Only' },
+                    { id: 'NOBODY', label: lang === 'bn' ? 'কেউ না (Nobody)' : 'Nobody' },
+                  ].map((opt) => (
+                    <button
+                      type="button"
+                      key={opt.id}
+                      onClick={() => setWhoCanMessage(opt.id)}
+                      className={`p-2.5 rounded-xl border text-center font-bold text-xs transition ${
+                        whoCanMessage === opt.id
+                          ? 'border-sky-500 bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-300 ring-1 ring-sky-500'
+                          : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Show Phone & Show Email toggles */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/70 dark:border-slate-800 space-y-3">
+                <div className="font-bold text-slate-900 dark:text-white">
+                  {lang === 'bn' ? 'যোগাযোগ তথ্য প্রদর্শন' : 'Contact Info Display'}
+                </div>
+
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div>
+                    <div className="font-semibold text-slate-700 dark:text-slate-300">
+                      {lang === 'bn' ? 'পাবলিক প্রোফাইলে ফোন নম্বর দেখান' : 'Show phone number on public profile'}
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      {lang === 'bn' ? 'অন্যান্য ইউজাররা আপনার প্রোফাইল পেজে ফোন দেখতে পারবে' : 'Other users can view your phone number'}
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={showPhone}
+                    onChange={(e) => setShowPhone(e.target.checked)}
+                    className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500"
+                  />
+                </label>
+
+                <div className="border-t border-slate-200/60 dark:border-slate-700/60 pt-2" />
+
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div>
+                    <div className="font-semibold text-slate-700 dark:text-slate-300">
+                      {lang === 'bn' ? 'পাবলিক প্রোফাইলে ইমেইল দেখান' : 'Show email address on public profile'}
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      {lang === 'bn' ? 'অন্যান্য ইউজাররা আপনার ইমেইল দেখতে পারবে' : 'Other users can view your email'}
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={showEmail}
+                    onChange={(e) => setShowEmail(e.target.checked)}
+                    className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500"
+                  />
+                </label>
+              </div>
+
+              {/* Timezone */}
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  {lang === 'bn' ? 'টাইমজোন (Timezone)' : 'Timezone'}
+                </label>
+                <select
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                >
+                  <option value="Asia/Dhaka">Asia/Dhaka (GMT+6 - Bangladesh Standard Time)</option>
+                  <option value="Asia/Kolkata">Asia/Kolkata (GMT+5:30 - India)</option>
+                  <option value="Asia/Dubai">Asia/Dubai (GMT+4 - UAE)</option>
+                  <option value="UTC">UTC (Coordinated Universal Time)</option>
+                </select>
+              </div>
+
+              {/* 2FA Toggle */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/70 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                    <span>{lang === 'bn' ? 'টু-ফ্যাক্টর অথেনটিকেশন (2FA)' : 'Two-Factor Authentication (2FA)'}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    {lang === 'bn' ? 'লগইনের সময় অতিরিক্ত নিরাপত্তা স্তর নিশ্চিত করুন' : 'Extra security layer during login'}
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={twoFactorEnabled}
+                  onChange={(e) => setTwoFactorEnabled(e.target.checked)}
+                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={savingPrivacy}
+                  className="px-6 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold transition flex items-center gap-2 shadow-sm active:scale-95 disabled:opacity-50"
+                >
+                  {savingPrivacy && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{lang === 'bn' ? 'প্রাইভেসি সেটিংস সংরক্ষণ করুন' : 'Save Privacy Settings'}</span>
+                </button>
+              </div>
+            </form>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Account Status Card */}
-            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 space-y-3">
-              <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <CheckSquare className="w-4 h-4 text-sky-500" />
-                <span>{lang === 'bn' ? 'অ্যাকাউন্ট ভেরিফিকেশন স্ট্যাটাস' : 'Account Status'}</span>
+          {/* Display & App Preferences */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-6 text-xs">
+            <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-sky-500" />
+                <span>{lang === 'bn' ? 'অ্যাপ ডিসপ্লে ও নোটিফিকেশন সেটিংস' : 'Display & App Preferences'}</span>
+              </h2>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                {lang === 'bn' ? 'থিম, ভাষা ও নোটিফিকেশন নিয়ন্ত্রণ করুন' : 'Control theme, language and sound alert preferences'}
+              </p>
+            </div>
+
+            <div className="space-y-5 max-w-xl">
+              {/* Theme Preference */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    {theme === 'dark' ? <Moon className="w-4 h-4 text-indigo-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
+                    <span>{lang === 'bn' ? 'অ্যাপের থিম (Theme)' : 'App Theme'}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {lang === 'bn' ? 'লাইট বা ডার্ক মোড বেছে নিন' : 'Choose between Light and Dark mode'}
+                  </p>
+                </div>
+
+                <div className="inline-flex p-1 bg-slate-200/70 dark:bg-slate-700/80 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setTheme('light')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                      theme === 'light'
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    <Sun className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Light</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTheme('dark')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                      theme === 'dark'
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    <Moon className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Dark</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                {user?.isVerified ? (
-                  <span className="px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 font-bold flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>{lang === 'bn' ? 'ভেরিফাইড অ্যাকাউন্ট (KYC Verified)' : 'Verified User'}</span>
-                  </span>
-                ) : (
-                  <span className="px-3 py-1 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 font-bold flex items-center gap-1.5">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    <span>{lang === 'bn' ? 'আনভেরিফাইড (সাধারণ ব্যবহারকারী)' : 'Basic User'}</span>
-                  </span>
+              {/* Language Preference */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-sky-500" />
+                    <span>{lang === 'bn' ? 'ভাষা নির্বাচন (Language)' : 'Language Selection'}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {lang === 'bn' ? 'বাংলা অথবা ইংরেজি নির্বাচন করুন' : 'Select English or Bengali'}
+                  </p>
+                </div>
+
+                <div className="inline-flex p-1 bg-slate-200/70 dark:bg-slate-700/80 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setLang('bn')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                      lang === 'bn'
+                        ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    <span>🇧🇩 বাংলা</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLang('en')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                      lang === 'en'
+                        ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    <span>🇬🇧 English</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Sound Alerts */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-amber-500" />
+                    <span>{lang === 'bn' ? 'সাউন্ড অ্যালার্ট ও রিংটোন' : 'Sound & Audio Alerts'}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {lang === 'bn' ? 'নতুন চ্যাট মেসেজ ও উইথড্র নোটিফিকেশনে রিংটোন বাজবে' : 'Play synthetic audio chime on chat and withdrawal alerts'}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={toggleSound}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    soundEnabled ? 'bg-sky-600' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      soundEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Email Notifications */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-slate-900 dark:text-white">
+                    {lang === 'bn' ? 'ইমেইল নোটিফিকেশন' : 'Email Notifications'}
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {lang === 'bn' ? 'গুরুত্বপূর্ণ লেনদেন ও ওয়ালেট আপডেটের ইমেইল পান' : 'Receive receipts and important dispute updates via email'}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleToggleEmail}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    emailAlerts ? 'bg-sky-600' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      emailAlerts ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Push / Desktop Notifications */}
+              <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-sky-500" />
+                      <span>{lang === 'bn' ? 'ব্রাউজার পুশ নোটিফিকেশন (ফোন ও কম্পিউটার)' : 'Browser Push Notifications (Mobile & Desktop)'}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      {lang === 'bn'
+                        ? 'নতুন চ্যাট মেসেজ (কে পাঠিয়েছে সহ) এবং উইথড্র অনুমোদনের সাথে সাথে নোটিফিকেশন পান'
+                        : 'Get real-time alerts when someone messages you or your withdrawal status updates'}
+                    </p>
+                  </div>
+
+                  {/* Status Badge or Request Action */}
+                  {notifPermission === 'granted' && (
+                    <span className="px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 font-bold text-[11px] flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'চালু আছে (অনুমোদিত)' : 'Active & Allowed'}</span>
+                    </span>
+                  )}
+                  {notifPermission === 'denied' && (
+                    <span className="px-3 py-1 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25 font-bold text-[11px] flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'ব্লক করা আছে (Blocked)' : 'Blocked in Browser'}</span>
+                    </span>
+                  )}
+                  {notifPermission === 'default' && (
+                    <button
+                      type="button"
+                      onClick={() => requestPermission()}
+                      className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-sm transition active:scale-95 flex items-center gap-2"
+                    >
+                      <Bell className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'নোটিফিকেশন অন করুন' : 'Enable Notifications'}</span>
+                    </button>
+                  )}
+                  {notifPermission === 'unsupported' && (
+                    <span className="px-3 py-1 rounded-xl bg-slate-500/10 text-slate-500 border border-slate-500/25 font-bold text-[11px]">
+                      {lang === 'bn' ? 'ডিভাইসে সমর্থিত নয়' : 'Not Supported'}
+                    </span>
+                  )}
+                </div>
+
+                {/* Action/Info row when granted */}
+                {notifPermission === 'granted' && (
+                  <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between flex-wrap gap-2">
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {lang === 'bn'
+                        ? 'ট্যাব ব্যাকগ্রাউন্ডে থাকলেও বা ফোন লক থাকলেও মেসেজ ও উইথড্র বার্তা আসবে।'
+                        : 'You will receive notifications even when this tab is in the background.'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleTestNotification}
+                      disabled={testingNotif}
+                      className="px-3 py-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 text-sky-600 dark:text-sky-300 font-bold text-[11px] hover:bg-sky-100 dark:hover:bg-sky-900 transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {testingNotif ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 text-sky-500" />}
+                      <span>{lang === 'bn' ? 'টেস্ট নোটিফিকেশন পাঠান' : 'Send Test Notification'}</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Help message when blocked */}
+                {notifPermission === 'denied' && (
+                  <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-[11px]">
+                    {lang === 'bn'
+                      ? '⚠️ আপনার ব্রাউজারে নোটিফিকেশন ব্লক করা রয়েছে। চালু করতে ব্রাউজারের URL বারে তালার (Lock) আইকনে ক্লিক করে Notification "Allow" করুন।'
+                      : '⚠️ Notifications are blocked in your browser settings. To unblock, click the lock icon in your browser URL address bar and set Notifications to "Allow".'}
+                  </div>
                 )}
               </div>
-
-              <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
-                {lang === 'bn'
-                  ? 'আপনার ফোন নম্বর ও আইডি সেফনেক্সবিডি সেন্ট্রাল ডাটাবেজে এনক্রিপ্ট করে সংরক্ষিত আছে।'
-                  : 'Your phone number and identity are securely encrypted in the SafnexBD system.'}
-              </p>
-            </div>
-
-            {/* Escrow Protection Card */}
-            <div className="p-5 rounded-2xl bg-gradient-to-br from-sky-500/10 via-indigo-500/5 to-transparent border border-sky-500/25 space-y-3">
-              <div className="font-bold text-sky-900 dark:text-sky-300 flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-sky-600 dark:text-sky-400" />
-                <span>{lang === 'bn' ? '১০০% এসক্রো সুরক্ষা কার্যকর' : '100% Escrow Protection Active'}</span>
-              </div>
-              <p className="text-slate-600 dark:text-slate-300 text-[11px] leading-relaxed">
-                {lang === 'bn'
-                  ? 'SafnexBD প্ল্যাটফর্মে আপনার প্রতিটি লেনদেন ও টাকা অ্যাডমিন তত্ত্বাবধানে সম্পূর্ণ সুরক্ষিত। কাজ সন্তোষজনক হওয়া ছাড়া বায়ারের টাকা বিক্রেতা তুলতে পারে না।'
-                  : 'Every transaction is guarded by SafnexBD Mediation Escrow. Funds are locked safely until buyer approves satisfaction.'}
-              </p>
-            </div>
-
-            {/* Active Session Info */}
-            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 space-y-3">
-              <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Laptop className="w-4 h-4 text-indigo-500" />
-                <span>{lang === 'bn' ? 'বর্তমান সেশন ও ডিভাইস' : 'Current Active Session'}</span>
-              </div>
-              <div className="space-y-1 text-slate-600 dark:text-slate-300 text-[11px]">
-                <div>
-                  <span className="text-slate-400">Status: </span>
-                  <span className="text-emerald-500 font-bold">● Active Session</span>
-                </div>
-                <div>
-                  <span className="text-slate-400">User ID: </span>
-                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{user?.uniqueUserId}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400">Phone: </span>
-                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{user?.phone}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Best Security Practices */}
-            <div className="p-5 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-2.5">
-              <div className="font-bold text-amber-800 dark:text-amber-400 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                <span>{lang === 'bn' ? 'নিরাপত্তা সতর্কতা' : 'Security Best Practices'}</span>
-              </div>
-              <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-600 dark:text-slate-300">
-                <li>{lang === 'bn' ? 'কখনও আপনার ওটিপি (OTP) বা পাসওয়ার্ড কারো সাথে শেয়ার করবেন না।' : 'Never share your password or OTP.'}</li>
-                <li>{lang === 'bn' ? 'প্ল্যাটফর্মের বাইরে কোনো পেমেন্ট করবেন না।' : 'Never transact outside SafnexBD escrow.'}</li>
-                <li>{lang === 'bn' ? 'কোনো সন্দেহ হলে চ্যাট রুম থেকে "কল অ্যাডমিন" বোতাম চাপুন।' : 'Use Call Admin if any suspicious activity occurs.'}</li>
-              </ul>
             </div>
           </div>
         </div>

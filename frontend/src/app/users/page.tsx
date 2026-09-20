@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Search, UserCheck, MessageSquare, ShieldCheck, CheckCircle2, Clock } from 'lucide-react';
+import { Search, UserCheck, MessageSquare, ShieldCheck, CheckCircle2, Clock, MapPin } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { api } from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
@@ -132,7 +132,18 @@ export default function UsersSearchPage() {
                       <div className="text-xs font-mono font-bold text-sky-600 dark:text-sky-400">
                         ID: {u.uniqueUserId}
                       </div>
-                      {u.businessName && (
+                      {u.headline && (
+                        <div className="text-[11px] font-medium text-slate-600 dark:text-slate-300 truncate">
+                          {u.headline}
+                        </div>
+                      )}
+                      {(u.city || u.district || u.division) && (
+                        <div className="text-[10px] text-slate-400 flex items-center gap-1 truncate pt-0.5">
+                          <MapPin className="w-3 h-3 text-emerald-500 shrink-0" />
+                          <span>{[u.city, u.district, u.division].filter(Boolean).join(', ')}</span>
+                        </div>
+                      )}
+                      {u.businessName && !u.headline && (
                         <div className="text-[11px] text-slate-400 truncate">{u.businessName}</div>
                       )}
                     </div>
@@ -144,6 +155,20 @@ export default function UsersSearchPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Skills tags preview */}
+                {u.skills && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {u.skills.split(',').slice(0, 3).map((s: string, idx: number) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-0.5 rounded-lg bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-300 text-[10px] font-semibold border border-sky-100 dark:border-sky-900/40"
+                      >
+                        {s.trim()}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500">
                 <div>

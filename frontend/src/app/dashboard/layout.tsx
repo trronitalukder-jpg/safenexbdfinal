@@ -250,7 +250,7 @@ export default function DashboardLayout({
             {/* Direct Marketplace Link */}
             <Link
               href="/products"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition"
+              className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition"
             >
               <ShoppingBag className="w-3.5 h-3.5 text-sky-500" />
               <span>{lang === 'bn' ? 'মার্কেটপ্লেস' : 'Marketplace'}</span>

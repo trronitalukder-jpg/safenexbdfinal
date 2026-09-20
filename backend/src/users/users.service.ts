@@ -39,6 +39,13 @@ export class UsersService {
         { phone: { contains: q } },
         ...(compactQ && compactQ !== q ? [{ phone: { contains: compactQ } }] : []),
         ...(cleanPhone && cleanPhone !== compactQ ? [{ phone: { contains: cleanPhone } }] : []),
+        { headline: { contains: q } },
+        { profession: { contains: q } },
+        { skills: { contains: q } },
+        { company: { contains: q } },
+        { city: { contains: q } },
+        { district: { contains: q } },
+        { division: { contains: q } },
       ];
     }
 
@@ -122,6 +129,12 @@ export class UsersService {
       createdAt: true,
       businessName: true,
       businessType: true,
+      headline: true,
+      profession: true,
+      skills: true,
+      city: true,
+      district: true,
+      division: true,
       _count: {
         select: {
           products: { where: { status: 'ACTIVE' as any } },
@@ -175,6 +188,10 @@ export class UsersService {
       isVerified: u.isVerified,
       businessName: u.businessName,
       businessType: u.businessType,
+      headline: u.headline,
+      profession: u.profession,
+      skills: u.skills,
+      location: [u.city, u.district, u.division].filter(Boolean).join(', '),
       memberSince: u.createdAt,
       activeProductsCount: u._count?.products || 0,
       completedTransactionsCount: u._count?.receivedTransactions || 0,
@@ -200,6 +217,31 @@ export class UsersService {
         isVerified: true,
         businessName: true,
         businessType: true,
+        headline: true,
+        bio: true,
+        skills: true,
+        interests: true,
+        languages: true,
+        website: true,
+        socialLinks: true,
+        profession: true,
+        company: true,
+        jobTitle: true,
+        institution: true,
+        department: true,
+        educationLevel: true,
+        graduationYear: true,
+        country: true,
+        division: true,
+        district: true,
+        upazila: true,
+        city: true,
+        profileVisibility: true,
+        whoCanMessage: true,
+        showPhone: true,
+        showEmail: true,
+        phone: true,
+        email: true,
         createdAt: true,
         products: {
           where: { status: 'ACTIVE' },
@@ -253,6 +295,8 @@ export class UsersService {
       }
     }
 
+    const isPrivate = user.profileVisibility === 'PRIVATE';
+
     return {
       id: user.id,
       uniqueUserId: user.uniqueUserId,
@@ -265,33 +309,88 @@ export class UsersService {
       productsCount: user._count.products,
       completedTransactionsCount: user._count.receivedTransactions,
       products: user.products,
+      headline: user.headline,
+      bio: isPrivate ? null : user.bio,
+      skills: isPrivate ? null : user.skills,
+      interests: isPrivate ? null : user.interests,
+      languages: isPrivate ? null : user.languages,
+      website: isPrivate ? null : user.website,
+      socialLinks: isPrivate ? null : user.socialLinks,
+      profession: isPrivate ? null : user.profession,
+      company: isPrivate ? null : user.company,
+      jobTitle: isPrivate ? null : user.jobTitle,
+      institution: isPrivate ? null : user.institution,
+      department: isPrivate ? null : user.department,
+      educationLevel: isPrivate ? null : user.educationLevel,
+      graduationYear: isPrivate ? null : user.graduationYear,
+      country: user.country,
+      division: user.division,
+      district: user.district,
+      upazila: user.upazila,
+      city: user.city,
+      profileVisibility: user.profileVisibility,
+      whoCanMessage: user.whoCanMessage,
+      phone: user.showPhone ? user.phone : null,
+      email: user.showEmail ? user.email : null,
     };
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const dataToUpdate: any = {};
+    if (dto.firstName !== undefined) dataToUpdate.firstName = dto.firstName.trim();
+    if (dto.lastName !== undefined) dataToUpdate.lastName = dto.lastName.trim();
+    if (dto.avatarUrl !== undefined) dataToUpdate.avatarUrl = dto.avatarUrl.trim() || null;
+    if (dto.phone !== undefined) dataToUpdate.phone = dto.phone.trim();
+    if (dto.additionalPhone !== undefined) dataToUpdate.additionalPhone = dto.additionalPhone.trim() || null;
+    if (dto.dateOfBirth !== undefined) dataToUpdate.dateOfBirth = dto.dateOfBirth ? new Date(dto.dateOfBirth) : null;
+    if (dto.gender !== undefined) dataToUpdate.gender = dto.gender.trim() || null;
+    if (dto.country !== undefined) dataToUpdate.country = dto.country.trim() || null;
+    if (dto.division !== undefined) dataToUpdate.division = dto.division.trim() || null;
+    if (dto.district !== undefined) dataToUpdate.district = dto.district.trim() || null;
+    if (dto.upazila !== undefined) dataToUpdate.upazila = dto.upazila.trim() || null;
+    if (dto.city !== undefined) dataToUpdate.city = dto.city.trim() || null;
+    if (dto.address !== undefined) dataToUpdate.address = dto.address.trim() || null;
+    if (dto.postalCode !== undefined) dataToUpdate.postalCode = dto.postalCode.trim() || null;
+    if (dto.profession !== undefined) dataToUpdate.profession = dto.profession.trim() || null;
+    if (dto.company !== undefined) dataToUpdate.company = dto.company.trim() || null;
+    if (dto.jobTitle !== undefined) dataToUpdate.jobTitle = dto.jobTitle.trim() || null;
+    if (dto.institution !== undefined) dataToUpdate.institution = dto.institution.trim() || null;
+    if (dto.department !== undefined) dataToUpdate.department = dto.department.trim() || null;
+    if (dto.educationLevel !== undefined) dataToUpdate.educationLevel = dto.educationLevel.trim() || null;
+    if (dto.graduationYear !== undefined) dataToUpdate.graduationYear = dto.graduationYear.trim() || null;
+    if (dto.headline !== undefined) dataToUpdate.headline = dto.headline.trim() || null;
+    if (dto.bio !== undefined) dataToUpdate.bio = dto.bio.trim() || null;
+    if (dto.skills !== undefined) dataToUpdate.skills = dto.skills.trim() || null;
+    if (dto.interests !== undefined) dataToUpdate.interests = dto.interests.trim() || null;
+    if (dto.languages !== undefined) dataToUpdate.languages = dto.languages.trim() || null;
+    if (dto.website !== undefined) dataToUpdate.website = dto.website.trim() || null;
+    if (dto.socialLinks !== undefined) dataToUpdate.socialLinks = dto.socialLinks;
+    if (dto.businessName !== undefined) dataToUpdate.businessName = dto.businessName.trim() || null;
+    if (dto.businessType !== undefined) dataToUpdate.businessType = dto.businessType.trim() || null;
+    if (dto.twoFactorEnabled !== undefined) dataToUpdate.twoFactorEnabled = Boolean(dto.twoFactorEnabled);
+    if (dto.profileVisibility !== undefined) dataToUpdate.profileVisibility = dto.profileVisibility.trim();
+    if (dto.whoCanMessage !== undefined) dataToUpdate.whoCanMessage = dto.whoCanMessage.trim();
+    if (dto.showPhone !== undefined) dataToUpdate.showPhone = Boolean(dto.showPhone);
+    if (dto.showEmail !== undefined) dataToUpdate.showEmail = Boolean(dto.showEmail);
+    if (dto.timezone !== undefined) dataToUpdate.timezone = dto.timezone.trim() || 'Asia/Dhaka';
+    if (dto.nidNumber !== undefined) dataToUpdate.nidNumber = dto.nidNumber.trim() || null;
+    if (dto.nidName !== undefined) dataToUpdate.nidName = dto.nidName.trim() || null;
+    if (dto.nidFrontUrl !== undefined) dataToUpdate.nidFrontUrl = dto.nidFrontUrl.trim() || null;
+    if (dto.nidBackUrl !== undefined) dataToUpdate.nidBackUrl = dto.nidBackUrl.trim() || null;
+
+    if ((dto.nidFrontUrl || dto.nidBackUrl || dto.nidNumber) && dto.nidNumber?.trim()) {
+      const currentUser = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { isVerified: true, verificationStatus: true },
+      });
+      if (!currentUser?.isVerified && currentUser?.verificationStatus !== 'VERIFIED') {
+        dataToUpdate.verificationStatus = 'PENDING';
+      }
+    }
+
     const user = await this.prisma.user.update({
       where: { id: userId },
-      data: {
-        ...(dto.firstName && { firstName: dto.firstName.trim() }),
-        ...(dto.lastName && { lastName: dto.lastName.trim() }),
-        ...(dto.avatarUrl && { avatarUrl: dto.avatarUrl.trim() }),
-        ...(dto.address && { address: dto.address.trim() }),
-        ...(dto.businessName && { businessName: dto.businessName.trim() }),
-        ...(dto.businessType && { businessType: dto.businessType.trim() }),
-      },
-      select: {
-        id: true,
-        uniqueUserId: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        phone: true,
-        avatarUrl: true,
-        address: true,
-        businessName: true,
-        businessType: true,
-        isVerified: true,
-      },
+      data: dataToUpdate,
     });
 
     return user;
