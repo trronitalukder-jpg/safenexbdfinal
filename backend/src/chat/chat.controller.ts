@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -247,6 +248,14 @@ export class ChatController {
         typeof value === 'bigint' ? value.toString() : value,
       ),
     );
+  }
+
+  @Delete('conversations/:id')
+  async deleteConversation(
+    @Param('id') conversationId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.chatService.deleteConversationForUser(conversationId, userId);
   }
 
   @Get('conversations/:id/messages')

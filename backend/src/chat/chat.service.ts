@@ -132,7 +132,20 @@ export class ChatService {
         include: { userRoles: { include: { role: true } } },
       }),
       this.prisma.conversationParticipant.findMany({
-        where: { userId },
+        where: {
+          userId,
+          conversation: {
+            participants: {
+              some: {
+                userId: { not: userId },
+                user: {
+                  deletedAt: null,
+                  isActive: true,
+                },
+              },
+            },
+          },
+        },
         include: {
           conversation: {
             include: {
@@ -202,7 +215,7 @@ export class ChatService {
     const mapped = filteredParticipants
       .map((p) => {
         const otherParticipant = p.conversation.participants.find(
-          (cp) => cp.userId !== userId,
+          (cp) => cp.userId !== userId && cp.user && !cp.user.deletedAt && cp.user.isActive !== false,
         );
         const lastMessage = p.conversation.messages[0] || null;
         const activeTransaction = (p.conversation as any).transactions?.[0] || null;
@@ -1074,6 +1087,31 @@ export class ChatService {
     }
 
     return updated;
+  }
+
+  /**
+   * Delete / remove a conversation from user's recent chats list
+   */
+  async deleteConversationForUser(conversationId: string, userId: string) {
+    await this.prisma.conversationParticipant.deleteMany({
+      where: { conversationId, userId },
+    });
+
+    // If no participants left and no transactions linked, clean up the conversation
+    const remaining = await this.prisma.conversationParticipant.count({
+      where: { conversationId },
+    });
+    if (remaining === 0) {
+      const hasTransactions = await this.prisma.transaction.count({
+        where: { conversationId },
+      });
+      if (hasTransactions === 0) {
+        await this.prisma.message.deleteMany({ where: { conversationId } }).catch(() => null);
+        await this.prisma.conversation.delete({ where: { id: conversationId } }).catch(() => null);
+      }
+    }
+
+    return { success: true, message: 'Conversation removed successfully' };
   }
 }
 

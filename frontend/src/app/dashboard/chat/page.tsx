@@ -52,6 +52,7 @@ import {
   ChevronUp,
   Sparkles,
   ShieldCheck,
+  Trash2,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguage } from '@/context/LanguageContext';
@@ -421,11 +422,11 @@ function MessengerChatContent() {
       const data = unwrap(res);
       const convList = Array.isArray(data) ? data : (data?.conversations || []);
 
-      // Deduplicate conversations so each user only appears once
+      // Deduplicate conversations so each user only appears once, strictly excluding deleted or inactive users
       const deduped: any[] = [];
       const seen = new Set<string>();
       for (const c of convList) {
-        if (!c.otherUser?.id) continue;
+        if (!c.otherUser?.id || c.otherUser?.deletedAt || c.otherUser?.isActive === false) continue;
         if (!seen.has(c.otherUser.id)) {
           seen.add(c.otherUser.id);
           deduped.push(c);
@@ -440,6 +441,7 @@ function MessengerChatContent() {
         }
         return prev;
       });
+
 
       // Load registered users for People list
       try {
@@ -492,6 +494,28 @@ function MessengerChatContent() {
       console.error('Failed to fetch conversations:', err);
     } finally {
       setLoadingConversations(false);
+    }
+  };
+
+  const handleDeleteConversation = async (e: React.MouseEvent, convId: string) => {
+    e.stopPropagation();
+    if (
+      !confirm(
+        lang === 'bn'
+          ? 'আপনি কি এই চ্যাটটি আপনার তালিকা থেকে মুছে ফেলতে চান?'
+          : 'Do you want to remove this chat from your recent list?',
+      )
+    ) {
+      return;
+    }
+    try {
+      await api.delete(`/chat/conversations/${convId}`);
+      setConversations((prev) => prev.filter((c) => c.conversationId !== convId));
+      if (activeConversation?.conversationId === convId) {
+        setActiveConversation(null);
+      }
+    } catch (err) {
+      console.error('Failed to delete conversation:', err);
     }
   };
 
@@ -1485,7 +1509,7 @@ function MessengerChatContent() {
                       <div
                         key={conv.conversationId}
                         onClick={() => selectConversation(conv)}
-                        className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-all ${
+                        className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-all group relative ${
                           isSelected
                             ? 'bg-emerald-50/80 dark:bg-emerald-950/30 border-l-4 border-emerald-600'
                             : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
@@ -1532,9 +1556,18 @@ function MessengerChatContent() {
                             >
                               {dName}
                             </h4>
-                            {timeStr && (
-                              <span className="text-[11px] text-slate-400 shrink-0 ml-1">{timeStr}</span>
-                            )}
+                            <div className="flex items-center gap-1 shrink-0">
+                              {timeStr && (
+                                <span className="text-[11px] text-slate-400 ml-1">{timeStr}</span>
+                              )}
+                              <button
+                                onClick={(e) => handleDeleteConversation(e, conv.conversationId)}
+                                className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 opacity-0 group-hover:opacity-100 transition"
+                                title={lang === 'bn' ? 'চ্যাট মুছে ফেলুন' : 'Delete Chat'}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
 
                           <div className="flex items-center justify-between">

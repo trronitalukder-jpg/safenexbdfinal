@@ -50,6 +50,25 @@ export class EmployeesService implements OnModuleInit {
     } catch (err) {
       console.warn('[AutoHeal] Could not run deleted user scrub on startup:', err);
     }
+
+    // Clean up any conversation participants belonging to deleted or inactive users
+    try {
+      const deletedParticipants = await this.prisma.conversationParticipant.deleteMany({
+        where: {
+          user: {
+            OR: [
+              { deletedAt: { not: null } },
+              { isActive: false },
+            ],
+          },
+        },
+      });
+      if (deletedParticipants.count > 0) {
+        console.log(`[AutoHeal] Purged ${deletedParticipants.count} conversation participants for deleted/inactive users.`);
+      }
+    } catch (err) {
+      console.warn('[AutoHeal] Could not clean up deleted conversation participants:', err);
+    }
   }
 
   private async generateUniqueUserId(name: string): Promise<string> {
