@@ -15,6 +15,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 
 import { OtpService } from '../sms/otp.service';
 import { SmsService } from '../sms/sms.service';
+import { purgeOrScrubUser } from '../common/utils/user-cleanup.util';
 
 @Injectable()
 export class AuthService {
@@ -71,7 +72,11 @@ export class AuthService {
       where: { email: dto.email.toLowerCase().trim() },
     });
     if (existingEmail) {
-      throw new BadRequestException('An account with this email already exists');
+      if (existingEmail.deletedAt) {
+        await purgeOrScrubUser(this.prisma, existingEmail.id);
+      } else {
+        throw new BadRequestException('An account with this email already exists');
+      }
     }
 
     // Check duplicate phone
@@ -79,7 +84,11 @@ export class AuthService {
       where: { phone: dto.phone.trim() },
     });
     if (existingPhone) {
-      throw new BadRequestException('An account with this phone number already exists');
+      if (existingPhone.deletedAt) {
+        await purgeOrScrubUser(this.prisma, existingPhone.id);
+      } else {
+        throw new BadRequestException('An account with this phone number already exists');
+      }
     }
 
     const uniqueUserId = await this.generateUniqueUserId(dto.firstName, dto.phone);

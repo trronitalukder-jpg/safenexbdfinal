@@ -148,6 +148,8 @@ export class ChatService {
                       isVerified: true,
                       phone: true,
                       email: true,
+                      isActive: true,
+                      deletedAt: true,
                       userRoles: {
                         select: {
                           role: {
@@ -213,7 +215,7 @@ export class ChatService {
           updatedAt: p.conversation.updatedAt,
         };
       })
-      .filter((c) => !!c.otherUser);
+      .filter((c) => !!c.otherUser && !c.otherUser.deletedAt && c.otherUser.isActive !== false);
 
     // Deduplicate by otherUser.id so each user only appears ONCE
     const uniqueMap = new Map<string, typeof mapped[0]>();
@@ -270,6 +272,8 @@ export class ChatService {
                 phone: true,
                 email: true,
                 isVerified: true,
+                isActive: true,
+                deletedAt: true,
               },
             },
           },
@@ -286,6 +290,10 @@ export class ChatService {
     }
 
     const otherParticipant = conv.participants.find((p) => p.userId !== userId);
+    if (!otherParticipant?.user || otherParticipant.user.deletedAt || otherParticipant.user.isActive === false) {
+      throw new NotFoundException('Conversation participant is no longer available');
+    }
+
     return {
       ...conv,
       conversationId: conv.id,

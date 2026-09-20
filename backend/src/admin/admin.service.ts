@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { invalidateUserCache } from '../auth/jwt.strategy';
+import { purgeOrScrubUser } from '../common/utils/user-cleanup.util';
 
 @Injectable()
 export class AdminService {
@@ -492,36 +493,8 @@ export class AdminService {
       throw new BadRequestException('You cannot delete your own admin account');
     }
 
-    const updated = await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        deletedAt: new Date(),
-        isActive: false,
-      },
-    });
-
-    // Invalidate user authentication cache immediately
-    invalidateUserCache(userId);
-
-    // Revoke all refresh tokens so the user cannot generate new access tokens
-    await this.prisma.refreshToken.deleteMany({
-      where: { userId },
-    }).catch((err) => console.error('Failed to delete refresh tokens for deleteUser:', err));
-
-    // Soft-delete all products belonging to this user so they disappear from website
-    await this.prisma.product.updateMany({
-      where: { sellerId: userId },
-      data: {
-        deletedAt: new Date(),
-        status: 'INACTIVE',
-      },
-    }).catch((err) => console.error('Failed to soft-delete products for deleteUser:', err));
-
-    // Cancel all active bids placed by this user
-    await this.prisma.bid.updateMany({
-      where: { sellerId: userId, status: 'ACTIVE' },
-      data: { status: 'CANCELLED' },
-    }).catch((err) => console.error('Failed to cancel bids for deleteUser:', err));
+    // Completely purge or scrub user credentials, chat presence, and profile
+    const result = await purgeOrScrubUser(this.prisma, userId);
 
     if (currentAdminId) {
       await this.recordAuditLog({
@@ -531,12 +504,19 @@ export class AdminService {
         targetEntity: 'User',
         targetId: userId,
         beforeState: { isActive: user.isActive, deletedAt: user.deletedAt },
-        afterState: { isActive: false, deletedAt: updated.deletedAt },
-        reason: 'User account soft-deleted by administrator',
+        afterState: { isActive: false, deletedAt: new Date() },
+        reason: result.hardDeleted
+          ? 'User account permanently hard-deleted by administrator'
+          : 'User account scrubbed and credentials freed by administrator',
       }).catch((err) => console.error('Failed to log audit for deleteUser:', err));
     }
 
-    return updated;
+    return {
+      success: true,
+      message: result.hardDeleted
+        ? 'User completely deleted and all records removed'
+        : 'User credentials wiped and freed successfully',
+    };
   }
 
   /**

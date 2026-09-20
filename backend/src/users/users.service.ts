@@ -246,6 +246,8 @@ export class UsersService {
           { uniqueUserId },
           { id: uniqueUserId },
         ],
+        deletedAt: null,
+        isActive: true,
       },
       select: {
         id: true,

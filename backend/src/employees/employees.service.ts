@@ -8,6 +8,7 @@ import {
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmployeeDto, UpdateEmployeeDto } from './dto/employee.dto';
+import { purgeOrScrubUser } from '../common/utils/user-cleanup.util';
 
 @Injectable()
 export class EmployeesService implements OnModuleInit {
@@ -26,6 +27,28 @@ export class EmployeesService implements OnModuleInit {
       });
     } catch (err) {
       console.warn('Could not auto-ensure EMPLOYEE role:', err);
+    }
+
+    // Auto-heal / scrub previously soft-deleted users who still retain email/phone or employee status
+    try {
+      const lingeringDeleted = await this.prisma.user.findMany({
+        where: {
+          deletedAt: { not: null },
+          OR: [
+            { email: { not: { contains: '_deleted_' } } },
+            { phone: { not: { contains: '_deleted_' } } },
+            { isEmployee: true },
+          ],
+        },
+        select: { id: true, email: true },
+      });
+
+      for (const u of lingeringDeleted) {
+        await purgeOrScrubUser(this.prisma, u.id);
+        console.log(`[AutoHeal] Successfully purged/scrubbed deleted user: ${u.email} (${u.id})`);
+      }
+    } catch (err) {
+      console.warn('[AutoHeal] Could not run deleted user scrub on startup:', err);
     }
   }
 
@@ -133,17 +156,36 @@ export class EmployeesService implements OnModuleInit {
       finalPhone = `019${Math.floor(10000000 + Math.random() * 90000000)}`;
     }
 
-    // Check if user already exists by email or phone
+    // Auto-heal if an existing deleted user has this email or phone
+    if (finalEmail) {
+      const deletedUserWithEmail = await this.prisma.user.findFirst({
+        where: { email: finalEmail, deletedAt: { not: null } },
+      });
+      if (deletedUserWithEmail) {
+        await purgeOrScrubUser(this.prisma, deletedUserWithEmail.id);
+      }
+    }
+
+    if (finalPhone) {
+      const deletedUserWithPhone = await this.prisma.user.findFirst({
+        where: { phone: finalPhone, deletedAt: { not: null } },
+      });
+      if (deletedUserWithPhone) {
+        await purgeOrScrubUser(this.prisma, deletedUserWithPhone.id);
+      }
+    }
+
+    // Check if an ACTIVE user already exists by email or phone
     const existingByEmail = finalEmail
-      ? await this.prisma.user.findUnique({
-          where: { email: finalEmail },
+      ? await this.prisma.user.findFirst({
+          where: { email: finalEmail, deletedAt: null },
           include: { userRoles: { include: { role: true } } },
         })
       : null;
 
     const existingByPhone = finalPhone
-      ? await this.prisma.user.findUnique({
-          where: { phone: finalPhone },
+      ? await this.prisma.user.findFirst({
+          where: { phone: finalPhone, deletedAt: null },
           include: { userRoles: { include: { role: true } } },
         })
       : null;
@@ -437,18 +479,12 @@ export class EmployeesService implements OnModuleInit {
       throw new ForbiddenException('CRITICAL: Super Admin accounts CANNOT be deleted!');
     }
 
-    // Soft delete employee to maintain transaction logs and referential integrity
-    await this.prisma.user.update({
-      where: { id },
-      data: {
-        deletedAt: new Date(),
-        isActive: false,
-      },
-    });
+    // Completely purge or scrub employee credentials, chat presence, and profile
+    await purgeOrScrubUser(this.prisma, id);
 
     return {
       success: true,
-      message: 'Employee removed successfully',
+      message: 'Employee removed and credentials cleared successfully',
     };
   }
 }
