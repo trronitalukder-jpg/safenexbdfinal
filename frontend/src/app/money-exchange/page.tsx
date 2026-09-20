@@ -143,10 +143,14 @@ export default function MoneyExchangePage() {
                           P2P ESCROW DEAL
                         </span>
                         {p.seller && (
-                          <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
+                          <Link
+                            href={`/users/${p.seller.uniqueUserId || p.seller.id}`}
+                            className="text-[10px] font-mono text-slate-400 hover:text-sky-600 hover:underline flex items-center gap-1 transition"
+                            title={lang === 'bn' ? 'সেলার প্রোফাইল দেখুন' : 'View Seller Profile'}
+                          >
                             <UserCheck className="w-3 h-3 text-emerald-500" />
                             <span>{p.seller.uniqueUserId}</span>
-                          </span>
+                          </Link>
                         )}
                       </div>
 

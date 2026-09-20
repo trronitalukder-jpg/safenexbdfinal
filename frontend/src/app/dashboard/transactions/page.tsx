@@ -92,26 +92,30 @@ export default function MyTransactionsPage() {
                   {(() => {
                     const counterparty = isBuyer ? tx.receiver : tx.sender;
                     return (
-                      <div className="flex items-center gap-2 pt-1">
+                      <Link
+                        href={`/users/${counterparty?.uniqueUserId || counterparty?.id}`}
+                        className="flex items-center gap-2 pt-1 hover:opacity-80 transition cursor-pointer group"
+                        title={lang === 'bn' ? 'প্রোফাইল দেখুন' : 'View Profile'}
+                      >
                         {counterparty?.avatarUrl ? (
                           <img
                             src={getImageUrl(counterparty.avatarUrl)}
                             alt={counterparty.firstName || 'User'}
-                            className="w-6 h-6 rounded-full object-cover border border-sky-500/30 flex-shrink-0"
+                            className="w-6 h-6 rounded-full object-cover border border-sky-500/30 flex-shrink-0 group-hover:ring-1 group-hover:ring-sky-500 transition"
                           />
                         ) : (
-                          <div className="w-6 h-6 rounded-full bg-slate-700 text-white font-bold text-[9px] flex items-center justify-center flex-shrink-0">
+                          <div className="w-6 h-6 rounded-full bg-slate-700 text-white font-bold text-[9px] flex items-center justify-center flex-shrink-0 group-hover:ring-1 group-hover:ring-sky-500 transition">
                             {counterparty?.firstName?.charAt(0) || (isBuyer ? 'S' : 'B')}
                           </div>
                         )}
                         <div className="text-slate-500 text-xs">
                           {isBuyer ? (
-                            <span>Seller: <strong className="text-slate-900 dark:text-white">{counterparty?.firstName ? `${counterparty.firstName} ${counterparty.lastName || ''}`.trim() : counterparty?.uniqueUserId}</strong> {counterparty?.firstName && <span className="font-mono text-sky-600">({counterparty?.uniqueUserId})</span>}</span>
+                            <span>Seller: <strong className="text-slate-900 dark:text-white group-hover:text-sky-600 transition">{counterparty?.firstName ? `${counterparty.firstName} ${counterparty.lastName || ''}`.trim() : counterparty?.uniqueUserId}</strong> {counterparty?.firstName && <span className="font-mono text-sky-600">({counterparty?.uniqueUserId})</span>}</span>
                           ) : (
-                            <span>Buyer: <strong className="text-slate-900 dark:text-white">{counterparty?.firstName ? `${counterparty.firstName} ${counterparty.lastName || ''}`.trim() : counterparty?.uniqueUserId}</strong> {counterparty?.firstName && <span className="font-mono text-sky-600">({counterparty?.uniqueUserId})</span>}</span>
+                            <span>Buyer: <strong className="text-slate-900 dark:text-white group-hover:text-sky-600 transition">{counterparty?.firstName ? `${counterparty.firstName} ${counterparty.lastName || ''}`.trim() : counterparty?.uniqueUserId}</strong> {counterparty?.firstName && <span className="font-mono text-sky-600">({counterparty?.uniqueUserId})</span>}</span>
                           )}
                         </div>
-                      </div>
+                      </Link>
                     );
                   })()}
                 </div>

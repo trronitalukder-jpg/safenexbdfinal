@@ -53,6 +53,7 @@ export const Navbar = () => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [mobileExpandedMenuId, setMobileExpandedMenuId] = useState<string | null>(null);
   const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(true);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   useEffect(() => {
     refreshMe();
@@ -348,16 +349,117 @@ export const Navbar = () => {
               </div>
             )}
 
-            {/* Mobile Hamburger Menu Button (Always visible on mobile on the far right) */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 sm:p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex-shrink-0 border border-slate-200 dark:border-slate-700/80 shadow-xs active:scale-95"
-              aria-label="Toggle navigation menu"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5 text-rose-500" /> : <MenuIcon className="w-5 h-5 text-sky-600 dark:text-sky-400" />}
-            </button>
+            {/* Mobile Header Controls: Search, Auth/User Panel, Hamburger */}
+            <div className="md:hidden flex items-center gap-1.5 sm:gap-2">
+              {/* Mobile Search Toggle Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileSearchOpen(!mobileSearchOpen);
+                  if (mobileMenuOpen) setMobileMenuOpen(false);
+                }}
+                className={`p-2 sm:p-2.5 rounded-xl transition flex-shrink-0 border shadow-xs active:scale-95 ${
+                  mobileSearchOpen
+                    ? 'bg-sky-600 text-white border-sky-600'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+                aria-label="Search"
+                title={lang === 'bn' ? 'অনুসন্ধান' : 'Search'}
+              >
+                <Search className="w-4 h-4" />
+              </button>
+
+              {/* Mobile User Panel / Auth Controls */}
+              {user ? (
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-1.5 p-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/80 shadow-xs hover:bg-sky-100 transition active:scale-95 flex-shrink-0"
+                  title={lang === 'bn' ? 'ইউজার প্যানেল' : 'User Panel'}
+                >
+                  {user.avatarUrl ? (
+                    <img
+                      src={getImageUrl(user.avatarUrl)}
+                      alt={user.firstName}
+                      className="w-6 h-6 rounded-full object-cover border border-sky-500/50 flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0">
+                      {user.firstName ? user.firstName.charAt(0) : 'U'}
+                    </div>
+                  )}
+                  <span className="text-[11px] font-bold hidden xs:inline">{lang === 'bn' ? 'প্যানেল' : 'Panel'}</span>
+                </Link>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <Link
+                    href="/login"
+                    className="px-2 sm:px-2.5 py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700/80 hover:bg-slate-200 transition"
+                  >
+                    {t('login')}
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="px-2 sm:px-2.5 py-1.5 text-[11px] font-bold rounded-lg bg-sky-600 text-white hover:bg-sky-700 shadow-xs transition"
+                  >
+                    {t('register')}
+                  </Link>
+                </div>
+              )}
+
+              {/* Mobile Hamburger Menu Button (Always visible on mobile on the far right) */}
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(!mobileMenuOpen);
+                  if (mobileSearchOpen) setMobileSearchOpen(false);
+                }}
+                className="p-2 sm:p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex-shrink-0 border border-slate-200 dark:border-slate-700/80 shadow-xs active:scale-95"
+                aria-label="Toggle navigation menu"
+              >
+                {mobileMenuOpen ? <X className="w-4 h-4 text-rose-500" /> : <MenuIcon className="w-4 h-4 text-sky-600 dark:text-sky-400" />}
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Mobile Search Bar Dropdown */}
+        {mobileSearchOpen && (
+          <div className="md:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 animate-in slide-in-from-top-1 duration-150">
+            <form
+              onSubmit={(e) => {
+                handleSearch(e);
+                setMobileSearchOpen(false);
+              }}
+              className="relative flex items-center gap-2"
+            >
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('search_placeholder')}
+                  autoFocus
+                  className="w-full pl-9 pr-8 py-2 text-xs bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-sky-500 focus:outline-none transition"
+                />
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <button
+                type="submit"
+                className="px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex-shrink-0"
+              >
+                {lang === 'bn' ? 'খুঁজুন' : 'Search'}
+              </button>
+            </form>
+          </div>
+        )}
       </div>
 
       {/* Navigation Links Bar */}
@@ -483,7 +585,7 @@ export const Navbar = () => {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 max-h-[calc(100vh-4.25rem)] overflow-y-auto px-4 pt-3 pb-12 space-y-4 shadow-2xl animate-in slide-in-from-top-2 duration-200">
+        <div className="md:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain px-4 pt-3 pb-24 space-y-4 shadow-2xl animate-in slide-in-from-top-2 duration-200">
           {/* Top Section: Language Switch & Dark/Light Toggle + Search */}
           <div className="space-y-2.5">
             <div className="flex items-center gap-2">
@@ -536,10 +638,76 @@ export const Navbar = () => {
             </form>
           </div>
 
-          {/* Middle Section: Navigation Menu */}
+          {/* CMS Dynamic Menus (If configured by Admin) */}
+          {navMenus.length > 0 && (
+            <div className="border-t border-slate-100 dark:border-slate-800/80 pt-3 space-y-1">
+              <div className="text-[11px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider px-2 mb-1">
+                {lang === 'bn' ? 'কাস্টম মেনু' : 'Custom Menus'}
+              </div>
+              {navMenus.map((item) => {
+                const activeChildren = (item.children || []).filter((c: any) => c.isActive !== false);
+                const hasChildren = activeChildren.length > 0;
+                const isExpanded = mobileExpandedMenuId === item.id;
+
+                if (hasChildren) {
+                  return (
+                    <div key={item.id} className="rounded-xl overflow-hidden bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => setMobileExpandedMenuId(isExpanded ? null : item.id)}
+                        className="w-full flex items-center justify-between py-2.5 px-3 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 transition"
+                      >
+                        <span>{item.title}</span>
+                        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180 text-sky-500' : ''}`} />
+                      </button>
+                      {isExpanded && (
+                        <div className="px-3 pb-2 pt-1 space-y-1 border-t border-slate-100 dark:border-slate-800/60 bg-white/60 dark:bg-slate-900/60">
+                          <Link
+                            href={item.url}
+                            target={item.isExternal ? '_blank' : undefined}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="block py-1.5 px-2 text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline"
+                          >
+                            {lang === 'bn' ? `${item.title} দেখুন` : `View ${item.title}`}
+                          </Link>
+                          {activeChildren.map((sub: any) => (
+                            <Link
+                              key={sub.id}
+                              href={sub.url}
+                              target={sub.isExternal ? '_blank' : undefined}
+                              onClick={() => setMobileMenuOpen(false)}
+                              className="flex items-center justify-between py-1.5 px-2 text-xs text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition"
+                            >
+                              <span>{sub.title}</span>
+                              {sub.isExternal && <span className="text-[10px] text-slate-400">↗</span>}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.url}
+                    target={item.isExternal ? '_blank' : undefined}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center justify-between py-2 px-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-semibold transition"
+                  >
+                    <span>{item.title}</span>
+                    {item.isExternal && <span className="text-[10px] text-slate-400">↗</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Primary Navigation Menu */}
           <div className="border-t border-slate-100 dark:border-slate-800/80 pt-3 space-y-1">
             <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 mb-1">
-              {lang === 'bn' ? 'নেভিগেশন মেনু' : 'Navigation Menu'}
+              {lang === 'bn' ? 'সকল সার্ভিস ও নেভিগেশন' : 'All Services & Navigation'}
             </div>
 
             {/* Home */}
@@ -562,7 +730,7 @@ export const Navbar = () => {
               <span>{lang === 'bn' ? 'শপ (SHOP)' : 'SHOP'}</span>
             </Link>
 
-            {/* Popular Categories (Dynamic Accordion from API) */}
+            {/* Popular Categories (Dynamic Accordion with Subcategories) */}
             <div className="rounded-xl overflow-hidden bg-slate-50/60 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
               <button
                 type="button"
@@ -589,19 +757,34 @@ export const Navbar = () => {
                 <div className="px-3 pb-2.5 pt-1 space-y-1 border-t border-slate-100 dark:border-slate-800/60">
                   {categories.length > 0 ? (
                     categories.map((c) => (
-                      <Link
-                        key={c.id}
-                        href={`/products?category=${c.slug}`}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center justify-between py-1.5 px-3 rounded-lg text-xs text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-white dark:hover:bg-slate-800 transition"
-                      >
-                        <span>{c.name}</span>
+                      <div key={c.id} className="space-y-0.5">
+                        <Link
+                          href={`/products?category=${c.slug}`}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center justify-between py-1.5 px-3 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-white dark:hover:bg-slate-800 transition"
+                        >
+                          <span>{c.name}</span>
+                          {c.children?.length > 0 && (
+                            <span className="text-[10px] text-slate-400 bg-slate-200/60 dark:bg-slate-700/60 px-1.5 py-0.5 rounded-full">
+                              {c.children.length}
+                            </span>
+                          )}
+                        </Link>
                         {c.children?.length > 0 && (
-                          <span className="text-[10px] text-slate-400 bg-slate-200/60 dark:bg-slate-700/60 px-1.5 py-0.5 rounded-full">
-                            {c.children.length}
-                          </span>
+                          <div className="pl-4 space-y-0.5 border-l border-slate-200 dark:border-slate-700 ml-3 my-0.5">
+                            {c.children.map((sub: any) => (
+                              <Link
+                                key={sub.id}
+                                href={`/products?category=${sub.slug}`}
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="block py-1 px-2.5 text-[11px] text-slate-500 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
+                              >
+                                • {sub.name}
+                              </Link>
+                            ))}
+                          </div>
                         )}
-                      </Link>
+                      </div>
                     ))
                   ) : (
                     <div className="py-2 text-center text-xs text-slate-400">
@@ -611,7 +794,7 @@ export const Navbar = () => {
                   <Link
                     href="/shop"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block text-center py-1.5 text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline pt-1"
+                    className="block text-center py-1.5 text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline pt-1 border-t border-slate-100 dark:border-slate-800 mt-1"
                   >
                     {lang === 'bn' ? 'সব ক্যাটাগরি ও প্রোডাক্ট দেখুন →' : 'View All Categories & Products →'}
                   </Link>

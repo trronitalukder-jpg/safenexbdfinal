@@ -82,33 +82,45 @@ export default function TransactionsMarketplacePage() {
 
                 <div className="text-xs text-slate-500 flex items-center gap-3 flex-wrap">
                   <div className="flex items-center gap-1.5">
-                    {tx.sender?.avatarUrl ? (
-                      <img
-                        src={getImageUrl(tx.sender.avatarUrl)}
-                        alt="Buyer"
-                        className="w-5 h-5 rounded-full object-cover border border-sky-500/30 flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="w-5 h-5 rounded-full bg-slate-700 text-white font-bold text-[8px] flex items-center justify-center flex-shrink-0">
-                        {tx.sender?.firstName?.charAt(0) || 'B'}
-                      </div>
-                    )}
-                    <span>Buyer: <strong className="font-mono text-slate-700 dark:text-slate-300">{tx.sender?.uniqueUserId}</strong></span>
+                    <Link
+                      href={`/users/${tx.sender?.uniqueUserId || tx.sender?.id}`}
+                      className="flex items-center gap-1.5 hover:opacity-80 transition cursor-pointer group"
+                      title={lang === 'bn' ? 'বায়ার প্রোফাইল দেখুন' : 'View Buyer Profile'}
+                    >
+                      {tx.sender?.avatarUrl ? (
+                        <img
+                          src={getImageUrl(tx.sender.avatarUrl)}
+                          alt="Buyer"
+                          className="w-5 h-5 rounded-full object-cover border border-sky-500/30 flex-shrink-0 group-hover:ring-1 group-hover:ring-sky-500 transition"
+                        />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full bg-slate-700 text-white font-bold text-[8px] flex items-center justify-center flex-shrink-0 group-hover:ring-1 group-hover:ring-sky-500 transition">
+                          {tx.sender?.firstName?.charAt(0) || 'B'}
+                        </div>
+                      )}
+                      <span>Buyer: <strong className="font-mono text-slate-700 dark:text-slate-300 group-hover:text-sky-600 transition">{tx.sender?.uniqueUserId}</strong></span>
+                    </Link>
                   </div>
                   <span>➔</span>
                   <div className="flex items-center gap-1.5">
-                    {tx.receiver?.avatarUrl ? (
-                      <img
-                        src={getImageUrl(tx.receiver.avatarUrl)}
-                        alt="Seller"
-                        className="w-5 h-5 rounded-full object-cover border border-emerald-500/30 flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="w-5 h-5 rounded-full bg-slate-700 text-white font-bold text-[8px] flex items-center justify-center flex-shrink-0">
-                        {tx.receiver?.firstName?.charAt(0) || 'S'}
-                      </div>
-                    )}
-                    <span>Seller: <strong className="font-mono text-slate-700 dark:text-slate-300">{tx.receiver?.uniqueUserId}</strong></span>
+                    <Link
+                      href={`/users/${tx.receiver?.uniqueUserId || tx.receiver?.id}`}
+                      className="flex items-center gap-1.5 hover:opacity-80 transition cursor-pointer group"
+                      title={lang === 'bn' ? 'সেলার প্রোফাইল দেখুন' : 'View Seller Profile'}
+                    >
+                      {tx.receiver?.avatarUrl ? (
+                        <img
+                          src={getImageUrl(tx.receiver.avatarUrl)}
+                          alt="Seller"
+                          className="w-5 h-5 rounded-full object-cover border border-emerald-500/30 flex-shrink-0 group-hover:ring-1 group-hover:ring-emerald-500 transition"
+                        />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full bg-slate-700 text-white font-bold text-[8px] flex items-center justify-center flex-shrink-0 group-hover:ring-1 group-hover:ring-emerald-500 transition">
+                          {tx.receiver?.firstName?.charAt(0) || 'S'}
+                        </div>
+                      )}
+                      <span>Seller: <strong className="font-mono text-slate-700 dark:text-slate-300 group-hover:text-emerald-600 transition">{tx.receiver?.uniqueUserId}</strong></span>
+                    </Link>
                   </div>
                 </div>
               </div>

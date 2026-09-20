@@ -1788,8 +1788,17 @@ function MessengerChatContent() {
                           className="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5"
                         >
                           <User className="w-4 h-4 text-slate-400" />
-                          <span>{lang === 'bn' ? 'প্রোফাইল দেখুন' : 'View Profile'}</span>
+                          <span>{lang === 'bn' ? 'প্রোফাইল পপআপ দেখুন' : 'View Profile Card'}</span>
                         </button>
+
+                        <Link
+                          href={`/users/${activeConversation.otherUser?.uniqueUserId || activeConversation.otherUser?.id}`}
+                          onClick={() => setShowOptionsDropdown(false)}
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/40 flex items-center gap-2.5 transition"
+                        >
+                          <User className="w-4 h-4 text-sky-500" />
+                          <span>{lang === 'bn' ? 'পাবলিক প্রোফাইল পেজ ↗' : 'Public Profile Page ↗'}</span>
+                        </Link>
                       </div>
                     </>
                   )}
@@ -3488,15 +3497,14 @@ function MessengerChatContent() {
                   </button>
                 </div>
 
-                {u.uniqueUserId && (
-                  <Link
-                    href={`/users/${u.uniqueUserId}`}
-                    onClick={() => setShowProfileModal(null)}
-                    className="block pt-1 text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline transition"
-                  >
-                    {lang === 'bn' ? 'সম্পূর্ণ প্রোফাইল দেখুন ও রিভিউ দিন →' : 'View Full Profile & Reviews →'}
-                  </Link>
-                )}
+                <Link
+                  href={`/users/${u.uniqueUserId || u.id}`}
+                  onClick={() => setShowProfileModal(null)}
+                  className="w-full py-2.5 rounded-xl bg-sky-50 dark:bg-sky-950/50 hover:bg-sky-100 dark:hover:bg-sky-900/50 text-sky-700 dark:text-sky-300 font-bold text-xs transition flex items-center justify-center gap-2 border border-sky-200 dark:border-sky-800"
+                >
+                  <User className="w-4 h-4 text-sky-500" />
+                  <span>{lang === 'bn' ? 'সম্পূর্ণ প্রোফাইল ও রিভিউ দেখুন →' : 'View Full Profile & Reviews →'}</span>
+                </Link>
               </div>
             </div>
           </div>

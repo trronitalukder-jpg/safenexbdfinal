@@ -121,9 +121,9 @@ function ShopContent() {
         </div>
       </div>
 
-      {/* Category Bubbles / Quick Filters */}
+      {/* Category Bubbles / Quick Filters (Mobile & Tablet Horizontal Scroll) */}
       {categories.length > 0 && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <div className="lg:hidden flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
           <button
             onClick={() => setSelectedCategory('')}
             className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-2 border ${
@@ -169,10 +169,78 @@ function ShopContent() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={lang === 'bn' ? 'শপ প্রোডাক্ট খুঁজুন...' : 'Search shop products...'}
-              className="w-full pl-10 pr-4 py-2.5 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-sky-500"
+              className="w-full pl-10 pr-4 py-2.5 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-sky-500 shadow-xs"
             />
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
           </form>
+
+          {/* Desktop Vertical Categories Sidebar */}
+          {categories.length > 0 && (
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200/80 dark:border-slate-800 space-y-3 shadow-xs">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                  <Store className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                  <span>{lang === 'bn' ? 'ক্যাটাগরি সমূহ' : 'Categories'}</span>
+                </h3>
+                {selectedCategory && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategory('')}
+                    className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
+                  >
+                    {lang === 'bn' ? 'রিসেট' : 'Reset'}
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-1 text-xs max-h-[360px] overflow-y-auto pr-1">
+                {/* All Categories Button */}
+                <button
+                  onClick={() => setSelectedCategory('')}
+                  className={`w-full text-left px-3 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-between ${
+                    selectedCategory === ''
+                      ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 font-bold border border-sky-200 dark:border-sky-800/80 shadow-xs'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${selectedCategory === '' ? 'bg-sky-600' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                    <span>{lang === 'bn' ? 'সকল ক্যাটাগরি' : 'All Categories'}</span>
+                  </div>
+                </button>
+
+                {/* Individual Categories */}
+                {categories.map((c) => {
+                  const isSelected = selectedCategory === c.slug;
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => setSelectedCategory(c.slug)}
+                      className={`w-full text-left px-3 py-2 rounded-xl transition cursor-pointer flex items-center justify-between ${
+                        isSelected
+                          ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 font-bold border border-sky-200 dark:border-sky-800/80 shadow-xs'
+                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isSelected ? 'bg-sky-600' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                        <span className="truncate">{c.name}</span>
+                      </div>
+                      {c._count?.products !== undefined && (
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 font-semibold ${
+                          isSelected
+                            ? 'bg-sky-600 text-white'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                        }`}>
+                          {c._count.products}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Product Type Filter */}
           <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200/80 dark:border-slate-800 space-y-3 shadow-xs">
@@ -310,14 +378,18 @@ function ShopContent() {
                       </Link>
 
                       <div className="p-3 sm:p-4 space-y-2">
-                        <div className="flex items-center gap-1.5 sm:gap-2">
-                          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-sky-600 text-white text-[9px] sm:text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                        <Link
+                          href={`/users/${p.seller?.uniqueUserId || p.seller?.id}`}
+                          className="flex items-center gap-1.5 sm:gap-2 hover:opacity-80 transition cursor-pointer group"
+                          title={lang === 'bn' ? 'সেলার প্রোফাইল দেখুন' : 'View Seller Profile'}
+                        >
+                          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-sky-600 text-white text-[9px] sm:text-[10px] font-bold flex items-center justify-center flex-shrink-0 group-hover:ring-1 group-hover:ring-sky-500 transition">
                             {p.seller?.firstName?.charAt(0) || 'U'}
                           </div>
-                          <span className="text-[10px] sm:text-xs text-slate-500 font-mono truncate">
+                          <span className="text-[10px] sm:text-xs text-slate-500 group-hover:text-sky-600 font-mono truncate transition">
                             @{p.seller?.uniqueUserId || 'Seller'}
                           </span>
-                        </div>
+                        </Link>
 
                         <Link href={`/products/${p.slug}`}>
                           <h2 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white line-clamp-2 hover:text-sky-600 transition leading-snug">

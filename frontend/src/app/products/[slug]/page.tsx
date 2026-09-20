@@ -306,27 +306,31 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-3">
+            <Link
+              href={`/users/${product.seller?.uniqueUserId || product.seller?.id}`}
+              className="flex items-center gap-3 hover:opacity-85 transition cursor-pointer group"
+              title={lang === 'bn' ? 'সম্পূর্ণ প্রোফাইল দেখুন' : 'View Full Profile'}
+            >
               {product.seller?.avatarUrl ? (
                 <img
                   src={getImageUrl(product.seller.avatarUrl)}
                   alt={product.seller?.firstName || 'Seller'}
-                  className="w-12 h-12 rounded-full object-cover border border-sky-500/30 flex-shrink-0"
+                  className="w-12 h-12 rounded-full object-cover border border-sky-500/30 flex-shrink-0 group-hover:ring-2 group-hover:ring-sky-500 transition"
                 />
               ) : (
-                <div className="w-12 h-12 rounded-full bg-sky-600 text-white font-bold text-sm flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 rounded-full bg-sky-600 text-white font-bold text-sm flex items-center justify-center flex-shrink-0 group-hover:ring-2 group-hover:ring-sky-500 transition">
                   {product.seller?.firstName?.charAt(0) || 'U'}
                 </div>
               )}
               <div>
-                <div className="font-bold text-sm text-slate-900 dark:text-white">
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-sky-600 transition">
                   {product.seller?.firstName} {product.seller?.lastName}
                 </div>
-                <div className="text-xs font-mono text-sky-600 font-semibold">
+                <div className="text-xs font-mono text-sky-600 font-semibold group-hover:underline">
                   ID: {product.seller?.uniqueUserId}
                 </div>
               </div>
-            </div>
+            </Link>
 
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 flex items-center gap-2">
               <Calendar className="w-3.5 h-3.5" />

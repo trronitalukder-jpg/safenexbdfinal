@@ -274,14 +274,18 @@ export default function HomePage() {
                   </Link>
 
                   <div className="p-2.5 sm:p-5 space-y-1.5 sm:space-y-3">
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-amber-500 text-slate-950 text-[9px] sm:text-xs font-bold flex items-center justify-center flex-shrink-0">
+                    <Link
+                      href={`/users/${p.seller?.uniqueUserId || p.seller?.id}`}
+                      className="flex items-center gap-1.5 sm:gap-2 hover:opacity-80 transition cursor-pointer group"
+                      title={lang === 'bn' ? 'সেলার প্রোফাইল দেখুন' : 'View Seller Profile'}
+                    >
+                      <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-amber-500 text-slate-950 text-[9px] sm:text-xs font-bold flex items-center justify-center flex-shrink-0 group-hover:ring-1 group-hover:ring-amber-500 transition">
                         {p.seller?.firstName?.charAt(0) || 'U'}
                       </div>
-                      <span className="text-[10px] sm:text-xs text-slate-500 font-mono truncate">
+                      <span className="text-[10px] sm:text-xs text-slate-500 group-hover:text-amber-500 font-mono truncate transition">
                         @{p.seller?.uniqueUserId || 'Seller'}
                       </span>
-                    </div>
+                    </Link>
 
                     <Link href={`/products/${p.slug}`}>
                       <h3 className="text-xs sm:text-base font-bold text-slate-900 dark:text-white line-clamp-2 hover:text-amber-500 transition leading-snug">
@@ -377,14 +381,18 @@ export default function HomePage() {
                   </Link>
 
                   <div className="p-2.5 sm:p-5 space-y-1.5 sm:space-y-3">
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-sky-600 text-white text-[9px] sm:text-xs font-bold flex items-center justify-center flex-shrink-0">
+                    <Link
+                      href={`/users/${p.seller?.uniqueUserId || p.seller?.id}`}
+                      className="flex items-center gap-1.5 sm:gap-2 hover:opacity-80 transition cursor-pointer group"
+                      title={lang === 'bn' ? 'সেলার প্রোফাইল দেখুন' : 'View Seller Profile'}
+                    >
+                      <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-sky-600 text-white text-[9px] sm:text-xs font-bold flex items-center justify-center flex-shrink-0 group-hover:ring-1 group-hover:ring-sky-500 transition">
                         {p.seller?.firstName?.charAt(0) || 'U'}
                       </div>
-                      <span className="text-[10px] sm:text-xs text-slate-500 font-mono truncate">
+                      <span className="text-[10px] sm:text-xs text-slate-500 group-hover:text-sky-600 font-mono truncate transition">
                         @{p.seller?.uniqueUserId || 'Seller'}
                       </span>
-                    </div>
+                    </Link>
 
                     <Link href={`/products/${p.slug}`}>
                       <h3 className="text-xs sm:text-base font-bold text-slate-900 dark:text-white line-clamp-2 hover:text-sky-600 transition leading-snug">
@@ -480,14 +488,18 @@ export default function HomePage() {
                   </Link>
 
                   <div className="p-2.5 sm:p-5 space-y-1.5 sm:space-y-3">
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-emerald-600 text-white text-[9px] sm:text-xs font-bold flex items-center justify-center flex-shrink-0">
+                    <Link
+                      href={`/users/${p.seller?.uniqueUserId || p.seller?.id}`}
+                      className="flex items-center gap-1.5 sm:gap-2 hover:opacity-80 transition cursor-pointer group"
+                      title={lang === 'bn' ? 'সেলার প্রোফাইল দেখুন' : 'View Seller Profile'}
+                    >
+                      <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-emerald-600 text-white text-[9px] sm:text-xs font-bold flex items-center justify-center flex-shrink-0 group-hover:ring-1 group-hover:ring-emerald-500 transition">
                         {p.seller?.firstName?.charAt(0) || 'U'}
                       </div>
-                      <span className="text-[10px] sm:text-xs text-slate-500 font-mono truncate">
+                      <span className="text-[10px] sm:text-xs text-slate-500 group-hover:text-emerald-600 font-mono truncate transition">
                         @{p.seller?.uniqueUserId || 'Seller'}
                       </span>
-                    </div>
+                    </Link>
 
                     <Link href={`/products/${p.slug}`}>
                       <h3 className="text-xs sm:text-base font-bold text-slate-900 dark:text-white line-clamp-2 hover:text-emerald-600 transition leading-snug">
@@ -562,14 +574,18 @@ export default function HomePage() {
               >
                 <div className="space-y-2.5 sm:space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-xs">
+                    <Link
+                      href={`/users/${p.seller?.uniqueUserId || p.seller?.id}`}
+                      className="flex items-center gap-2 hover:opacity-80 transition cursor-pointer group"
+                      title={lang === 'bn' ? 'সেলার প্রোফাইল দেখুন' : 'View Seller Profile'}
+                    >
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-xs group-hover:ring-1 group-hover:ring-amber-500 transition">
                         <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </div>
-                      <span className="font-mono text-[11px] sm:text-xs text-slate-500">
+                      <span className="font-mono text-[11px] sm:text-xs text-slate-500 group-hover:text-amber-500 transition">
                         @{p.seller?.uniqueUserId || 'Seller'}
                       </span>
-                    </div>
+                    </Link>
 
                     {hasActiveBid ? (
                       <HomePositionTag position={p.activeBid.targetPosition} />
@@ -652,21 +668,25 @@ export default function HomePage() {
               >
                 <div className="space-y-3 sm:space-y-4">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
+                    <Link
+                      href={`/users/${u.uniqueUserId || u.id}`}
+                      className="flex items-center gap-3 sm:gap-3.5 min-w-0 hover:opacity-85 transition cursor-pointer group/user"
+                      title={lang === 'bn' ? 'প্রোফাইল দেখুন' : 'View Profile'}
+                    >
                       {u.avatarUrl ? (
                         <img
                           src={getImageUrl(u.avatarUrl)}
                           alt={u.fullName}
-                          className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-sky-500/30 flex-shrink-0"
+                          className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-sky-500/30 flex-shrink-0 group-hover/user:ring-2 group-hover/user:ring-sky-500 transition"
                         />
                       ) : (
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-sky-600 text-white font-black text-sm sm:text-base flex items-center justify-center shadow-xs flex-shrink-0">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-sky-600 text-white font-black text-sm sm:text-base flex items-center justify-center shadow-xs flex-shrink-0 group-hover/user:ring-2 group-hover/user:ring-sky-500 transition">
                           {u.fullName?.charAt(0) || 'U'}
                         </div>
                       )}
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-mono font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
+                          <span className="font-mono font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate group-hover/user:text-sky-600 group-hover/user:underline transition">
                             @{u.uniqueUserId}
                           </span>
                           {u.isVerified && (
@@ -675,7 +695,7 @@ export default function HomePage() {
                         </div>
                         <div className="text-[11px] sm:text-xs text-slate-500 truncate">{u.fullName}</div>
                       </div>
-                    </div>
+                    </Link>
 
                     {hasActiveBid && (
                       <div className="flex-shrink-0">

@@ -87,7 +87,13 @@ export default function PhysicalProductsPage() {
                     )}
                   </Link>
                   <div className="p-2.5 sm:p-4 space-y-1 sm:space-y-2">
-                    <span className="text-[9px] sm:text-[10px] font-mono text-slate-400">ID: {p.seller?.uniqueUserId}</span>
+                    <Link
+                      href={`/users/${p.seller?.uniqueUserId || p.seller?.id}`}
+                      className="inline-block text-[9px] sm:text-[10px] font-mono text-slate-400 hover:text-sky-600 hover:underline transition"
+                      title={lang === 'bn' ? 'সেলার প্রোফাইল দেখুন' : 'View Seller Profile'}
+                    >
+                      ID: {p.seller?.uniqueUserId}
+                    </Link>
                     <Link href={`/products/${p.slug}`}>
                       <h2 className="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 hover:text-sky-600 transition leading-snug">{p.title}</h2>
                     </Link>
