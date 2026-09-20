@@ -1,0 +1,15 @@
+{
+  "name": "safnexbd",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Safe Transaction Marketplace & Digital/Physical Product Platform",
+  "scripts": {
+    "dev:backend": "cd backend && npm run start:dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "prisma:generate": "cd backend && npx prisma generate",
+    "prisma:push": "cd backend && npx prisma db push",
+    "prisma:seed": "cd backend && node dist/prisma/seed.js"
+  }
+}

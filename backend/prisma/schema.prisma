@@ -1,0 +1,1198 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -----------------------------------------------------------------------------
+// 1. Identity, Users & Roles
+// -----------------------------------------------------------------------------
+
+model User {
+  id              String    @id @default(uuid())
+  uniqueUserId    String    @unique @db.VarChar(50) // Format: Rahim2345, Rahim2345A
+  firstName       String    @db.VarChar(100)
+  lastName        String    @db.VarChar(100)
+  email           String    @unique @db.VarChar(191)
+  phone           String    @unique @db.VarChar(30)
+  passwordHash    String    @db.VarChar(255)
+  avatarUrl       String?   @db.VarChar(500)
+  address         String?   @db.Text
+  dateOfBirth     DateTime?
+  country         String?   @db.VarChar(100)
+  city            String?   @db.VarChar(100)
+  postalCode      String?   @db.VarChar(30)
+  businessName    String?   @db.VarChar(200)
+  businessType    String?   @db.VarChar(100)
+  isActive        Boolean   @default(true)
+  isVerified      Boolean   @default(false)
+  isEmployee      Boolean   @default(false)
+  adminPermissions String?  @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  wallet          Wallet?
+  userRoles       UserRole[]
+  refreshTokens   RefreshToken[]
+  paymentAccounts UserPaymentAccount[]
+  products        Product[]
+  bids            Bid[]                  @relation("SellerBids")
+  targetedBids    Bid[]                  @relation("TargetedBids")
+  bidHistories    BidHistory[]
+  
+  sentTransactions     Transaction[] @relation("SenderTransactions")
+  receivedTransactions Transaction[] @relation("ReceiverTransactions")
+
+  rechargeRequests     RechargeRequest[]
+  withdrawalRequests   WithdrawalRequest[]
+
+  chatParticipants     ConversationParticipant[]
+  messages             Message[]
+  initiatedDisputes    Dispute[] @relation("InitiatedDisputes")
+  disputeEvidences     DisputeEvidence[]
+  passwordResetRequests PasswordResetRequest[]
+  partnerUsers          PartnerUser[]
+
+  assignedWithdrawals  WithdrawalRequest[] @relation("AssignedWithdrawals")
+  assignedRecharges    RechargeRequest[]   @relation("AssignedRecharges")
+  assignedDisputes     Dispute[]           @relation("AssignedDisputes")
+  staffProfile         StaffProfile?
+  handoffsSent         TaskHandoffLog[]    @relation("HandoffFromStaff")
+  handoffsReceived     TaskHandoffLog[]    @relation("HandoffToStaff")
+
+  @@index([uniqueUserId])
+  @@index([email])
+  @@index([phone])
+  @@map("users")
+}
+
+model PasswordResetRequest {
+  id                String    @id @default(uuid())
+  userId            String?
+  fullName          String    @db.VarChar(100)
+  phone             String    @db.VarChar(30)
+  uniqueUserId      String    @db.VarChar(50)
+  email             String?   @db.VarChar(191)
+  notes             String?   @db.Text
+  status            String    @default("PENDING") // PENDING, COMPLETED, REJECTED
+  generatedPassword String?   @db.VarChar(255)
+  adminNote         String?   @db.Text
+  resolvedBy        String?   @db.VarChar(100)
+  resolvedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user              User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([uniqueUserId])
+  @@index([phone])
+  @@index([status])
+  @@map("password_reset_requests")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @db.VarChar(255)
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  name        String           @unique @db.VarChar(50) // SUPER_ADMIN, ADMIN, FINANCE_ADMIN, SUPPORT_ADMIN, MODERATOR, USER
+  description String?          @db.VarChar(255)
+  permissions RolePermission[]
+  userRoles   UserRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  code        String           @unique @db.VarChar(100)
+  description String?          @db.VarChar(255)
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+enum PaymentMethodType {
+  BKASH
+  NAGAD
+  ROCKET
+  UPAY
+  BANK
+  OTHER
+}
+
+enum AccountOwnerType {
+  PERSONAL
+  AGENT
+  MERCHANT
+}
+
+model UserPaymentAccount {
+  id            String            @id @default(uuid())
+  userId        String
+  methodType    PaymentMethodType
+  accountType   AccountOwnerType  @default(PERSONAL)
+  accountNumber String            @db.VarChar(100)
+  accountName   String            @db.VarChar(100)
+  bankName      String?           @db.VarChar(100)
+  branchName    String?           @db.VarChar(100)
+  routingNumber String?           @db.VarChar(50)
+  isDefault     Boolean           @default(false)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_payment_accounts")
+}
+
+// -----------------------------------------------------------------------------
+// 2. Wallets, Financial Ledger & Holds
+// -----------------------------------------------------------------------------
+
+model Wallet {
+  id               String          @id @default(uuid())
+  userId           String          @unique
+  availableBalance Decimal         @default(0.0000) @db.Decimal(18, 4)
+  holdBalance      Decimal         @default(0.0000) @db.Decimal(18, 4)
+  currency         String          @default("BDT") @db.VarChar(10)
+  version          Int             @default(0) // Optimistic locking
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ledgerEntries    WalletLedger[]
+  holds            WalletHold[]
+  bidReservations  BidReservation[]
+
+  @@map("wallets")
+}
+
+enum LedgerEntryType {
+  RECHARGE
+  WITHDRAWAL
+  HOLD_LOCK
+  HOLD_RELEASE
+  HOLD_REFUND
+  COMMISSION
+  BID_RESERVE
+  BID_RELEASE
+  BID_DEDUCT
+  TRANSFER_IN
+  TRANSFER_OUT
+  ADMIN_ADJUSTMENT
+}
+
+model WalletLedger {
+  id            String          @id @default(uuid())
+  walletId      String
+  userId        String
+  transactionId String?         @db.VarChar(100)
+  type          LedgerEntryType
+  amount        Decimal         @db.Decimal(18, 4)
+  commission    Decimal         @default(0.0000) @db.Decimal(18, 4)
+  balanceBefore Decimal         @db.Decimal(18, 4)
+  balanceAfter  Decimal         @db.Decimal(18, 4)
+  holdBefore    Decimal         @default(0.0000) @db.Decimal(18, 4)
+  holdAfter     Decimal         @default(0.0000) @db.Decimal(18, 4)
+  referenceId   String?         @db.VarChar(100)
+  referenceType String?         @db.VarChar(50)
+  notes         String?         @db.Text
+  status        String          @default("COMPLETED") @db.VarChar(20)
+  createdBy     String          @default("SYSTEM") @db.VarChar(50)
+  createdAt     DateTime        @default(now())
+
+  wallet        Wallet          @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId])
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([type])
+  @@index([createdAt])
+  @@map("wallet_ledger")
+}
+
+enum HoldStatus {
+  HELD
+  RELEASED
+  REFUNDED
+}
+
+model WalletHold {
+  id            String     @id @default(uuid())
+  walletId      String
+  userId        String
+  transactionId String     @db.VarChar(100)
+  amount        Decimal    @db.Decimal(18, 4)
+  status        HoldStatus @default(HELD)
+  warningDate   DateTime?
+  warningTime   String?    @db.VarChar(50)
+  notes         String?    @db.Text
+  releasedAt    DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  wallet        Wallet     @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId])
+  @@index([userId])
+  @@index([transactionId])
+  @@index([status])
+  @@map("wallet_holds")
+}
+
+enum GatewayType {
+  PERSONAL
+  MERCHANT
+  BANK
+  API
+}
+
+model RechargeMethod {
+  id            String            @id @default(uuid())
+  name          String            @db.VarChar(100)
+  code          String            @unique @db.VarChar(50)
+  type          GatewayType       @default(PERSONAL)
+  accountNumber String            @db.VarChar(100)
+  accountName   String?           @db.VarChar(100)
+  bankDetails   String?           @db.Text
+  instructions  String?           @db.Text
+  minAmount     Decimal           @default(10.0000) @db.Decimal(18, 4)
+  maxAmount     Decimal           @default(500000.0000) @db.Decimal(18, 4)
+  isActive      Boolean           @default(true)
+  sortOrder     Int               @default(0)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  requests      RechargeRequest[]
+
+  @@map("recharge_methods")
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model RechargeRequest {
+  id                String         @id @default(uuid())
+  userId            String
+  methodId          String
+  amount            Decimal        @db.Decimal(18, 4)
+  approvedAmount    Decimal?       @db.Decimal(18, 4)
+  senderAccount     String         @db.VarChar(100)
+  transactionNumber String         @db.VarChar(100)
+  proofUrl          String?        @db.VarChar(500)
+  status            RequestStatus  @default(PENDING)
+  adminNotes        String?        @db.Text
+  reviewedById      String?        @db.VarChar(50)
+  reviewedAt        DateTime?
+  assignedToId      String?        @db.VarChar(50)
+  assignedAt        DateTime?
+  lockedUntil       DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  method            RechargeMethod @relation(fields: [methodId], references: [id], onDelete: Cascade)
+  assignedTo        User?          @relation("AssignedRecharges", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([transactionNumber])
+  @@index([assignedToId])
+  @@map("recharge_requests")
+}
+
+model WithdrawalMethod {
+  id            String                @id @default(uuid())
+  name          String                @db.VarChar(100)
+  code          String                @unique @db.VarChar(50)
+  minAmount     Decimal               @default(100.0000) @db.Decimal(18, 4)
+  maxAmount     Decimal               @default(100000.0000) @db.Decimal(18, 4)
+  feePercentage Decimal               @default(0.00) @db.Decimal(5, 2)
+  feeFlat       Decimal               @default(0.0000) @db.Decimal(18, 4)
+  isActive      Boolean               @default(true)
+  sortOrder     Int                   @default(0)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  requests      WithdrawalRequest[]
+
+  @@map("withdrawal_methods")
+}
+
+model WithdrawalRequest {
+  id                 String           @id @default(uuid())
+  userId             String
+  methodId           String
+  amount             Decimal          @db.Decimal(18, 4)
+  fee                Decimal          @default(0.0000) @db.Decimal(18, 4)
+  netAmount          Decimal          @db.Decimal(18, 4)
+  destinationAccount String           @db.VarChar(500)
+  accountType        String?          @db.VarChar(50)
+  bankName           String?          @db.VarChar(150)
+  accountHolderName  String?          @db.VarChar(150)
+  accountNumber      String?          @db.VarChar(100)
+  routingNumber      String?          @db.VarChar(50)
+  branchName         String?          @db.VarChar(150)
+  status             RequestStatus    @default(PENDING)
+  adminNotes         String?          @db.Text
+  reviewedById       String?          @db.VarChar(50)
+  reviewedAt         DateTime?
+  assignedToId       String?          @db.VarChar(50)
+  assignedAt         DateTime?
+  lockedUntil        DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  method             WithdrawalMethod @relation(fields: [methodId], references: [id], onDelete: Cascade)
+  assignedTo         User?            @relation("AssignedWithdrawals", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([assignedToId])
+  @@map("withdrawal_requests")
+}
+
+// -----------------------------------------------------------------------------
+// 3. Categories & Products
+// -----------------------------------------------------------------------------
+
+model Category {
+  id              String                @id @default(uuid())
+  parentId        String?
+  name            String                @db.VarChar(100)
+  slug            String                @unique @db.VarChar(100)
+  icon            String?               @db.VarChar(100)
+  bannerUrl       String?               @db.VarChar(500)
+  commissionRate  Decimal?              @db.Decimal(5, 2)
+  commissionFlat  Decimal?              @db.Decimal(18, 4)
+  isActive        Boolean               @default(true)
+  sortOrder       Int                   @default(0)
+  metaTitle       String?               @db.VarChar(255)
+  metaDescription String?               @db.Text
+  metaKeywords    String?               @db.VarChar(255)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  parent          Category?             @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children        Category[]            @relation("CategoryHierarchy")
+  translations    CategoryTranslation[]
+  products        Product[]
+  bids            Bid[]
+
+  @@index([slug])
+  @@index([parentId])
+  @@map("categories")
+}
+
+model CategoryTranslation {
+  id          String   @id @default(uuid())
+  categoryId  String
+  lang        String   @db.VarChar(10) // bn, en
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, lang])
+  @@map("category_translations")
+}
+
+enum ProductType {
+  PHYSICAL
+  DIGITAL_DOWNLOAD
+}
+
+enum ProductStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+  REJECTED
+}
+
+model Product {
+  id              String              @id @default(uuid())
+  sellerId        String
+  categoryId      String
+  title           String              @db.VarChar(255)
+  slug            String              @unique @db.VarChar(255)
+  productType     ProductType         @default(PHYSICAL)
+  price           Decimal             @default(0.0000) @db.Decimal(18, 4)
+  descriptionHtml String              @db.LongText
+  status          ProductStatus       @default(ACTIVE)
+  isFeatured      Boolean             @default(false)
+  viewsCount      Int                 @default(0)
+  metaTitle       String?             @db.VarChar(255)
+  metaDescription String?             @db.Text
+  metaKeywords    String?             @db.VarChar(255)
+  canonicalUrl    String?             @db.VarChar(255)
+  ogTitle         String?             @db.VarChar(255)
+  ogDescription   String?             @db.Text
+  ogImage         String?             @db.VarChar(500)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  deletedAt       DateTime?
+
+  seller          User                @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  category        Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  images          ProductImage[]
+  files           ProductFile[]
+  physicalMeta    ProductPhysicalMeta?
+  bids            Bid[]
+  transactions    Transaction[]
+
+  @@index([sellerId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([status, deletedAt, createdAt])
+  @@index([createdAt])
+  @@map("products")
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String
+  imageUrl  String   @db.VarChar(500)
+  isMain    Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_images")
+}
+
+model ProductFile {
+  id            String   @id @default(uuid())
+  productId     String
+  fileName      String   @db.VarChar(255)
+  fileUrl       String   @db.VarChar(500)
+  fileSize      BigInt
+  mimeType      String   @db.VarChar(100)
+  version       String   @default("1.0") @db.VarChar(50)
+  downloadLimit Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_files")
+}
+
+model ProductPhysicalMeta {
+  id           String   @id @default(uuid())
+  productId    String   @unique
+  stock        Int      @default(0)
+  sku          String?  @db.VarChar(100)
+  weight       Decimal? @db.Decimal(10, 2)
+  dimensions   String?  @db.VarChar(100)
+  deliveryInfo String?  @db.Text
+
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_physical_meta")
+}
+
+// -----------------------------------------------------------------------------
+// 4. Bidding & Product Position Promotion
+// -----------------------------------------------------------------------------
+
+enum BidStatus {
+  ACTIVE
+  OUTBID
+  WON
+  EXPIRED
+  CANCELLED
+}
+
+enum BidType {
+  PRODUCT
+  USER_ID
+}
+
+enum BidScope {
+  CATEGORY
+  HOME_PAGE
+  SHOP
+  DIGITAL_PRODUCTS
+  PHYSICAL_PRODUCTS
+  MONEY_EXCHANGE
+}
+
+model Bid {
+  id             String          @id @default(uuid())
+  bidType        BidType         @default(PRODUCT)
+  scope          BidScope        @default(CATEGORY)
+  productId      String?
+  targetUserId   String?
+  sellerId       String
+  categoryId     String?
+  targetPosition Int             @default(1)
+  bidAmount      Decimal         @db.Decimal(18, 4)
+  status         BidStatus       @default(ACTIVE)
+  expiresAt      DateTime
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  product        Product?        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  seller         User            @relation("SellerBids", fields: [sellerId], references: [id], onDelete: Cascade)
+  targetUser     User?           @relation("TargetedBids", fields: [targetUserId], references: [id], onDelete: SetNull)
+  category       Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  reservation    BidReservation?
+
+  @@index([scope, bidType, categoryId, targetPosition, status])
+  @@index([productId])
+  @@index([sellerId])
+  @@index([targetUserId])
+  @@map("bids")
+}
+
+enum ReservationStatus {
+  RESERVED
+  DEDUCTED
+  RELEASED
+}
+
+model BidReservation {
+  id             String            @id @default(uuid())
+  bidId          String            @unique
+  walletId       String
+  reservedAmount Decimal           @db.Decimal(18, 4)
+  status         ReservationStatus @default(RESERVED)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  bid            Bid               @relation(fields: [bidId], references: [id], onDelete: Cascade)
+  wallet         Wallet            @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@map("bid_reservations")
+}
+
+enum BidAction {
+  PLACED
+  OUTBID
+  WON
+  REFUNDED
+}
+
+model BidHistory {
+  id           String    @id @default(uuid())
+  bidType      BidType   @default(PRODUCT)
+  scope        BidScope  @default(CATEGORY)
+  productId    String?
+  targetUserId String?
+  userId       String
+  position     Int
+  amount       Decimal   @db.Decimal(18, 4)
+  action       BidAction
+  createdAt    DateTime  @default(now())
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([targetUserId])
+  @@index([userId])
+  @@map("bid_histories")
+}
+
+// -----------------------------------------------------------------------------
+// 5. Chat & Communication
+// -----------------------------------------------------------------------------
+
+enum ConversationType {
+  DIRECT
+  TRANSACTION_LINKED
+}
+
+model Conversation {
+  id            String                    @id @default(uuid())
+  type          ConversationType          @default(DIRECT)
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+
+  participants  ConversationParticipant[]
+  messages      Message[]
+  transactions  Transaction[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+  isBlocked      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM
+  PAY_REQUEST
+  RECEIVE_REQUEST
+  WORK_UPDATE
+  ADMIN_INTERVENTION
+}
+
+model Message {
+  id             String              @id @default(uuid())
+  conversationId String
+  senderId       String
+  content        String              @db.Text
+  messageType    MessageType         @default(TEXT)
+  metadata       Json?               // For pay/receive requests payload, amounts, trxIds
+  isDeleted      Boolean             @default(false)
+  createdAt      DateTime            @default(now())
+
+  conversation   Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User                @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  attachments    MessageAttachment[]
+
+  @@index([conversationId])
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model MessageAttachment {
+  id        String   @id @default(uuid())
+  messageId String
+  fileUrl   String   @db.VarChar(500)
+  fileType  String   @db.VarChar(100)
+  fileSize  BigInt
+  createdAt DateTime @default(now())
+
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("message_attachments")
+}
+
+// -----------------------------------------------------------------------------
+// 6. Safe Transaction Engine & Disputes
+// -----------------------------------------------------------------------------
+
+enum TransactionType {
+  PHYSICAL_PRODUCT
+  DIGITAL_PRODUCT
+  SERVICE
+  MONEY_EXCHANGE
+  GENERAL_TRANSACTION
+}
+
+enum TransactionStatus {
+  DRAFT
+  REQUESTED
+  APPROVED
+  WORKING
+  WORK_COMPLETED
+  HOLD
+  RELEASED
+  REJECTED
+  CANCELLED
+  DISPUTED
+  REFUNDED
+}
+
+model Transaction {
+  id                   String                   @id @default(uuid())
+  trackingNumber       String                   @unique @db.VarChar(50) // TXN-20260917-ABC12345
+  conversationId       String?
+  senderId             String                   // Buyer / Payer
+  receiverId           String                   // Seller / Provider
+  productId            String?
+  transactionType      TransactionType          @default(GENERAL_TRANSACTION)
+  amount               Decimal                  @db.Decimal(18, 4)
+  commissionAmount     Decimal                  @default(0.0000) @db.Decimal(18, 4)
+  totalRequired        Decimal                  @db.Decimal(18, 4)
+  status               TransactionStatus        @default(REQUESTED)
+  workStartTime        DateTime?
+  workEndTime          DateTime?
+  workExpectedDuration String?                  @db.VarChar(50) // e.g. "24 hours"
+  workCompletedAt      DateTime?
+  rejectReason         String?                  @db.Text
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+
+  conversation         Conversation?            @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  sender               User                     @relation("SenderTransactions", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver             User                     @relation("ReceiverTransactions", fields: [receiverId], references: [id], onDelete: Cascade)
+  product              Product?                 @relation(fields: [productId], references: [id], onDelete: SetNull)
+  workLogs             TransactionWorkLog[]
+  statusHistory        TransactionStatusHistory[]
+  dispute              Dispute?
+
+  @@index([trackingNumber])
+  @@index([senderId])
+  @@index([senderId, status, createdAt])
+  @@index([receiverId])
+  @@index([receiverId, status, createdAt])
+  @@index([status])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+enum WorkLogStatus {
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+}
+
+model TransactionWorkLog {
+  id              String        @id @default(uuid())
+  transactionId   String
+  submittedById   String
+  workDescription String        @db.Text
+  proofUrls       Json?         // Array of uploaded proof URLs
+  status          WorkLogStatus @default(SUBMITTED)
+  feedback        String?       @db.Text
+  createdAt       DateTime      @default(now())
+
+  transaction     Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+  @@map("transaction_work_logs")
+}
+
+model TransactionStatusHistory {
+  id            String      @id @default(uuid())
+  transactionId String
+  fromStatus    String      @db.VarChar(50)
+  toStatus      String      @db.VarChar(50)
+  changedById   String      @db.VarChar(50)
+  reason        String?     @db.Text
+  createdAt     DateTime    @default(now())
+
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+  @@map("transaction_status_history")
+}
+
+enum DisputeStatus {
+  ACTIVE_CALL
+  UNRESOLVED
+  RESOLVED
+  HOLD_BALANCE
+}
+
+model Dispute {
+  id             String            @id @default(uuid())
+  transactionId  String            @unique
+  initiatedById  String
+  status         DisputeStatus     @default(ACTIVE_CALL)
+  reason         String            @db.Text
+  adminNotes     String?           @db.Text
+  resolvedById   String?           @db.VarChar(50)
+  resolvedAt     DateTime?
+  assignedToId   String?           @db.VarChar(50)
+  assignedAt     DateTime?
+  lockedUntil    DateTime?
+  isEscalated    Boolean           @default(false)
+  escalationLevel Int              @default(1)
+  escalationReason String?         @db.Text
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  transaction    Transaction       @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  initiatedBy    User              @relation("InitiatedDisputes", fields: [initiatedById], references: [id], onDelete: Cascade)
+  assignedTo     User?             @relation("AssignedDisputes", fields: [assignedToId], references: [id], onDelete: SetNull)
+  evidences      DisputeEvidence[]
+  actions        DisputeAction[]
+
+  @@index([status])
+  @@index([assignedToId])
+  @@map("disputes")
+}
+
+model DisputeEvidence {
+  id           String   @id @default(uuid())
+  disputeId    String
+  uploadedById String
+  fileUrl      String   @db.VarChar(500)
+  fileType     String   @db.VarChar(100)
+  description  String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  dispute      Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([disputeId])
+  @@map("dispute_evidence")
+}
+
+enum DisputeActionType {
+  REFUND_SENDER
+  RELEASE_RECEIVER
+  PARTIAL_SPLIT
+  CANCEL_TRANSACTION
+}
+
+model DisputeAction {
+  id         String            @id @default(uuid())
+  disputeId  String
+  adminId    String
+  actionType DisputeActionType
+  amount     Decimal?          @db.Decimal(18, 4)
+  notes      String            @db.Text
+  createdAt  DateTime          @default(now())
+
+  dispute    Dispute           @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  @@index([disputeId])
+  @@map("dispute_actions")
+}
+
+// -----------------------------------------------------------------------------
+// 7. Commission Engine & Settings
+// -----------------------------------------------------------------------------
+
+enum CommissionScope {
+  GLOBAL
+  CATEGORY
+  PHYSICAL_PRODUCT
+  DIGITAL_PRODUCT
+  TRANSACTION_TYPE
+}
+
+enum RateType {
+  PERCENTAGE
+  FLAT
+}
+
+model CommissionRule {
+  id           String          @id @default(uuid())
+  name         String          @db.VarChar(100)
+  scope        CommissionScope @default(GLOBAL)
+  categorySlug String?         @db.VarChar(100)
+  rateType     RateType        @default(PERCENTAGE)
+  value        Decimal         @db.Decimal(18, 4)
+  priority     Int             @default(0)
+  isActive     Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@map("commission_rules")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique @db.VarChar(100)
+  value       Json
+  category    String   @default("GENERAL") @db.VarChar(50)
+  isPublic    Boolean  @default(false)
+  description String?  @db.Text
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+  @@map("system_settings")
+}
+
+enum ActorType {
+  USER
+  ADMIN
+  SYSTEM
+}
+
+model AuditLog {
+  id           String    @id @default(uuid())
+  actorId      String    @db.VarChar(50)
+  actorType    ActorType @default(USER)
+  action       String    @db.VarChar(100)
+  targetEntity String    @db.VarChar(100)
+  targetId     String    @db.VarChar(100)
+  beforeState  Json?
+  afterState   Json?
+  reason       String    @db.Text // Mandatory for administrative & financial modifications
+  ipAddress    String?   @db.VarChar(50)
+  userAgent    String?   @db.Text
+  createdAt    DateTime  @default(now())
+
+  @@index([actorId])
+  @@index([action])
+  @@index([targetEntity, targetId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// -----------------------------------------------------------------------------
+// 8. CMS, SEO & Tracking
+// -----------------------------------------------------------------------------
+
+model CmsPage {
+  id              String   @id @default(uuid())
+  slug            String   @unique @db.VarChar(100)
+  title           String   @db.VarChar(255)
+  contentHtml     String   @db.LongText
+  metaTitle       String?  @db.VarChar(255)
+  metaDescription String?  @db.Text
+  isPublished     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("cms_pages")
+}
+
+model Slider {
+  id         String   @id @default(uuid())
+  title      String   @db.VarChar(255)
+  subtitle   String?  @db.VarChar(255)
+  description String? @db.Text
+  imageUrl   String   @db.VarChar(500)
+  buttonText String?  @db.VarChar(100)
+  buttonLink String?  @db.VarChar(255)
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("sliders")
+}
+
+model Guide {
+  id          String   @id @default(uuid())
+  title       String   @db.VarChar(255)
+  slug        String   @unique @db.VarChar(120)
+  coverImage  String?  @db.VarChar(500)
+  youtubeUrl  String?  @db.VarChar(500)
+  description String   @db.LongText
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  viewsCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([sortOrder])
+  @@index([isActive])
+  @@map("guides")
+}
+
+model CmsSection {
+  id         String   @id @default(uuid())
+  sectionKey String   @unique @db.VarChar(100) // hero, featured_categories, latest_products, digital, physical, exchange, safe_tx, how_it_works, trust, cta
+  title      String   @db.VarChar(255)
+  subtitle   String?  @db.Text
+  content    Json?
+  sortOrder  Int      @default(0)
+  isEnabled  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("cms_sections")
+}
+
+enum MenuLocation {
+  HEADER
+  FOOTER_QUICK
+  FOOTER_CATEGORIES
+  FOOTER_LEGAL
+}
+
+model Menu {
+  id        String       @id @default(uuid())
+  location  MenuLocation @unique
+  name      String       @db.VarChar(100)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  items     MenuItem[]
+
+  @@map("menus")
+}
+
+model MenuItem {
+  id         String     @id @default(uuid())
+  menuId     String
+  parentId   String?
+  title      String     @db.VarChar(100)
+  url        String     @db.VarChar(255)
+  icon       String?    @db.VarChar(50)
+  sortOrder  Int        @default(0)
+  isExternal Boolean    @default(false)
+  isActive   Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  menu       Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  parent     MenuItem?  @relation("MenuHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children   MenuItem[] @relation("MenuHierarchy")
+
+  @@index([menuId])
+  @@map("menu_items")
+}
+
+enum TrackingProvider {
+  META_PIXEL
+  GOOGLE_ANALYTICS
+  TIKTOK
+}
+
+model TrackingSetting {
+  id                  String           @id @default(uuid())
+  provider            TrackingProvider @unique
+  pixelId             String           @db.VarChar(100)
+  apiSecret           String?          @db.VarChar(255)
+  isServerSideEnabled Boolean          @default(false)
+  isActive            Boolean          @default(false)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  @@map("tracking_settings")
+}
+
+model Otp {
+  id         String   @id @default(uuid())
+  identifier String   @db.VarChar(191)
+  code       String   @db.VarChar(10)
+  purpose    String   @db.VarChar(50)
+  expiresAt  DateTime
+  isUsed     Boolean  @default(false)
+  attempts   Int      @default(0)
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([identifier, purpose])
+  @@index([identifier, purpose, isUsed, expiresAt])
+  @@map("otps")
+}
+
+// -----------------------------------------------------------------------------
+// 17. Partner & Merchant Integration (BaaS, Embedded Wallet & Chat)
+// -----------------------------------------------------------------------------
+
+model PartnerApp {
+  id             String        @id @default(uuid())
+  appId          String        @unique @db.VarChar(64) // e.g. app_live_...
+  name           String        @db.VarChar(150)
+  description    String?       @db.Text
+  apiKey         String        @unique @db.VarChar(128) // pk_live_...
+  apiSecret      String        @db.VarChar(128) // sk_live_...
+  webhookUrl     String?       @db.VarChar(500)
+  webhookSecret  String?       @db.VarChar(128)
+  allowedDomains String?       @db.Text // Comma or newline separated origins
+  isActive       Boolean       @default(true)
+  isLiveMode     Boolean       @default(true)
+  ownerId        String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  partnerUsers   PartnerUser[]
+
+  @@index([appId])
+  @@index([apiKey])
+  @@map("partner_apps")
+}
+
+model PartnerUser {
+  id            String      @id @default(uuid())
+  partnerAppId  String
+  partnerUserId String      @db.VarChar(100) // The user's ID on the external site
+  safnexUserId  String      // The linked User.id in SafnexBD
+  name          String?     @db.VarChar(150)
+  email         String?     @db.VarChar(191)
+  phone         String?     @db.VarChar(30)
+  metadata      Json?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  partnerApp    PartnerApp  @relation(fields: [partnerAppId], references: [id], onDelete: Cascade)
+  safnexUser    User        @relation(fields: [safnexUserId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerAppId, partnerUserId])
+  @@index([partnerAppId])
+  @@index([safnexUserId])
+  @@map("partner_users")
+}
+
+// -----------------------------------------------------------------------------
+// 10. Operations, Staff Workload & Task Handoff
+// -----------------------------------------------------------------------------
+
+model StaffProfile {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  department          String   @default("GENERAL") // FINANCE, DISPUTE, GENERAL
+  dutyStatus          String   @default("OFF_DUTY") // ON_DUTY, ON_BREAK, OFF_DUTY
+  maxConcurrentTasks  Int      @default(5)
+  lastActiveAt        DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([department])
+  @@index([dutyStatus])
+  @@map("staff_profiles")
+}
+
+model TaskHandoffLog {
+  id          String   @id @default(uuid())
+  taskType    String   // WITHDRAWAL, RECHARGE, DISPUTE
+  taskId      String
+  fromStaffId String
+  toStaffId   String?
+  reason      String   @db.Text
+  createdAt   DateTime @default(now())
+
+  fromStaff   User     @relation("HandoffFromStaff", fields: [fromStaffId], references: [id], onDelete: Cascade)
+  toStaff     User?    @relation("HandoffToStaff", fields: [toStaffId], references: [id], onDelete: SetNull)
+
+  @@index([taskType, taskId])
+  @@index([fromStaffId])
+  @@index([toStaffId])
+  @@map("task_handoff_logs")
+}
+
