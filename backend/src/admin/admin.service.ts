@@ -1101,11 +1101,22 @@ export class AdminService {
     const product = await this.prisma.product.findUnique({ where: { id: productId } });
     if (!product) throw new NotFoundException('Product not found');
 
-    const cleanUrl = canonicalUrl ? canonicalUrl.trim() : null;
+    const cleanUrl = canonicalUrl && canonicalUrl.trim() !== '' ? canonicalUrl.trim() : null;
+
+    let targetProductType: 'PHYSICAL' | 'DIGITAL_DOWNLOAD' | undefined = undefined;
+    if (cleanUrl === '/physical-products') {
+      targetProductType = 'PHYSICAL';
+    } else if (cleanUrl === '/digital-products' || cleanUrl === '/money-exchange') {
+      targetProductType = 'DIGITAL_DOWNLOAD';
+    }
+
     const updated = await this.prisma.product.update({
       where: { id: productId },
-      data: { canonicalUrl: cleanUrl },
-      include: { category: true, images: true, seller: true },
+      data: {
+        canonicalUrl: cleanUrl,
+        ...(targetProductType ? { productType: targetProductType } : {}),
+      },
+      include: { category: true, images: true, seller: true, physicalMeta: true, files: true },
     });
     return JSON.parse(
       JSON.stringify(updated, (key, value) =>

@@ -203,7 +203,20 @@ export class ProductsService {
       });
     }
 
-    return this.prisma.product.update({
+    // Sync productType if canonicalUrl was changed or specified
+    let targetProductType = dto.productType;
+    if (!targetProductType && dto.canonicalUrl) {
+      if (dto.canonicalUrl.startsWith('/physical-products')) {
+        targetProductType = 'PHYSICAL';
+      } else if (
+        dto.canonicalUrl.startsWith('/digital-products') ||
+        dto.canonicalUrl.startsWith('/money-exchange')
+      ) {
+        targetProductType = 'DIGITAL_DOWNLOAD';
+      }
+    }
+
+    const updated = await this.prisma.product.update({
       where: { id: productId },
       data: {
         ...(dto.title && { title: dto.title.trim() }),
@@ -213,6 +226,7 @@ export class ProductsService {
         ...(dto.status && (isAdmin || ['ACTIVE', 'INACTIVE'].includes(dto.status))
           ? { status: dto.status }
           : {}),
+        ...(targetProductType && { productType: targetProductType }),
         ...(dto.metaTitle && { metaTitle: dto.metaTitle }),
         ...(dto.metaDescription && { metaDescription: dto.metaDescription }),
         ...(dto.metaKeywords && { metaKeywords: dto.metaKeywords }),
@@ -220,6 +234,12 @@ export class ProductsService {
       },
       include: { images: true, category: true, physicalMeta: true, files: true },
     });
+
+    return JSON.parse(
+      JSON.stringify(updated, (key, value) =>
+        typeof value === 'bigint' ? value.toString() : value,
+      ),
+    );
   }
 
   /**
@@ -340,23 +360,24 @@ export class ProductsService {
       where.category = { slug: params.categorySlug };
     }
 
-    if (params.productType) {
-      where.productType = params.productType;
-    }
-
     if (params.sellerId) {
       where.sellerId = params.sellerId;
     }
 
     if (params.search) {
       const q = params.search.trim();
-      where.OR = [
-        { title: { contains: q } },
-        { metaTitle: { contains: q } },
-        { metaKeywords: { contains: q } },
-        { seller: { uniqueUserId: { contains: q } } },
-        { seller: { firstName: { contains: q } } },
-        { seller: { lastName: { contains: q } } },
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { title: { contains: q } },
+            { metaTitle: { contains: q } },
+            { metaKeywords: { contains: q } },
+            { seller: { uniqueUserId: { contains: q } } },
+            { seller: { firstName: { contains: q } } },
+            { seller: { lastName: { contains: q } } },
+          ],
+        },
       ];
     }
 
@@ -370,21 +391,48 @@ export class ProductsService {
       const raw = String((params as any).canonicalUrl).trim();
       const withSlash = raw.startsWith('/') ? raw : `/${raw}`;
       const withoutSlash = withSlash.replace(/^\//, '');
-      where.OR = [
-        { canonicalUrl: withSlash },
-        { canonicalUrl: withoutSlash },
-        { canonicalUrl: `/page${withSlash}` },
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { canonicalUrl: withSlash },
+            { canonicalUrl: withoutSlash },
+            { canonicalUrl: `/page${withSlash}` },
+          ],
+        },
+      ];
+    } else if (params.productType === 'PHYSICAL') {
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { productType: 'PHYSICAL' },
+            { canonicalUrl: '/physical-products' },
+            { canonicalUrl: 'physical-products' },
+          ],
+        },
       ];
     } else if (params.productType === 'DIGITAL_DOWNLOAD') {
       where.AND = [
         ...(where.AND || []),
         {
           OR: [
-            { canonicalUrl: null },
-            { canonicalUrl: { not: '/money-exchange' } },
+            { productType: 'DIGITAL_DOWNLOAD' },
+            { canonicalUrl: '/digital-products' },
+            { canonicalUrl: 'digital-products' },
+          ],
+        },
+        {
+          NOT: [
+            { canonicalUrl: '/money-exchange' },
+            { canonicalUrl: 'money-exchange' },
+            { canonicalUrl: '/physical-products' },
+            { canonicalUrl: 'physical-products' },
           ],
         },
       ];
+    } else if (params.productType) {
+      where.productType = params.productType;
     }
 
     // Default sorting order: Newest uploaded product on top (Spec: newly uploaded appears on top)

@@ -14,6 +14,23 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard, PermissionsGuard } from '../common/guards/roles.guard';
 import { Roles, Permissions } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
+
+class UpdateProductSettingsDto {
+  @IsBoolean()
+  autoApprove: boolean;
+}
+
+class UpdateProductStatusDto {
+  @IsString()
+  status: string;
+}
+
+class UpdateProductRouteDto {
+  @IsString()
+  @IsOptional()
+  canonicalUrl?: string | null;
+}
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -121,7 +138,7 @@ export class AdminController {
 
   @Roles('SUPER_ADMIN', 'ADMIN')
   @Patch('products/settings')
-  async updateProductSettings(@Body() body: { autoApprove: boolean }) {
+  async updateProductSettings(@Body() body: UpdateProductSettingsDto) {
     return this.adminService.updateProductSettings(body);
   }
 
@@ -135,7 +152,7 @@ export class AdminController {
   @Patch('products/:id/status')
   async updateProductStatus(
     @Param('id') id: string,
-    @Body() body: { status: string },
+    @Body() body: UpdateProductStatusDto,
   ) {
     return this.adminService.updateProductStatus(id, body.status);
   }
@@ -144,9 +161,9 @@ export class AdminController {
   @Patch('products/:id/route')
   async updateProductRoute(
     @Param('id') id: string,
-    @Body() body: { canonicalUrl: string },
+    @Body() body: UpdateProductRouteDto,
   ) {
-    return this.adminService.updateProductRoute(id, body.canonicalUrl);
+    return this.adminService.updateProductRoute(id, body.canonicalUrl ?? null);
   }
 
   @Roles('SUPER_ADMIN', 'ADMIN')
