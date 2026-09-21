@@ -22,6 +22,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
+import { trackEvent } from '@/lib/tracking';
 import DOMPurify from 'dompurify';
 
 export default function ProductDetailPage() {
@@ -74,6 +75,15 @@ export default function ProductDetailPage() {
           const main = res.images.find((img: any) => img.isMain) || res.images[0];
           setSelectedImage(main.imageUrl);
         }
+        // Track ViewContent event
+        trackEvent('ViewContent', {
+          content_name: res.title,
+          content_category: res.category?.name || 'General',
+          content_ids: [res.id],
+          content_type: 'product',
+          value: Number(res.price || 0),
+          currency: 'BDT',
+        });
       })
       .catch(() => setProduct(null))
       .finally(() => setLoading(false));
@@ -275,6 +285,16 @@ export default function ProductDetailPage() {
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <Link
               href={`/dashboard/chat?targetUserId=${product.seller?.id}&productId=${product.id}`}
+              onClick={() => {
+                trackEvent('Contact', {
+                  content_name: product.title,
+                  content_category: product.category?.name || 'General',
+                  content_ids: [product.id],
+                  content_type: 'product',
+                  value: Number(product.price || 0),
+                  currency: 'BDT',
+                });
+              }}
               className="w-full sm:flex-1 py-3 px-6 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm shadow-lg shadow-sky-600/25 flex items-center justify-center gap-2 transition"
             >
               <MessageSquare className="w-4 h-4" />

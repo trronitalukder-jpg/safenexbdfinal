@@ -20,6 +20,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/lib/api';
 import { compressImage } from '@/lib/imageUtils';
+import { trackEvent } from '@/lib/tracking';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -145,6 +146,14 @@ export default function RegisterPage() {
       });
 
       setAuth(res.user, res.accessToken, res.refreshToken);
+
+      // Track Meta Pixel & Analytics Registration Event
+      trackEvent('CompleteRegistration', {
+        content_name: 'User Registration',
+        status: true,
+        method: 'phone_email',
+      });
+
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please check inputs.');

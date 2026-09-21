@@ -39,6 +39,15 @@ export const DEFAULT_SETTINGS = {
     tiktokPixelId: '',
     customHeadScripts: '',
     customBodyScripts: '',
+    events: {
+      pageView: true,
+      viewContent: true,
+      completeRegistration: true,
+      initiateCheckout: true,
+      purchase: true,
+      contact: true,
+      search: true,
+    },
   },
   localization: {
     timezone: 'Asia/Dhaka',

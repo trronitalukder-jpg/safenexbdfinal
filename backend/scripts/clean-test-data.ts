@@ -34,12 +34,14 @@ async function main() {
   });
 
   const staffUserIds = staffUsers.map((s) => s.id);
+  console.log(`🛡️  Preserving ${staffUsers.length} Admin/Staff accounts:`, staffUsers.map((s) => `${s.uniqueUserId} (${s.email})`));
   console.log(
     `🛡️  Preserving ${staffUsers.length} Admin/Staff accounts:`,
     staffUsers.map((s) => `${s.uniqueUserId} (${s.email})`)
   );
 
   // 1. Clean test chats and messages
+  console.log('🧹 Cleaning chat messages and conversations...');
   console.log('🧹 Cleaning chat attachments, messages, participants, and conversations...');
   await prisma.messageAttachment.deleteMany({});
   await prisma.message.deleteMany({});
@@ -51,18 +53,21 @@ async function main() {
   await prisma.disputeEvidence.deleteMany({});
   await prisma.disputeAction.deleteMany({});
   await prisma.dispute.deleteMany({});
+  await prisma.callingQueue.deleteMany({});
   await prisma.transactionWorkLog.deleteMany({});
   await prisma.transactionStatusHistory.deleteMany({});
   await prisma.taskHandoffLog.deleteMany({});
   await prisma.transaction.deleteMany({});
 
   // 3. Clean test bids
+  console.log('🧹 Cleaning test bids...');
   console.log('🧹 Cleaning test bids and reservations...');
   await prisma.bidReservation.deleteMany({});
   await prisma.bidHistory.deleteMany({});
   await prisma.bid.deleteMany({});
 
   // 4. Clean test products
+  console.log('🧹 Cleaning test products and images...');
   console.log('🧹 Cleaning test products, images, files and metadata...');
   await prisma.productImage.deleteMany({});
   await prisma.productFile.deleteMany({});
@@ -70,6 +75,7 @@ async function main() {
   await prisma.product.deleteMany({});
 
   // 5. Clean test financial requests & ledgers
+  console.log('🧹 Cleaning test recharges, withdrawals and ledgers...');
   console.log('🧹 Cleaning test recharges, withdrawals, wallet holds and ledgers...');
   await prisma.rechargeRequest.deleteMany({});
   await prisma.withdrawalRequest.deleteMany({});
@@ -96,6 +102,9 @@ async function main() {
   await prisma.userReview.deleteMany({});
   await prisma.passwordResetRequest.deleteMany({});
 
+  // 7. Clean test notifications & audit logs
+  console.log('🧹 Cleaning notifications and audit logs...');
+  await prisma.notification.deleteMany({});
   // 7. Clean test audit logs (keep admin audit intact if needed or clean non-essential)
   console.log('🧹 Cleaning audit logs...');
   await prisma.auditLog.deleteMany({});
@@ -129,3 +138,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

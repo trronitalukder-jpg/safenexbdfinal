@@ -8,6 +8,7 @@ import { PwaProvider } from '@/context/PwaContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { InstallPromptModal } from '@/components/pwa/InstallPromptModal';
 import { NotificationPromptBanner } from '@/components/notifications/NotificationPromptBanner';
+import { TrackingRouteListener } from '@/components/tracking/TrackingRouteListener';
 
 export const Providers: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
@@ -16,6 +17,7 @@ export const Providers: React.FC<{ children: React.ReactNode }> = ({ children })
         <SettingsProvider>
           <NotificationProvider>
             <PwaProvider>
+              <TrackingRouteListener />
               {children}
               <InstallPromptModal />
               <NotificationPromptBanner />

@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useSettings } from '@/context/SettingsContext';
 import { compressImage, getImageUrl } from '@/lib/imageUtils';
+import { trackEvent, isPixelLoaded, isGtagLoaded, isGtmLoaded } from '@/lib/tracking';
 import {
   Settings,
   Palette,
@@ -105,6 +106,11 @@ export default function AdminSettingsPage() {
     cleanNonStaffUsers: false,
   });
   const [cleanConfirmText, setCleanConfirmText] = useState('');
+
+  // Tracking & Event Tester State
+  const [testEventName, setTestEventName] = useState<string>('PageView');
+  const [testEventValue, setTestEventValue] = useState<string>('1500');
+  const [testEventFeedback, setTestEventFeedback] = useState<string>('');
 
   // Chat Rules & Quick Templates State
   const [chatConfig, setChatConfig] = useState<any>({
@@ -293,6 +299,15 @@ export default function AdminSettingsPage() {
       tiktokPixelId: '',
       customHeadScripts: '',
       customBodyScripts: '',
+      events: {
+        pageView: true,
+        viewContent: true,
+        completeRegistration: true,
+        initiateCheckout: true,
+        purchase: true,
+        contact: true,
+        search: true,
+      },
     },
     localization: {
       timezone: 'Asia/Dhaka',
@@ -1760,6 +1775,356 @@ export default function AdminSettingsPage() {
                     }
                     className="w-full p-3 font-mono text-xs bg-slate-950 text-slate-200 rounded-xl border border-slate-800"
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Standard Event Handling & Triggers Configuration */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-amber-500" />
+                    <span>{lang === 'bn' ? 'স্ট্যান্ডার্ড ইভেন্ট হ্যান্ডলিং ও অটোমেশন (Event Triggers)' : 'Standard Event Handling & Triggers'}</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    {lang === 'bn'
+                      ? 'ওয়েবসাইটে বিভিন্ন অ্যাকশন ঘটলে স্বয়ংক্রিয়ভাবে Meta Pixel ও Analytics-এ ইভেন্ট পাঠাতে অন/অফ করুন।'
+                      : 'Enable or disable automatic tracking for standard user actions across the platform.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {/* PageView */}
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="event-pageView"
+                    checked={settings.tracking.events?.pageView !== false}
+                    onChange={(e) =>
+                      setSettings((p: any) => ({
+                        ...p,
+                        tracking: {
+                          ...p.tracking,
+                          events: { ...(p.tracking.events || {}), pageView: e.target.checked },
+                        },
+                      }))
+                    }
+                    className="mt-0.5 rounded text-amber-500 focus:ring-amber-400"
+                  />
+                  <label htmlFor="event-pageView" className="cursor-pointer space-y-0.5">
+                    <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <span>PageView</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 font-mono">
+                        Route Changes
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      {lang === 'bn' ? 'প্রতিটি পেজ ভিজিট এবং পেজ পরিবর্তনের সাথে সাথে ট্র্যাক হবে।' : 'Tracks route navigation and page visits.'}
+                    </p>
+                  </label>
+                </div>
+
+                {/* CompleteRegistration */}
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="event-registration"
+                    checked={settings.tracking.events?.completeRegistration !== false}
+                    onChange={(e) =>
+                      setSettings((p: any) => ({
+                        ...p,
+                        tracking: {
+                          ...p.tracking,
+                          events: { ...(p.tracking.events || {}), completeRegistration: e.target.checked },
+                        },
+                      }))
+                    }
+                    className="mt-0.5 rounded text-amber-500 focus:ring-amber-400"
+                  />
+                  <label htmlFor="event-registration" className="cursor-pointer space-y-0.5">
+                    <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <span>CompleteRegistration</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono">
+                        Sign Up
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      {lang === 'bn' ? 'নতুন ব্যবহারকারী সফলভাবে অ্যাকাউন্ট তৈরি বা সাইন-আপ করলে।' : 'Fired when a new user registers an account.'}
+                    </p>
+                  </label>
+                </div>
+
+                {/* ViewContent */}
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="event-viewContent"
+                    checked={settings.tracking.events?.viewContent !== false}
+                    onChange={(e) =>
+                      setSettings((p: any) => ({
+                        ...p,
+                        tracking: {
+                          ...p.tracking,
+                          events: { ...(p.tracking.events || {}), viewContent: e.target.checked },
+                        },
+                      }))
+                    }
+                    className="mt-0.5 rounded text-amber-500 focus:ring-amber-400"
+                  />
+                  <label htmlFor="event-viewContent" className="cursor-pointer space-y-0.5">
+                    <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <span>ViewContent</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 font-mono">
+                        Products
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      {lang === 'bn' ? 'কোনো প্রোডাক্ট বা ডিজিটাল সার্ভিসের বিস্তারিত পেজ দেখলে।' : 'Fired when viewing product details (with price & category).'}
+                    </p>
+                  </label>
+                </div>
+
+                {/* InitiateCheckout */}
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="event-initiateCheckout"
+                    checked={settings.tracking.events?.initiateCheckout !== false}
+                    onChange={(e) =>
+                      setSettings((p: any) => ({
+                        ...p,
+                        tracking: {
+                          ...p.tracking,
+                          events: { ...(p.tracking.events || {}), initiateCheckout: e.target.checked },
+                        },
+                      }))
+                    }
+                    className="mt-0.5 rounded text-amber-500 focus:ring-amber-400"
+                  />
+                  <label htmlFor="event-initiateCheckout" className="cursor-pointer space-y-0.5">
+                    <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <span>InitiateCheckout</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-mono">
+                        Escrow Order
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      {lang === 'bn' ? 'এসক্রো পেমেন্ট রিকোয়েস্ট পাঠালে বা অর্ডার শুরু করলে।' : 'Fired when starting an escrow pay request or order.'}
+                    </p>
+                  </label>
+                </div>
+
+                {/* Purchase */}
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="event-purchase"
+                    checked={settings.tracking.events?.purchase !== false}
+                    onChange={(e) =>
+                      setSettings((p: any) => ({
+                        ...p,
+                        tracking: {
+                          ...p.tracking,
+                          events: { ...(p.tracking.events || {}), purchase: e.target.checked },
+                        },
+                      }))
+                    }
+                    className="mt-0.5 rounded text-amber-500 focus:ring-amber-400"
+                  />
+                  <label htmlFor="event-purchase" className="cursor-pointer space-y-0.5">
+                    <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <span>Purchase</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono">
+                        Completed
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      {lang === 'bn' ? 'এসক্রো পেমেন্ট সফলভাবে রিলিজ হলে এবং লেনদেন সম্পন্ন হলে।' : 'Fired when escrow funds are released and order completed.'}
+                    </p>
+                  </label>
+                </div>
+
+                {/* Contact / Lead */}
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="event-contact"
+                    checked={settings.tracking.events?.contact !== false}
+                    onChange={(e) =>
+                      setSettings((p: any) => ({
+                        ...p,
+                        tracking: {
+                          ...p.tracking,
+                          events: { ...(p.tracking.events || {}), contact: e.target.checked },
+                        },
+                      }))
+                    }
+                    className="mt-0.5 rounded text-amber-500 focus:ring-amber-400"
+                  />
+                  <label htmlFor="event-contact" className="cursor-pointer space-y-0.5">
+                    <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <span>Contact / Lead</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 font-mono">
+                        Chat
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      {lang === 'bn' ? 'সেলার সাথে চ্যাট শুরু করলে বা মেসেজ অপশন ক্লিক করলে।' : 'Fired when a user initiates chat with a seller.'}
+                    </p>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive Live Event Simulator & Tester */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-emerald-500" />
+                    <span>{lang === 'bn' ? 'লাইভ ইভেন্ট সিমুলেটর ও টেস্ট টুল (Live Event Tester)' : 'Live Event Simulator & Tester'}</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    {lang === 'bn'
+                      ? 'অ্যাডমিন প্যানেল থেকেই সরাসরি ফেসবুক পিক্সেল ও অ্যানালিটিক্স ইভেন্ট ফায়ার করে টেস্ট করুন।'
+                      : 'Test and fire live tracking events directly from the browser to verify with Meta Pixel Helper.'}
+                  </p>
+                </div>
+
+                {/* Status Badges */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1.5 ${
+                    isPixelLoaded()
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-300 dark:border-slate-700'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${isPixelLoaded() ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                    <span>Meta Pixel: {isPixelLoaded() ? 'Active' : 'Inactive / Blocked'}</span>
+                  </div>
+
+                  <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1.5 ${
+                    isGtagLoaded()
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-300 dark:border-slate-700'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${isGtagLoaded() ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                    <span>GA4: {isGtagLoaded() ? 'Active' : 'Inactive'}</span>
+                  </div>
+
+                  <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1.5 ${
+                    isGtmLoaded()
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-300 dark:border-slate-700'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${isGtmLoaded() ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                    <span>GTM: {isGtmLoaded() ? 'Active' : 'Inactive'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Event Simulator Box */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-amber-500/5 dark:from-slate-800/40 dark:to-amber-500/5 border border-slate-200 dark:border-slate-700 space-y-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      {lang === 'bn' ? 'ইভেন্ট নির্বাচন করুন' : 'Select Event'}
+                    </label>
+                    <select
+                      value={testEventName}
+                      onChange={(e) => setTestEventName(e.target.value)}
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white"
+                    >
+                      <option value="PageView">PageView</option>
+                      <option value="ViewContent">ViewContent</option>
+                      <option value="CompleteRegistration">CompleteRegistration</option>
+                      <option value="InitiateCheckout">InitiateCheckout</option>
+                      <option value="Purchase">Purchase</option>
+                      <option value="Contact">Contact</option>
+                      <option value="Lead">Lead</option>
+                      <option value="Search">Search</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      {lang === 'bn' ? 'টেস্ট অ্যামাউন্ট (BDT)' : 'Test Amount (BDT)'}
+                    </label>
+                    <input
+                      type="number"
+                      value={testEventValue}
+                      onChange={(e) => setTestEventValue(e.target.value)}
+                      placeholder="1500"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        try {
+                          trackEvent(testEventName as any, {
+                            value: Number(testEventValue) || 1500,
+                            currency: 'BDT',
+                            content_name: `Test ${testEventName}`,
+                            content_type: 'product',
+                            test_event: true,
+                          });
+                          setTestEventFeedback(
+                            lang === 'bn'
+                              ? `✅ "${testEventName}" ইভেন্ট সফলভাবে ব্রাউজারে ফায়ার করা হয়েছে! Meta Pixel Helper ও Events Manager-এ দেখুন।`
+                              : `✅ "${testEventName}" event successfully fired! Check Meta Pixel Helper or Events Manager.`
+                          );
+                        } catch (e: any) {
+                          setTestEventFeedback(`❌ Error: ${e.message}`);
+                        }
+                      }}
+                      className="w-full py-2 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition flex items-center justify-center gap-2"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'টেস্ট ইভেন্ট পাঠান' : 'Send Test Event'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {testEventFeedback && (
+                  <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-700 dark:text-emerald-300 flex items-center justify-between gap-2 animate-in fade-in">
+                    <span>{testEventFeedback}</span>
+                    <button
+                      type="button"
+                      onClick={() => setTestEventFeedback('')}
+                      className="text-emerald-500 hover:text-emerald-700 text-xs font-bold"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
+                {/* Testing Guide */}
+                <div className="p-3 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
+                  <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <span>{lang === 'bn' ? 'কীভাবে লাইভ ভেরিফাই করবেন?' : 'How to verify events?'}</span>
+                  </div>
+                  <ul className="list-disc list-inside space-y-0.5 text-[10px]">
+                    <li>
+                      {lang === 'bn'
+                        ? 'ক্রোম ব্রাউজারে "Meta Pixel Helper" এক্সটেনশন ইনস্টল করে উপরে সবুজ ব্যাজ চেক করুন।'
+                        : 'Install "Meta Pixel Helper" Chrome extension to inspect fired events in real-time.'}
+                    </li>
+                    <li>
+                      {lang === 'bn'
+                        ? 'Facebook Events Manager-এর "Test Events" ট্যাবে গিয়ে আপনার ওয়েবসাইটের URL দিয়ে লাইভ ইভেন্ট দেখতে পারবেন।'
+                        : 'Go to Facebook Events Manager -> Test Events tab and enter your site URL to see real-time triggers.'}
+                    </li>
+                    <li>
+                      {lang === 'bn'
+                        ? 'ব্রাউজারে AdBlocker চালু থাকলে ফেসবুক পিক্সেল ব্লক হতে পারে, তাই টেস্ট করার সময় AdBlocker বন্ধ রাখুন।'
+                        : 'Disable AdBlockers during testing as they block Facebook Pixel scripts.'}
+                    </li>
+                  </ul>
                 </div>
               </div>
             </div>

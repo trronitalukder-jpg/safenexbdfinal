@@ -58,6 +58,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguage } from '@/context/LanguageContext';
 import { api } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
+import { trackEvent } from '@/lib/tracking';
 import { getImageUrl, compressImage } from '@/lib/imageUtils';
 
 // Helper to safely unwrap api.ts responses
@@ -964,6 +965,13 @@ function MessengerChatContent() {
       setPayAmount('');
       setPayReason('Service Payment');
 
+      // Track Meta Pixel & Analytics InitiateCheckout Event
+      trackEvent('InitiateCheckout', {
+        value: amountNum,
+        currency: 'BDT',
+        content_type: 'escrow_order',
+      });
+
       // 1. Immediately append message to chat stream & update conversation list
       if (data?.message) {
         setMessages((prev) => {
@@ -1084,6 +1092,13 @@ function MessengerChatContent() {
       const res: any = await api.patch(`/transactions/${transactionId}/pay-request/approve`);
       const data = unwrap(res);
 
+      // Track Meta Pixel & Analytics InitiateCheckout Event
+      trackEvent('InitiateCheckout', {
+        value: Number(data?.amount || 0),
+        currency: 'BDT',
+        transaction_id: transactionId,
+      });
+
       await fetchWallet();
       const msgRes: any = await api.get(`/chat/conversations/${activeConversation.conversationId}/messages`);
       const msgData = unwrap(msgRes);
@@ -1118,6 +1133,13 @@ function MessengerChatContent() {
     try {
       const res: any = await api.patch(`/transactions/${transactionId}/pay-request/release`);
       const data = unwrap(res);
+
+      // Track Meta Pixel & Analytics Purchase Event
+      trackEvent('Purchase', {
+        value: Number(data?.amount || 0),
+        currency: 'BDT',
+        transaction_id: transactionId,
+      });
 
       await fetchWallet();
       const msgRes: any = await api.get(`/chat/conversations/${activeConversation.conversationId}/messages`);

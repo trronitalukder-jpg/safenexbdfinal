@@ -32,11 +32,22 @@ export interface WebsiteSeoSettings {
 
 export interface WebsiteTrackingSettings {
   facebookPixelId: string;
+  facebookCapiToken?: string;
+  facebookTestEventCode?: string;
   googleAnalyticsId: string;
   gtmId: string;
   tiktokPixelId: string;
   customHeadScripts: string;
   customBodyScripts: string;
+  events?: {
+    pageView?: boolean;
+    viewContent?: boolean;
+    completeRegistration?: boolean;
+    initiateCheckout?: boolean;
+    purchase?: boolean;
+    contact?: boolean;
+    search?: boolean;
+  };
 }
 
 export interface WebsiteLocalizationSettings {
@@ -114,11 +125,22 @@ export const DEFAULT_PUBLIC_SETTINGS: WebsiteSettings = {
   },
   tracking: {
     facebookPixelId: '',
+    facebookCapiToken: '',
+    facebookTestEventCode: '',
     googleAnalyticsId: '',
     gtmId: '',
     tiktokPixelId: '',
     customHeadScripts: '',
     customBodyScripts: '',
+    events: {
+      pageView: true,
+      viewContent: true,
+      completeRegistration: true,
+      initiateCheckout: true,
+      purchase: true,
+      contact: true,
+      search: true,
+    },
   },
   localization: {
     timezone: 'Asia/Dhaka',
