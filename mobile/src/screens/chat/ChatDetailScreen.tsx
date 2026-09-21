@@ -543,13 +543,21 @@ export const ChatDetailScreen: React.FC = () => {
       });
 
       const newDeal = res?.data !== undefined ? res.data : res;
-      if (newDeal) setDeal(newDeal);
+      if (newDeal) {
+        setDeal(newDeal?.transaction || newDeal);
+        if (newDeal.message) {
+          setMessages((prev: any) => {
+            if (prev.some((m: any) => m.id === newDeal.message.id)) return prev;
+            return [...prev, newDeal.message];
+          });
+        }
+      }
       setShowPayModal(false);
       setPayAmount('');
       setPayNotes('সার্ভিস পেমেন্ট');
 
       await refreshWallet();
-      if (conversationId) await fetchMessagesAndDeal(conversationId);
+      if (conversationId) fetchMessagesAndDeal(conversationId);
 
       const socket = getChatSocket(user?.id);
       socket.emit('transaction:update', {
@@ -591,12 +599,20 @@ export const ChatDetailScreen: React.FC = () => {
       });
 
       const newDeal = res?.data !== undefined ? res.data : res;
-      if (newDeal) setDeal(newDeal);
+      if (newDeal) {
+        setDeal(newDeal?.transaction || newDeal);
+        if (newDeal.message) {
+          setMessages((prev: any) => {
+            if (prev.some((m: any) => m.id === newDeal.message.id)) return prev;
+            return [...prev, newDeal.message];
+          });
+        }
+      }
       setShowRequestModal(false);
       setRequestAmount('');
       setRequestReason('সার্ভিস ফি');
 
-      if (conversationId) await fetchMessagesAndDeal(conversationId);
+      if (conversationId) fetchMessagesAndDeal(conversationId);
 
       const socket = getChatSocket(user?.id);
       socket.emit('transaction:update', {

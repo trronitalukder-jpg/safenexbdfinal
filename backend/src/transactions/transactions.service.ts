@@ -2,14 +2,17 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
   Optional,
+  forwardRef,
 } from '@nestjs/common';
 import { Prisma, TransactionStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CommissionService } from '../commission/commission.service';
 import { ChatGateway } from '../chat/chat.gateway';
+import { TelegramService } from '../telegram/telegram.service';
 import {
   CreateTransactionDto,
   RejectTransactionDto,
@@ -24,6 +27,9 @@ export class TransactionsService {
     private prisma: PrismaService,
     private commissionService: CommissionService,
     @Optional() private chatGateway?: ChatGateway,
+    @Optional()
+    @Inject(forwardRef(() => TelegramService))
+    private telegramService?: TelegramService,
   ) {}
 
   /**
@@ -807,6 +813,7 @@ export class TransactionsService {
         },
         include: {
           sender: { select: { id: true, uniqueUserId: true, firstName: true, lastName: true, avatarUrl: true } },
+          attachments: true,
         },
       });
 
@@ -815,9 +822,17 @@ export class TransactionsService {
         data: { updatedAt: new Date() },
       });
 
+      const messageWithAttachments = {
+        ...inChatMessage,
+        attachments: (inChatMessage.attachments || []).map((att) => ({
+          ...att,
+          fileSize: Number(att.fileSize || 0),
+        })),
+      };
+
       return {
         transaction,
-        message: inChatMessage,
+        message: messageWithAttachments,
         senderUser,
       };
     });
@@ -851,6 +866,35 @@ export class TransactionsService {
         targetUrl: `/admin/cms`,
         createdAt: new Date().toISOString(),
       });
+    }
+
+    // Trigger Telegram Notification for recipient and admin
+    if (this.telegramService) {
+      const senderFullName =
+        `${result.senderUser?.firstName || ''} ${result.senderUser?.lastName || ''}`.trim() ||
+        result.senderUser?.uniqueUserId ||
+        'User';
+
+      this.telegramService
+        .sendUserAlert(
+          dto.receiverId,
+          'escrowPayRequest',
+          {
+            senderName: senderFullName,
+            senderUniqueId: result.senderUser?.uniqueUserId || 'User',
+            amount: dto.amount,
+            transactionId: result.transaction.id,
+            trackingNumber,
+            notes: dto.notes || 'Service Payment',
+          },
+          [
+            {
+              text: `💬 চ্যাটে দেখুন (@${result.senderUser?.uniqueUserId || 'User'})`,
+              callback_data: `chat_with_${senderId}`,
+            },
+          ],
+        )
+        .catch(() => null);
     }
 
     return {
@@ -1240,6 +1284,27 @@ export class TransactionsService {
         title: 'পেমেন্ট রিলিজ সম্পন্ন',
         message: `৳${transaction.amount} প্রাপকের মূল ব্যালেন্সে সফলভাবে রিলিজ হয়েছে।`,
       });
+    }
+
+    // Trigger Telegram Notification for receiver
+    if (this.telegramService && updatedTx) {
+      this.telegramService
+        .sendUserAlert(
+          transaction.receiverId,
+          'escrowRelease',
+          {
+            amount: Number(transaction.amount),
+            transactionId: transaction.id,
+            trackingNumber: transaction.trackingNumber,
+          },
+          [
+            {
+              text: '💰 ওয়ালেট ব্যালেন্স দেখুন',
+              callback_data: 'view_balance',
+            },
+          ],
+        )
+        .catch(() => null);
     }
 
     return updatedTx;
@@ -1710,6 +1775,33 @@ export class TransactionsService {
       });
     }
 
+    // Trigger Telegram Notification for counterpart and admin group
+    if (this.telegramService) {
+      const counterpartId = transaction.senderId === userId ? transaction.receiverId : transaction.senderId;
+      this.telegramService
+        .sendUserAlert(
+          counterpartId,
+          'disputeOpened',
+          {
+            transactionId: transaction.id,
+            trackingNumber: transaction.trackingNumber,
+          },
+        )
+        .catch(() => null);
+
+      this.telegramService
+        .sendAdminAlert(
+          'adminDisputeAlert',
+          {
+            transactionId: transaction.id,
+            buyerName: transaction.sender?.firstName || 'Buyer',
+            sellerName: transaction.receiver?.firstName || 'Seller',
+            reason: dto.reason,
+          },
+        )
+        .catch(() => null);
+    }
+
     return result;
   }
 
@@ -2011,6 +2103,7 @@ export class TransactionsService {
         },
         include: {
           sender: { select: { id: true, uniqueUserId: true, firstName: true, lastName: true, avatarUrl: true } },
+          attachments: true,
         },
       });
 
@@ -2019,9 +2112,17 @@ export class TransactionsService {
         data: { updatedAt: new Date() },
       });
 
+      const messageWithAttachments = {
+        ...msg,
+        attachments: (msg.attachments || []).map((att) => ({
+          ...att,
+          fileSize: Number(att.fileSize || 0),
+        })),
+      };
+
       return {
         transaction,
-        message: msg,
+        message: messageWithAttachments,
       };
     });
 
@@ -2054,6 +2155,35 @@ export class TransactionsService {
         targetUrl: `/admin/cms`,
         createdAt: new Date().toISOString(),
       });
+    }
+
+    // Trigger Telegram Notification for target user
+    if (this.telegramService) {
+      const requesterFullName =
+        `${requester?.firstName || ''} ${requester?.lastName || ''}`.trim() ||
+        requester?.uniqueUserId ||
+        'User';
+
+      this.telegramService
+        .sendUserAlert(
+          dto.targetId,
+          'escrowPayRequest',
+          {
+            senderName: requesterFullName,
+            senderUniqueId: requester?.uniqueUserId || 'User',
+            amount: dto.amount,
+            transactionId: result.transaction.id,
+            trackingNumber,
+            notes: dto.reason || 'Service Payment',
+          },
+          [
+            {
+              text: `💬 চ্যাটে দেখুন (@${requester?.uniqueUserId || 'User'})`,
+              callback_data: `chat_with_${requesterId}`,
+            },
+          ],
+        )
+        .catch(() => null);
     }
 
     return result;

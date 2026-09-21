@@ -964,11 +964,34 @@ function MessengerChatContent() {
       setPayAmount('');
       setPayReason('Service Payment');
 
-      // Refresh wallet & messages
-      await fetchWallet();
-      const msgRes: any = await api.get(`/chat/conversations/${activeConversation.conversationId}/messages`);
-      const msgData = unwrap(msgRes);
-      setMessages(Array.isArray(msgData) ? msgData : (msgData?.messages || []));
+      // 1. Immediately append message to chat stream & update conversation list
+      if (data?.message) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === data.message.id)) return prev;
+          return [...prev, data.message];
+        });
+        setConversations((prev) => {
+          const updated = prev.map((c) =>
+            c.conversationId === activeConversation.conversationId
+              ? { ...c, lastMessage: data.message, updatedAt: new Date().toISOString() }
+              : c,
+          );
+          const target = updated.find((c) => c.conversationId === activeConversation.conversationId);
+          const others = updated.filter((c) => c.conversationId !== activeConversation.conversationId);
+          return target ? [target, ...others] : updated;
+        });
+      }
+
+      // 2. Refresh wallet & messages in background
+      fetchWallet();
+      api
+        .get(`/chat/conversations/${activeConversation.conversationId}/messages`)
+        .then((msgRes: any) => {
+          const msgData = unwrap(msgRes);
+          const list = Array.isArray(msgData) ? msgData : (msgData?.messages || []);
+          if (list.length > 0) setMessages(list);
+        })
+        .catch(console.error);
 
       socket.emit('transaction:update', {
         conversationId: activeConversation.conversationId,
@@ -1003,10 +1026,33 @@ function MessengerChatContent() {
       setRequestAmount('');
       setRequestReason('Service Payment');
 
-      // Refresh messages
-      const msgRes: any = await api.get(`/chat/conversations/${activeConversation.conversationId}/messages`);
-      const msgData = unwrap(msgRes);
-      setMessages(Array.isArray(msgData) ? msgData : (msgData?.messages || []));
+      // 1. Immediately append message to chat stream & update conversation list
+      if (data?.message) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === data.message.id)) return prev;
+          return [...prev, data.message];
+        });
+        setConversations((prev) => {
+          const updated = prev.map((c) =>
+            c.conversationId === activeConversation.conversationId
+              ? { ...c, lastMessage: data.message, updatedAt: new Date().toISOString() }
+              : c,
+          );
+          const target = updated.find((c) => c.conversationId === activeConversation.conversationId);
+          const others = updated.filter((c) => c.conversationId !== activeConversation.conversationId);
+          return target ? [target, ...others] : updated;
+        });
+      }
+
+      // 2. Refresh messages in background
+      api
+        .get(`/chat/conversations/${activeConversation.conversationId}/messages`)
+        .then((msgRes: any) => {
+          const msgData = unwrap(msgRes);
+          const list = Array.isArray(msgData) ? msgData : (msgData?.messages || []);
+          if (list.length > 0) setMessages(list);
+        })
+        .catch(console.error);
 
       socket.emit('transaction:update', {
         conversationId: activeConversation.conversationId,
@@ -3946,6 +3992,21 @@ function MessengerChatContent() {
               <span className="text-emerald-500 text-xl">💸</span> {lang === 'bn' ? 'পে রিকোয়েস্ট পাঠান (Pay Request)' : 'Send Pay Request'}
             </h3>
 
+            {/* Quick Switch Notice */}
+            <div className="mb-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between text-xs border border-slate-200/60 dark:border-slate-700/60">
+              <span className="text-slate-600 dark:text-slate-400">টাকা চেয়ে অনুরোধ করতে চান?</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPayModal(false);
+                  setShowRequestModal(true);
+                }}
+                className="text-blue-600 dark:text-blue-400 font-bold hover:underline"
+              >
+                💰 টাকা অনুরোধ (Request Money)
+              </button>
+            </div>
+
             {/* Recipient info */}
             <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 font-bold flex items-center justify-center text-sm">
@@ -4077,6 +4138,21 @@ function MessengerChatContent() {
             <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
               <span className="text-blue-500 text-xl">💰</span> {lang === 'bn' ? 'টাকা রিকোয়েস্ট করুন (Request Money)' : 'Request Money'}
             </h3>
+
+            {/* Quick Switch Notice */}
+            <div className="mb-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 flex items-center justify-between text-xs border border-slate-200/60 dark:border-slate-700/60">
+              <span className="text-slate-600 dark:text-slate-400">নিজে টাকা পরিশোধ করতে চান?</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowRequestModal(false);
+                  setShowPayModal(true);
+                }}
+                className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
+              >
+                💸 পে রিকোয়েস্ট পাঠান
+              </button>
+            </div>
 
             {/* Target info */}
             <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 flex items-center gap-3 mb-4">
