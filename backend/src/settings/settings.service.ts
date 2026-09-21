@@ -558,4 +558,178 @@ export class SettingsService {
 
     return { deletedCount: result.count };
   }
+
+  /**
+   * Clean test transactions, disputes, chats, and financial requests before production launch
+   */
+  async cleanTestData(
+    adminId: string,
+    options?: {
+      cleanTransactions?: boolean;
+      cleanDisputes?: boolean;
+      cleanChats?: boolean;
+      cleanFinancials?: boolean;
+      cleanNonStaffUsers?: boolean;
+    },
+  ) {
+    const opts = {
+      cleanTransactions: options?.cleanTransactions ?? true,
+      cleanDisputes: options?.cleanDisputes ?? true,
+      cleanChats: options?.cleanChats ?? true,
+      cleanFinancials: options?.cleanFinancials ?? true,
+      cleanNonStaffUsers: options?.cleanNonStaffUsers ?? false,
+    };
+
+    // 1. Identify all staff and admin accounts to preserve
+    const staffUsers = await this.prisma.user.findMany({
+      where: {
+        OR: [
+          { isEmployee: true },
+          {
+            userRoles: {
+              some: {
+                role: {
+                  name: {
+                    in: [
+                      'ADMIN',
+                      'SUPER_ADMIN',
+                      'EMPLOYEE',
+                      'SUPPORT_ADMIN',
+                      'FINANCE_ADMIN',
+                      'CONTENT_ADMIN',
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
+      select: { id: true, email: true, uniqueUserId: true },
+    });
+
+    const staffUserIds = staffUsers.map((s) => s.id);
+
+    let deletedMessagesCount = 0;
+    let deletedConversationsCount = 0;
+    let deletedDisputesCount = 0;
+    let deletedTransactionsCount = 0;
+    let deletedRechargesCount = 0;
+    let deletedWithdrawalsCount = 0;
+    let deletedLedgersCount = 0;
+    let deletedUsersCount = 0;
+
+    // 1. Clean Chats
+    if (opts.cleanChats) {
+      await this.prisma.messageAttachment.deleteMany({});
+      const msgs = await this.prisma.message.deleteMany({});
+      deletedMessagesCount = msgs.count;
+      await this.prisma.conversationParticipant.deleteMany({});
+      const convs = await this.prisma.conversation.deleteMany({});
+      deletedConversationsCount = convs.count;
+    }
+
+    // 2. Clean Disputes
+    if (opts.cleanDisputes) {
+      await this.prisma.disputeEvidence.deleteMany({});
+      await this.prisma.disputeAction.deleteMany({});
+      const disputes = await this.prisma.dispute.deleteMany({});
+      deletedDisputesCount = disputes.count;
+    }
+
+    // 3. Clean Transactions
+    if (opts.cleanTransactions) {
+      // If transactions are deleted, disputes must also be deleted due to FK
+      if (!opts.cleanDisputes) {
+        await this.prisma.disputeEvidence.deleteMany({});
+        await this.prisma.disputeAction.deleteMany({});
+        const disputes = await this.prisma.dispute.deleteMany({});
+        deletedDisputesCount += disputes.count;
+      }
+      await this.prisma.transactionWorkLog.deleteMany({});
+      await this.prisma.transactionStatusHistory.deleteMany({});
+      await this.prisma.taskHandoffLog.deleteMany({});
+      const txs = await this.prisma.transaction.deleteMany({});
+      deletedTransactionsCount = txs.count;
+    }
+
+    // 4. Clean Financials (Recharges, Withdrawals, Wallet Holds, Ledgers)
+    if (opts.cleanFinancials) {
+      const recharges = await this.prisma.rechargeRequest.deleteMany({});
+      deletedRechargesCount = recharges.count;
+      const withdrawals = await this.prisma.withdrawalRequest.deleteMany({});
+      deletedWithdrawalsCount = withdrawals.count;
+      await this.prisma.walletHold.deleteMany({});
+      const ledgers = await this.prisma.walletLedger.deleteMany({});
+      deletedLedgersCount = ledgers.count;
+
+      // Reset all staff wallets to 0
+      await this.prisma.wallet.updateMany({
+        where: { userId: { in: staffUserIds } },
+        data: {
+          availableBalance: 0,
+          holdBalance: 0,
+          version: 0,
+        },
+      });
+
+      // Reset all user wallets to 0
+      await this.prisma.wallet.updateMany({
+        data: {
+          availableBalance: 0,
+          holdBalance: 0,
+          version: 0,
+        },
+      });
+    }
+
+    // 5. Clean Non-Staff Users if explicitly requested
+    if (opts.cleanNonStaffUsers) {
+      await this.prisma.wallet.deleteMany({
+        where: { userId: { notIn: staffUserIds } },
+      });
+      await this.prisma.userReview.deleteMany({});
+      await this.prisma.passwordResetRequest.deleteMany({});
+      await this.prisma.userPaymentAccount.deleteMany({
+        where: { userId: { notIn: staffUserIds } },
+      });
+      await this.prisma.refreshToken.deleteMany({
+        where: { userId: { notIn: staffUserIds } },
+      });
+      const users = await this.prisma.user.deleteMany({
+        where: { id: { notIn: staffUserIds } },
+      });
+      deletedUsersCount = users.count;
+    }
+
+    // Log in AuditLog
+    if (adminId) {
+      await this.prisma.auditLog
+        .create({
+          data: {
+            actorId: adminId,
+            actorType: 'ADMIN',
+            action: 'MAINTENANCE_CLEAN_TEST_DATA',
+            targetEntity: 'Database',
+            targetId: 'TEST_DATA_CLEANUP',
+            reason: `Purged test data: ${deletedTransactionsCount} txs, ${deletedDisputesCount} disputes, ${deletedMessagesCount} msgs, ${deletedRechargesCount} recharges, ${deletedWithdrawalsCount} withdrawals, ${deletedLedgersCount} ledgers, ${deletedUsersCount} test users. Preserved ${staffUsers.length} staff accounts.`,
+          },
+        })
+        .catch(() => {});
+    }
+
+    return {
+      success: true,
+      message: 'Test data cleaned successfully',
+      preservedStaffCount: staffUsers.length,
+      deletedTransactions: deletedTransactionsCount,
+      deletedDisputes: deletedDisputesCount,
+      deletedMessages: deletedMessagesCount,
+      deletedConversations: deletedConversationsCount,
+      deletedRecharges: deletedRechargesCount,
+      deletedWithdrawals: deletedWithdrawalsCount,
+      deletedLedgers: deletedLedgersCount,
+      deletedUsers: deletedUsersCount,
+    };
+  }
 }

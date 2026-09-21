@@ -96,6 +96,15 @@ export default function AdminSettingsPage() {
   const [loadingStats, setLoadingStats] = useState(false);
   const [cleaningAction, setCleaningAction] = useState<string | null>(null);
   const [cleanupMessage, setCleanupMessage] = useState('');
+  const [cleanTestDataModalOpen, setCleanTestDataModalOpen] = useState(false);
+  const [cleanOptions, setCleanOptions] = useState({
+    cleanTransactions: true,
+    cleanDisputes: true,
+    cleanChats: true,
+    cleanFinancials: true,
+    cleanNonStaffUsers: false,
+  });
+  const [cleanConfirmText, setCleanConfirmText] = useState('');
 
   // Chat Rules & Quick Templates State
   const [chatConfig, setChatConfig] = useState<any>({
@@ -613,6 +622,31 @@ export default function AdminSettingsPage() {
       );
     } catch (err: any) {
       alert(err.response?.data?.message || err.message || 'Failed to flush logs');
+    } finally {
+      setCleaningAction(null);
+    }
+  };
+
+  const handleCleanTestData = async () => {
+    if (cleanConfirmText.trim().toUpperCase() !== 'RESET') {
+      alert(lang === 'bn' ? 'নিশ্চিত করতে "RESET" টাইপ করুন।' : 'Type "RESET" to confirm.');
+      return;
+    }
+    setCleaningAction('test_data');
+    setCleanupMessage('');
+    try {
+      const res: any = await api.post('/settings/maintenance/clean-test-data', cleanOptions);
+      const data = res?.data !== undefined ? res.data : res;
+      setCleanupMessage(
+        lang === 'bn'
+          ? `সফলভাবে টেস্ট ডাটা মুছে ফেলা হয়েছে! (${data.deletedTransactions || 0}টি লেনদেন, ${data.deletedDisputes || 0}টি ডিসপ্যুট, ${data.deletedMessages || 0}টি চ্যাট মেসেজ, ${data.deletedLedgers || 0}টি লেজার)। ${data.preservedStaffCount || 0}টি অ্যাডমিন অ্যাকাউন্ট সুরক্ষিত আছে।`
+          : `Successfully cleaned test data! (${data.deletedTransactions || 0} txs, ${data.deletedDisputes || 0} disputes, ${data.deletedMessages || 0} messages). ${data.preservedStaffCount || 0} staff accounts preserved.`
+      );
+      setCleanTestDataModalOpen(false);
+      setCleanConfirmText('');
+      fetchMaintenanceStats();
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Failed to clean test data');
     } finally {
       setCleaningAction(null);
     }
@@ -3445,6 +3479,61 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
+            {/* Production Launch Test Data Cleanup Section */}
+            <div className="p-5 rounded-2xl bg-rose-500/5 dark:bg-rose-950/20 border-2 border-rose-500/20 dark:border-rose-800/40 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Trash2 className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                      {lang === 'bn'
+                        ? 'মার্কেটিং পূর্ববর্তী টেস্ট ডাটা রিসেট (Clean Test Data for Launch)'
+                        : 'Pre-Marketing Test Data Reset (Launch Cleanup)'}
+                    </h4>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-700 dark:text-rose-400">
+                      Super Admin Only
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    {lang === 'bn'
+                      ? 'অফিসিয়াল মার্কেটিং শুরুর আগে সকল পুরনো টেস্ট লেনদেন, ডিসপ্যুট, চ্যাট মেসেজ এবং আর্থিক রেকর্ড নিরাপদে ক্লিন করুন।'
+                      : 'Safely purge all test transactions, disputes, chat messages, and financial records before official launch.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCleanTestDataModalOpen(true)}
+                  disabled={cleaningAction === 'test_data'}
+                  className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-600/20 transition flex items-center justify-center gap-2 flex-shrink-0"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>{lang === 'bn' ? 'টেস্ট ডাটা রিসেট করুন' : 'Clean Test Data'}</span>
+                </button>
+              </div>
+
+              {/* Protection Badges */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                  <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                    {lang === 'bn' ? 'সকল অ্যাডমিন ও স্টাফ ১০০% সুরক্ষিত' : 'All Admin & Staff Accounts Safe'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800">
+                  <Settings className="w-4 h-4 text-sky-600 dark:text-sky-400 flex-shrink-0" />
+                  <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                    {lang === 'bn' ? 'সিস্টেম সেটিংস ও গেটওয়ে সুরক্ষিত' : 'Settings & Gateways Intact'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/60 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800">
+                  <CheckCircle2 className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                  <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                    {lang === 'bn' ? 'ক্যাটাগরি ও পেজ কনফিগারেশন অক্ষত' : 'Categories & Pages Preserved'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* Retention Policies */}
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
               <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-3">
@@ -4825,6 +4914,120 @@ export default function AdminSettingsPage() {
                   : 'Save All Telegram Settings'}
               </span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Clean Test Data Modal */}
+      {cleanTestDataModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    {lang === 'bn' ? 'টেস্ট ডাটা ডিলিট নিশ্চিতকরণ' : 'Confirm Test Data Cleanup'}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {lang === 'bn'
+                      ? 'নিচের অপশনগুলো সিলেক্ট করে কনফার্ম করুন'
+                      : 'Select items to clean and confirm'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCleanTestDataModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2.5 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs">
+              <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-800 dark:text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={cleanOptions.cleanTransactions}
+                  onChange={(e) => setCleanOptions({ ...cleanOptions, cleanTransactions: e.target.checked })}
+                  className="rounded text-rose-600 focus:ring-rose-500"
+                />
+                <span>{lang === 'bn' ? 'পুরনো টেস্ট লেনদেন ও এসক্রো রেকর্ড' : 'Old Transactions & Escrows'}</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-800 dark:text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={cleanOptions.cleanDisputes}
+                  onChange={(e) => setCleanOptions({ ...cleanOptions, cleanDisputes: e.target.checked })}
+                  className="rounded text-rose-600 focus:ring-rose-500"
+                />
+                <span>{lang === 'bn' ? 'টেস্ট ডিসপ্যুট ও এভিডেন্স ফাইল' : 'Test Disputes & Evidences'}</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-800 dark:text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={cleanOptions.cleanChats}
+                  onChange={(e) => setCleanOptions({ ...cleanOptions, cleanChats: e.target.checked })}
+                  className="rounded text-rose-600 focus:ring-rose-500"
+                />
+                <span>{lang === 'bn' ? 'সকল টেস্ট চ্যাট কনভারসেশন ও মেসেজ' : 'All Test Chat Messages & Attachments'}</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-800 dark:text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={cleanOptions.cleanFinancials}
+                  onChange={(e) => setCleanOptions({ ...cleanOptions, cleanFinancials: e.target.checked })}
+                  className="rounded text-rose-600 focus:ring-rose-500"
+                />
+                <span>{lang === 'bn' ? 'টেস্ট রিচার্জ/উইথড্র রিকোয়েস্ট ও ওয়ালেট লেজার' : 'Test Recharges, Withdrawals & Ledgers'}</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-800 dark:text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={cleanOptions.cleanNonStaffUsers}
+                  onChange={(e) => setCleanOptions({ ...cleanOptions, cleanNonStaffUsers: e.target.checked })}
+                  className="rounded text-rose-600 focus:ring-rose-500"
+                />
+                <span className="text-rose-600 dark:text-rose-400 font-semibold">
+                  {lang === 'bn' ? 'নন-স্টাফ টেস্ট ইউজার ডিলিট করুন (ঐচ্ছিক)' : 'Delete Non-Staff Test Users (Optional)'}
+                </span>
+              </label>
+            </div>
+
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300">
+              {lang === 'bn'
+                ? '⚠️ এটি স্থায়ীভাবে ডাটা ডিলিট করবে। নিশ্চিত করতে নিচে "RESET" টাইপ করুন:'
+                : '⚠️ This will permanently purge the selected data. Type "RESET" below to confirm:'}
+            </div>
+
+            <input
+              type="text"
+              placeholder='Type "RESET"'
+              value={cleanConfirmText}
+              onChange={(e) => setCleanConfirmText(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm font-mono tracking-widest text-center uppercase focus:outline-none focus:ring-2 focus:ring-rose-500"
+            />
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setCleanTestDataModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition"
+              >
+                {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleCleanTestData}
+                disabled={cleanConfirmText.trim().toUpperCase() !== 'RESET' || cleaningAction === 'test_data'}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white font-bold text-xs transition flex items-center gap-2"
+              >
+                {cleaningAction === 'test_data' && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                <span>{lang === 'bn' ? 'নিশ্চিত করুন ও ক্লিন করুন' : 'Confirm & Clean'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -119,5 +119,18 @@ export class SettingsController {
   async flushServerLogs(@CurrentUser('id') adminId: string) {
     return { success: true, message: 'Server logs successfully flushed' };
   }
+
+  /**
+   * Super Admin endpoint to purge test transactions, disputes, chats, and financial records
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN')
+  @Post('maintenance/clean-test-data')
+  async cleanTestData(
+    @CurrentUser('id') adminId: string,
+    @Body() body: any,
+  ) {
+    return this.settingsService.cleanTestData(adminId, body);
+  }
 }
 
