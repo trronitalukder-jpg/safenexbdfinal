@@ -69,6 +69,51 @@ export class EmployeesService implements OnModuleInit {
     } catch (err) {
       console.warn('[AutoHeal] Could not clean up deleted conversation participants:', err);
     }
+
+    // Auto-heal: Ensure all admins/employees have isEmployee: true and remove any USER role so they are never counted as users
+    try {
+      const adminStaffUsers = await this.prisma.user.findMany({
+        where: {
+          OR: [
+            { isEmployee: true },
+            {
+              userRoles: {
+                some: {
+                  role: {
+                    name: { in: ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'SUPPORT_ADMIN', 'FINANCE_ADMIN', 'CONTENT_ADMIN'] },
+                  },
+                },
+              },
+            },
+          ],
+        },
+        select: { id: true, isEmployee: true },
+      });
+
+      for (const staff of adminStaffUsers) {
+        if (!staff.isEmployee) {
+          await this.prisma.user.update({
+            where: { id: staff.id },
+            data: { isEmployee: true },
+          });
+        }
+      }
+
+      const userRole = await this.prisma.role.findUnique({ where: { name: 'USER' } });
+      if (userRole && adminStaffUsers.length > 0) {
+        const removed = await this.prisma.userRole.deleteMany({
+          where: {
+            userId: { in: adminStaffUsers.map((s) => s.id) },
+            roleId: userRole.id,
+          },
+        });
+        if (removed.count > 0) {
+          console.log(`[AutoHeal] Stripped USER role from ${removed.count} administrative/staff accounts.`);
+        }
+      }
+    } catch (err) {
+      console.warn('[AutoHeal] Could not run admin/user separation on startup:', err);
+    }
   }
 
   private async generateUniqueUserId(name: string): Promise<string> {
@@ -278,6 +323,14 @@ export class EmployeesService implements OnModuleInit {
           }
         }
 
+        // Remove regular USER role so staff is never treated as a marketplace user
+        const regularUserRole = await tx.role.findUnique({ where: { name: 'USER' } });
+        if (regularUserRole) {
+          await tx.userRole.deleteMany({
+            where: { userId: user.id, roleId: regularUserRole.id },
+          });
+        }
+
         // Initialize StaffProfile for duty/workload
         await tx.staffProfile.upsert({
           where: { userId: user.id },
@@ -321,15 +374,9 @@ export class EmployeesService implements OnModuleInit {
           phone: finalPhone!,
           passwordHash,
           isActive: dto.isActive !== false,
-          isVerified: true,
+          isVerified: false,
           isEmployee: true,
           adminPermissions: JSON.stringify(permissions),
-          wallet: {
-            create: {
-              availableBalance: 0,
-              holdBalance: 0,
-            },
-          },
         },
       });
 

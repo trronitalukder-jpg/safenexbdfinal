@@ -31,7 +31,19 @@ export default function LoginPage() {
       });
 
       setAuth(res.user, res.accessToken, res.refreshToken);
-      router.push('/dashboard');
+
+      const isStaffOrAdmin =
+        Boolean(res.user?.isEmployee) ||
+        res.user?.roles?.some((r: string) =>
+          ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'SUPPORT_ADMIN', 'FINANCE_ADMIN', 'CONTENT_ADMIN'].includes(r)
+        ) ||
+        Boolean(res.user?.adminPermissions && res.user.adminPermissions.length > 0);
+
+      if (isStaffOrAdmin) {
+        router.push('/admin');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err: any) {
       setError(err.message || 'Login failed. Please verify credentials.');
     } finally {

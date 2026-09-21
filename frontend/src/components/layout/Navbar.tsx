@@ -283,15 +283,17 @@ export const Navbar = () => {
                             </Link>
                           )}
 
-                          {/* User Panel */}
-                          <Link
-                            href="/dashboard"
-                            onClick={() => setUserDropdownOpen(false)}
-                            className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
-                          >
-                            <Layers className="w-4 h-4 text-sky-500" />
-                            <span>{lang === 'bn' ? 'ইউজার প্যানেল' : 'User Panel'}</span>
-                          </Link>
+                          {/* User Panel (Only for regular users) */}
+                          {!isAdmin() && (
+                            <Link
+                              href="/dashboard"
+                              onClick={() => setUserDropdownOpen(false)}
+                              className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
+                            >
+                              <Layers className="w-4 h-4 text-sky-500" />
+                              <span>{lang === 'bn' ? 'ইউজার প্যানেল' : 'User Panel'}</span>
+                            </Link>
+                          )}
 
                           {/* Dispute Resolution Policy */}
                           <Link
@@ -921,15 +923,17 @@ export const Navbar = () => {
                     </Link>
                   )}
 
-                  {/* User Panel */}
-                  <Link
-                    href="/dashboard"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-medium transition"
-                  >
-                    <Layers className="w-4 h-4 text-sky-500" />
-                    <span>{lang === 'bn' ? 'ইউজার প্যানেল' : 'User Panel'}</span>
-                  </Link>
+                  {/* User Panel (Only for regular users) */}
+                  {!isAdmin() && (
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-medium transition"
+                    >
+                      <Layers className="w-4 h-4 text-sky-500" />
+                      <span>{lang === 'bn' ? 'ইউজার প্যানেল' : 'User Panel'}</span>
+                    </Link>
+                  )}
 
                   {/* Dispute Resolution Policy */}
                   <Link

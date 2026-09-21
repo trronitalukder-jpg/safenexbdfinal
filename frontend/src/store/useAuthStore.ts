@@ -143,10 +143,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user) return false;
     const roles = user.roles || [];
     return (
+      Boolean(user.isEmployee) ||
       roles.includes('SUPER_ADMIN') ||
       roles.includes('ADMIN') ||
       roles.includes('FINANCE_ADMIN') ||
       roles.includes('EMPLOYEE') ||
+      roles.includes('SUPPORT_ADMIN') ||
+      roles.includes('CONTENT_ADMIN') ||
       Boolean(user.adminPermissions && user.adminPermissions.length > 0)
     );
   },

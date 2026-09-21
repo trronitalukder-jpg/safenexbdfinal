@@ -97,9 +97,10 @@ export class UsersService {
 
     // Exclude staff and admin accounts from normal marketplace user search
     const excludedRoles = isSuperAdminVisible
-      ? ['ADMIN', 'EMPLOYEE', 'SUPPORT_ADMIN']
-      : ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'SUPPORT_ADMIN'];
+      ? ['ADMIN', 'EMPLOYEE', 'SUPPORT_ADMIN', 'FINANCE_ADMIN', 'CONTENT_ADMIN']
+      : ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'SUPPORT_ADMIN', 'FINANCE_ADMIN', 'CONTENT_ADMIN'];
 
+    whereClause.isEmployee = false;
     whereClause.userRoles = {
       none: {
         role: { name: { in: excludedRoles } },
@@ -260,6 +261,7 @@ export class UsersService {
         lastName: true,
         avatarUrl: true,
         isVerified: true,
+        isEmployee: true,
         businessName: true,
         businessType: true,
         headline: true,
@@ -343,25 +345,36 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${uniqueUserId} not found`);
     }
 
-    const isSuperAdmin = user.userRoles?.some((ur: any) => ur.role?.name === 'SUPER_ADMIN');
-    if (isSuperAdmin) {
-      try {
-        const superAdminVisibilitySetting = await this.prisma.systemSetting.findUnique({
-          where: { key: 'super_admin_chat_visibility' },
-        });
+    // Admins and staff are not marketplace users and must not have public user profiles
+    const isAdminOrStaff =
+      user.isEmployee ||
+      user.userRoles?.some((ur: any) =>
+        ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'SUPPORT_ADMIN', 'FINANCE_ADMIN', 'CONTENT_ADMIN'].includes(
+          ur.role?.name,
+        ),
+      );
+
+    if (isAdminOrStaff) {
+      const isSuperAdmin = user.userRoles?.some((ur: any) => ur.role?.name === 'SUPER_ADMIN');
+      if (isSuperAdmin) {
         let isSuperAdminVisible = false;
-        if (superAdminVisibilitySetting?.value) {
-          const val =
-            typeof superAdminVisibilitySetting.value === 'string'
-              ? JSON.parse(superAdminVisibilitySetting.value)
-              : superAdminVisibilitySetting.value;
-          isSuperAdminVisible = val?.isVisible === true;
-        }
+        try {
+          const superAdminVisibilitySetting = await this.prisma.systemSetting.findUnique({
+            where: { key: 'super_admin_chat_visibility' },
+          });
+          if (superAdminVisibilitySetting?.value) {
+            const val =
+              typeof superAdminVisibilitySetting.value === 'string'
+                ? JSON.parse(superAdminVisibilitySetting.value)
+                : superAdminVisibilitySetting.value;
+            isSuperAdminVisible = val?.isVisible === true;
+          }
+        } catch {}
         if (!isSuperAdminVisible) {
           throw new NotFoundException(`User with ID ${uniqueUserId} not found`);
         }
-      } catch (err) {
-        if (err instanceof NotFoundException) throw err;
+      } else {
+        throw new NotFoundException(`User with ID ${uniqueUserId} not found`);
       }
     }
 

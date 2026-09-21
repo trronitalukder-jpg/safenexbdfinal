@@ -20,7 +20,7 @@ export class AdminService {
       isEmployee: false,
       userRoles: {
         none: {
-          role: { name: { in: ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'SUPPORT_ADMIN'] } },
+          role: { name: { in: ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'SUPPORT_ADMIN', 'FINANCE_ADMIN', 'CONTENT_ADMIN'] } },
         },
       },
     };
@@ -154,7 +154,7 @@ export class AdminService {
       isEmployee: false,
       userRoles: {
         none: {
-          role: { name: { in: ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'SUPPORT_ADMIN'] } },
+          role: { name: { in: ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'SUPPORT_ADMIN', 'FINANCE_ADMIN', 'CONTENT_ADMIN'] } },
         },
       },
     };

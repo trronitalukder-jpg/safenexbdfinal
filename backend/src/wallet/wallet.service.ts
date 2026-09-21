@@ -28,6 +28,9 @@ import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class WalletService {
+  private activeRechargeLocks = new Set<string>();
+  private activeWithdrawLocks = new Set<string>();
+
   constructor(
     private prisma: PrismaService,
     private commissionService: CommissionService,
@@ -222,121 +225,130 @@ export class WalletService {
    * User submits a Recharge Request
    */
   async submitRechargeRequest(userId: string, dto: CreateRechargeRequestDto) {
-    const method = await this.prisma.rechargeMethod.findUnique({
-      where: { id: dto.methodId },
-    });
-
-    if (!method || !method.isActive) {
-      throw new BadRequestException('Selected payment method is currently unavailable');
-    }
-
-    const amount = new Prisma.Decimal(dto.amount);
-    if (amount.lessThan(method.minAmount) || amount.greaterThan(method.maxAmount)) {
-      throw new BadRequestException(
-        `Amount must be between ৳${method.minAmount} and ৳${method.maxAmount}`,
-      );
-    }
-
-    // Check duplicate pending recharge with same transactionNumber or rapid re-submission
-    const existingPending = await this.prisma.rechargeRequest.findFirst({
-      where: {
-        userId,
-        status: 'PENDING',
-        transactionNumber: dto.transactionNumber.trim(),
-      },
-    });
-    if (existingPending) {
-      throw new BadRequestException('এই ট্রানজেকশন নম্বরটির একটি রিচার্জ রিকোয়েস্ট ইতিমধ্যে পেন্ডিং রয়েছে। অনুগ্রহ করে অপেক্ষা করুন।');
-    }
-
-    const recentPending = await this.prisma.rechargeRequest.findFirst({
-      where: {
-        userId,
-        status: 'PENDING',
-        createdAt: { gte: new Date(Date.now() - 10000) },
-      },
-    });
-    if (recentPending) {
+    if (this.activeRechargeLocks.has(userId)) {
       throw new BadRequestException('একটি রিচার্জ আবেদন ইতিমধ্যে প্রক্রিয়াধীন রয়েছে। অনুগ্রহ করে কয়েক সেকেন্ড অপেক্ষা করুন।');
     }
+    this.activeRechargeLocks.add(userId);
 
-    const recharge = await this.prisma.$transaction(async (tx) => {
-      let wallet = await tx.wallet.findUnique({
-        where: { userId },
+    try {
+      const method = await this.prisma.rechargeMethod.findUnique({
+        where: { id: dto.methodId },
       });
 
-      if (!wallet) {
-        wallet = await tx.wallet.create({
+      if (!method || !method.isActive) {
+        throw new BadRequestException('Selected payment method is currently unavailable');
+      }
+
+      const amount = new Prisma.Decimal(dto.amount);
+      if (amount.lessThan(method.minAmount) || amount.greaterThan(method.maxAmount)) {
+        throw new BadRequestException(
+          `Amount must be between ৳${method.minAmount} and ৳${method.maxAmount}`,
+        );
+      }
+
+      // Check duplicate pending recharge with same transactionNumber or rapid re-submission
+      const existingPending = await this.prisma.rechargeRequest.findFirst({
+        where: {
+          userId,
+          status: 'PENDING',
+          transactionNumber: dto.transactionNumber.trim(),
+        },
+      });
+      if (existingPending) {
+        throw new BadRequestException('এই ট্রানজেকশন নম্বরটির একটি রিচার্জ রিকোয়েস্ট ইতিমধ্যে পেন্ডিং রয়েছে। অনুগ্রহ করে অপেক্ষা করুন।');
+      }
+
+      const recentPending = await this.prisma.rechargeRequest.findFirst({
+        where: {
+          userId,
+          status: 'PENDING',
+          createdAt: { gte: new Date(Date.now() - 10000) },
+        },
+      });
+      if (recentPending) {
+        throw new BadRequestException('একটি রিচার্জ আবেদন ইতিমধ্যে প্রক্রিয়াধীন রয়েছে। অনুগ্রহ করে কয়েক সেকেন্ড অপেক্ষা করুন।');
+      }
+
+      const recharge = await this.prisma.$transaction(async (tx) => {
+        let wallet = await tx.wallet.findUnique({
+          where: { userId },
+        });
+
+        if (!wallet) {
+          wallet = await tx.wallet.create({
+            data: {
+              userId,
+              availableBalance: new Prisma.Decimal(0),
+              holdBalance: new Prisma.Decimal(0),
+            },
+          });
+        }
+
+        const recharge = await tx.rechargeRequest.create({
           data: {
             userId,
-            availableBalance: new Prisma.Decimal(0),
-            holdBalance: new Prisma.Decimal(0),
+            methodId: dto.methodId,
+            amount,
+            senderAccount: dto.senderAccount.trim(),
+            transactionNumber: dto.transactionNumber.trim(),
+            proofUrl: dto.proofUrl,
+            status: 'PENDING',
           },
+        });
+
+        // Write initial pending ledger entry into WalletLedger
+        await tx.walletLedger.create({
+          data: {
+            walletId: wallet.id,
+            userId,
+            transactionId: dto.transactionNumber.trim(),
+            type: 'RECHARGE',
+            amount,
+            commission: new Prisma.Decimal(0),
+            balanceBefore: wallet.availableBalance,
+            balanceAfter: wallet.availableBalance, // not credited yet
+            holdBefore: wallet.holdBalance,
+            holdAfter: wallet.holdBalance,
+            referenceId: recharge.id,
+            referenceType: 'RECHARGE_REQUEST',
+            notes: `Recharge Pending: Request submitted via ${method.name}. TrxID: ${dto.transactionNumber.trim()}`,
+            status: 'PENDING',
+            createdBy: userId,
+          },
+        });
+
+        return recharge;
+      });
+
+      // Real-time notifications for Recharge Request
+      if (this.chatGateway && recharge) {
+        const amountNum = recharge.amount ? Number(recharge.amount) : Number(dto.amount);
+        this.chatGateway.notifyUser(userId, 'notification:recharge', {
+          id: recharge.id,
+          status: 'PENDING',
+          amount: amountNum,
+          title: 'রিচার্জ আবেদন জমা হয়েছে',
+          message: `আপনার ৳${amountNum.toLocaleString()} টাকার রিচার্জ আবেদন পর্যালোচনার জন্য জমা রয়েছে।`,
+          createdAt: new Date().toISOString(),
+        });
+
+        this.chatGateway.notifyAdminsAndStaff('notification:admin', {
+          type: 'NEW_RECHARGE_REQUEST',
+          title: 'নতুন রিচার্জ রিকোয়েস্ট',
+          message: `ব্যবহারকারী ৳${amountNum.toLocaleString()} টাকার রিচার্জ রিকোয়েস্ট পাঠিয়েছেন (${method.name})।`,
+          targetUrl: '/admin/recharges',
+          createdAt: new Date().toISOString(),
         });
       }
 
-      const recharge = await tx.rechargeRequest.create({
-        data: {
-          userId,
-          methodId: dto.methodId,
-          amount,
-          senderAccount: dto.senderAccount.trim(),
-          transactionNumber: dto.transactionNumber.trim(),
-          proofUrl: dto.proofUrl,
-          status: 'PENDING',
-        },
-      });
-
-      // Write initial pending ledger entry into WalletLedger
-      await tx.walletLedger.create({
-        data: {
-          walletId: wallet.id,
-          userId,
-          transactionId: dto.transactionNumber.trim(),
-          type: 'RECHARGE',
-          amount,
-          commission: new Prisma.Decimal(0),
-          balanceBefore: wallet.availableBalance,
-          balanceAfter: wallet.availableBalance, // not credited yet
-          holdBefore: wallet.holdBalance,
-          holdAfter: wallet.holdBalance,
-          referenceId: recharge.id,
-          referenceType: 'RECHARGE_REQUEST',
-          notes: `Recharge Pending: Request submitted via ${method.name}. TrxID: ${dto.transactionNumber.trim()}`,
-          status: 'PENDING',
-          createdBy: userId,
-        },
-      });
+      if (this.operationsService && recharge?.id) {
+        await this.operationsService.autoAssignTaskOnCreate('RECHARGE', recharge.id, 'FINANCE_RECHARGE');
+      }
 
       return recharge;
-    });
-
-    // Real-time notifications for Recharge Request
-    if (this.chatGateway && recharge) {
-      const amountNum = recharge.amount ? Number(recharge.amount) : Number(dto.amount);
-      this.chatGateway.notifyUser(userId, 'notification:recharge', {
-        id: recharge.id,
-        status: 'PENDING',
-        amount: amountNum,
-        title: 'রিচার্জ আবেদন জমা হয়েছে',
-        message: `আপনার ৳${amountNum.toLocaleString()} টাকার রিচার্জ আবেদন পর্যালোচনার জন্য জমা রয়েছে।`,
-        createdAt: new Date().toISOString(),
-      });
-
-      this.chatGateway.notifyAdminsAndStaff('notification:admin', {
-        type: 'NEW_RECHARGE_REQUEST',
-        title: 'নতুন রিচার্জ রিকোয়েস্ট',
-        message: `ব্যবহারকারী ৳${amountNum.toLocaleString()} টাকার রিচার্জ রিকোয়েস্ট পাঠিয়েছেন (${method.name})।`,
-        targetUrl: '/admin/recharges',
-        createdAt: new Date().toISOString(),
-      });
+    } finally {
+      this.activeRechargeLocks.delete(userId);
     }
-
-    if (this.operationsService && recharge?.id) {
-      await this.operationsService.autoAssignTaskOnCreate('RECHARGE', recharge.id, 'FINANCE_RECHARGE');
-    }
-
-    return recharge;
   }
 
   /**
@@ -662,17 +674,23 @@ export class WalletService {
    * Rule: Only Available Balance can be withdrawn. Hold balance is strictly excluded.
    */
   async submitWithdrawalRequest(userId: string, dto: CreateWithdrawalRequestDto) {
-    // Check if a pending withdrawal request was submitted by this user in the last 10 seconds
-    const recentWithdraw = await this.prisma.withdrawalRequest.findFirst({
-      where: {
-        userId,
-        status: 'PENDING',
-        createdAt: { gte: new Date(Date.now() - 10000) },
-      },
-    });
-    if (recentWithdraw) {
+    if (this.activeWithdrawLocks.has(userId)) {
       throw new BadRequestException('একটি উইথড্র রিকোয়েস্ট ইতিমধ্যে প্রক্রিয়াধীন রয়েছে। অনুগ্রহ করে কয়েক সেকেন্ড অপেক্ষা করুন।');
     }
+    this.activeWithdrawLocks.add(userId);
+
+    try {
+      // Check if a pending withdrawal request was submitted by this user in the last 10 seconds
+      const recentWithdraw = await this.prisma.withdrawalRequest.findFirst({
+        where: {
+          userId,
+          status: 'PENDING',
+          createdAt: { gte: new Date(Date.now() - 10000) },
+        },
+      });
+      if (recentWithdraw) {
+        throw new BadRequestException('একটি উইথড্র রিকোয়েস্ট ইতিমধ্যে প্রক্রিয়াধীন রয়েছে। অনুগ্রহ করে কয়েক সেকেন্ড অপেক্ষা করুন।');
+      }
 
     // Verify OTP if Security Mode requires Withdrawal OTP
     if (this.smsService) {
@@ -1028,11 +1046,14 @@ export class WalletService {
       });
     }
 
-    if (this.operationsService && withdrawal?.id) {
-      await this.operationsService.autoAssignTaskOnCreate('WITHDRAWAL', withdrawal.id, 'FINANCE_WITHDRAWAL');
-    }
+      if (this.operationsService && withdrawal?.id) {
+        await this.operationsService.autoAssignTaskOnCreate('WITHDRAWAL', withdrawal.id, 'FINANCE_WITHDRAWAL');
+      }
 
-    return withdrawal;
+      return withdrawal;
+    } finally {
+      this.activeWithdrawLocks.delete(userId);
+    }
   }
 
   /**

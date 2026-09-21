@@ -88,16 +88,31 @@ function WalletContent() {
   const [checkoutPhone, setCheckoutPhone] = useState('');
   const [checkoutTrxId, setCheckoutTrxId] = useState('');
 
+  // Submission lock refs to prevent double-click executions
+  const isSubmittingRechargeRef = React.useRef(false);
+  const isSubmittingWithdrawRef = React.useRef(false);
+
   // Modals
   const [showRechargeModal, setShowRechargeModal] = useState(initialAction === 'recharge');
   const [showWithdrawModal, setShowWithdrawModal] = useState(initialAction === 'withdraw');
 
-  // Immediately clear URL action query param so page refresh doesn't reopen modal
+  // Immediately respond whenever searchParams action changes (e.g. clicking Recharge or Withdraw from dashboard)
   useEffect(() => {
-    if (initialAction && typeof window !== 'undefined') {
-      window.history.replaceState({}, '', window.location.pathname);
+    const action = searchParams.get('action');
+    if (action === 'recharge') {
+      setShowRechargeModal(true);
+      setShowWithdrawModal(false);
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    } else if (action === 'withdraw') {
+      setShowWithdrawModal(true);
+      setShowRechargeModal(false);
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     }
-  }, [initialAction]);
+  }, [searchParams]);
 
   // Recharge Form state
   const [rechargeMethodId, setRechargeMethodId] = useState('');
@@ -351,7 +366,8 @@ function WalletContent() {
 
   const handleRechargeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmittingRecharge) return;
+    if (isSubmittingRechargeRef.current || isSubmittingRecharge) return;
+    isSubmittingRechargeRef.current = true;
     setIsSubmittingRecharge(true);
     setRechargeError('');
     setRechargeSuccess('');
@@ -365,24 +381,22 @@ function WalletContent() {
         proofUrl: proofUrl.trim() || undefined,
       });
 
-      setRechargeSuccess(
-        lang === 'bn'
-          ? 'রিচার্জ রিকোয়েস্ট সফলভাবে সাবমিট হয়েছে! ওয়ালেট লেজারে "রিচার্জ পেন্ডিং" হিসেবে যুক্ত হয়েছে, অ্যাডমিন অ্যাপ্রুভ করলে ব্যালেন্স যোগ হবে।'
-          : 'Recharge request submitted! Listed as "Recharge Pending" in your Wallet Ledger.',
-      );
-      loadData();
-      refreshMe();
+      setShowRechargeModal(false);
       setSenderAccount('');
       setTransactionNumber('');
       setProofUrl('');
-      setTimeout(() => {
-        setShowRechargeModal(false);
-        setRechargeSuccess('');
-        setIsSubmittingRecharge(false);
-      }, 1000);
+      loadData();
+      refreshMe();
+      alert(
+        lang === 'bn'
+          ? 'রিচার্জ রিকোয়েস্ট সফলভাবে সাবমিট হয়েছে! ওয়ালেট লেজারে "রিচার্জ পেন্ডিং" হিসেবে যুক্ত হয়েছে, অ্যাডমিন অ্যাপ্রুভ করলে ব্যালেন্স যোগ হবে।'
+          : 'Recharge request submitted! Listed as "Recharge Pending" in your Wallet Ledger.'
+      );
     } catch (err: any) {
       setRechargeError(err.message || err.response?.data?.message || 'Failed to submit recharge request');
+    } finally {
       setIsSubmittingRecharge(false);
+      isSubmittingRechargeRef.current = false;
     }
   };
 
@@ -452,7 +466,7 @@ function WalletContent() {
 
   const handleWithdrawSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmittingWithdraw) return;
+    if (isSubmittingWithdrawRef.current || isSubmittingWithdraw) return;
 
     setWithdrawError('');
     setWithdrawSuccess('');
@@ -552,6 +566,7 @@ function WalletContent() {
     }
 
     // Lock immediately before any async requests to prevent double-click execution
+    isSubmittingWithdrawRef.current = true;
     setIsSubmittingWithdraw(true);
 
     // DUAL-MODE WITHDRAWAL: Check Security Settings for Withdrawal OTP
@@ -591,6 +606,7 @@ function WalletContent() {
         setWithdrawError(err.message || err.response?.data?.message || 'ওটিপি পাঠাতে ব্যর্থ হয়েছে');
       } finally {
         setIsSubmittingWithdraw(false);
+        isSubmittingWithdrawRef.current = false;
       }
       return;
     }
@@ -598,34 +614,33 @@ function WalletContent() {
     // Direct submit when OTP is OFF
     try {
       await api.post('/wallet/withdraw', payload);
-      setWithdrawSuccess(
+      setShowWithdrawModal(false);
+      setDestinationAccount('');
+      setAccountNumber('');
+      setAccountHolderName('');
+      setRoutingNumber('');
+      setBranchName('');
+      setCustomBankName('');
+      setWithdrawPassword('');
+      loadData();
+      refreshMe();
+      alert(
         lang === 'bn'
           ? 'উইথড্র রিকোয়েস্ট সফলভাবে সাবমিট হয়েছে! এডমিন দ্রুত যাচাই করে পেমেন্ট সম্পন্ন করবেন।'
           : 'Withdrawal request submitted successfully! Admin will review and process payout.'
       );
-      loadData();
-      refreshMe();
-      setTimeout(() => {
-        setShowWithdrawModal(false);
-        setDestinationAccount('');
-        setAccountNumber('');
-        setAccountHolderName('');
-        setRoutingNumber('');
-        setBranchName('');
-        setCustomBankName('');
-        setWithdrawSuccess('');
-        setIsSubmittingWithdraw(false);
-      }, 1000);
     } catch (err: any) {
       setWithdrawError(err.message || err.response?.data?.message || 'Failed to submit withdrawal request');
+    } finally {
       setIsSubmittingWithdraw(false);
+      isSubmittingWithdrawRef.current = false;
     }
   };
 
   // Confirm Withdrawal with Password (First-time / Unsaved Account auto-save flow)
   const handleConfirmWithdrawWithPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmittingWithdraw) return;
+    if (isSubmittingWithdrawRef.current || isSubmittingWithdraw) return;
     if (!withdrawPassword.trim()) {
       setWithdrawPasswordError(
         lang === 'bn' ? 'নিরাপত্তার জন্য আপনার পাসওয়ার্ড দিন' : 'Enter your password for security'
@@ -634,6 +649,7 @@ function WalletContent() {
     }
     if (!pendingWithdrawPayload) return;
 
+    isSubmittingWithdrawRef.current = true;
     setIsSubmittingWithdraw(true);
     setWithdrawPasswordError('');
 
@@ -647,28 +663,26 @@ function WalletContent() {
       setShowWithdrawPasswordModal(false);
       setPendingWithdrawPayload(null);
       setWithdrawPassword('');
-      setWithdrawSuccess(
+      setDestinationAccount('');
+      setAccountNumber('');
+      setAccountHolderName('');
+      setRoutingNumber('');
+      setBranchName('');
+      setCustomBankName('');
+      loadData();
+      refreshMe();
+      alert(
         lang === 'bn'
           ? 'উইথড্র সফলভাবে সাবমিট হয়েছে এবং অ্যাকাউন্টটি স্বয়ংক্রিয়ভাবে সেভ হয়েছে!'
           : 'Withdrawal submitted and destination account automatically saved!'
       );
-      loadData();
-      refreshMe();
-      setTimeout(() => {
-        setDestinationAccount('');
-        setAccountNumber('');
-        setAccountHolderName('');
-        setRoutingNumber('');
-        setBranchName('');
-        setCustomBankName('');
-        setWithdrawSuccess('');
-      }, 1000);
     } catch (err: any) {
       setWithdrawPasswordError(
         err.response?.data?.message || err.message || (lang === 'bn' ? 'উইথড্র আবেদন ব্যর্থ হয়েছে' : 'Failed to submit withdrawal')
       );
     } finally {
       setIsSubmittingWithdraw(false);
+      isSubmittingWithdrawRef.current = false;
     }
   };
 

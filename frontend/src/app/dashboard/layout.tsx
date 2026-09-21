@@ -54,11 +54,24 @@ export default function DashboardLayout({
     refreshMe();
   }, []);
 
+  const isStaffOrAdmin =
+    Boolean(user?.isEmployee) ||
+    Boolean(
+      user?.roles?.some((r: string) =>
+        ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'SUPPORT_ADMIN', 'FINANCE_ADMIN', 'CONTENT_ADMIN'].includes(r)
+      )
+    ) ||
+    Boolean(user?.adminPermissions && user.adminPermissions.length > 0);
+
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/login');
+    if (!isLoading) {
+      if (!user) {
+        router.push('/login');
+      } else if (isStaffOrAdmin) {
+        router.push('/admin');
+      }
     }
-  }, [user, isLoading]);
+  }, [user, isLoading, isStaffOrAdmin]);
 
   useEffect(() => {
     setMobileDrawerOpen(false);
@@ -78,11 +91,11 @@ export default function DashboardLayout({
     { href: '/dashboard/settings', label: lang === 'bn' ? 'অ্যাকাউন্ট সেটিংস' : 'Account Settings', icon: Settings },
   ];
 
-  if (isLoading || !user) {
+  if (isLoading || !user || isStaffOrAdmin) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-xs text-slate-400 gap-3">
         <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
-        <span>Authenticating Dashboard Session...</span>
+        <span>{isStaffOrAdmin ? 'Redirecting to Admin Panel...' : 'Authenticating Dashboard Session...'}</span>
       </div>
     );
   }

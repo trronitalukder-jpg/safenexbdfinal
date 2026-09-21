@@ -185,6 +185,7 @@ export default function DashboardOverviewPage() {
           <div className="flex items-center gap-1 sm:gap-2 pt-0.5 sm:pt-1">
             <Link
               href="/dashboard/wallet?action=recharge"
+              prefetch={true}
               className="flex-1 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 shadow-xs transition"
             >
               <ArrowDownCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -192,6 +193,7 @@ export default function DashboardOverviewPage() {
             </Link>
             <Link
               href="/dashboard/wallet?action=withdraw"
+              prefetch={true}
               className="flex-1 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 transition"
             >
               <ArrowUpCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
