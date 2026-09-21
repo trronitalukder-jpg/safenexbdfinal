@@ -1166,8 +1166,8 @@ function SettingsContent() {
         </div>
       </div>
 
-      {/* Navigation Tabs (Scrollable & Responsive) */}
-      <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 overflow-x-auto no-scrollbar scroll-smooth">
+      {/* Navigation Tabs (Swipeable on Mobile, 4-column 2-row grid on Tablet, Laptop & Desktop) */}
+      <div className="flex sm:grid sm:grid-cols-4 gap-2 p-2 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 overflow-x-auto sm:overflow-visible no-scrollbar">
         {[
           { id: 'profile', icon: User, label: lang === 'bn' ? 'বেসিক প্রোফাইল' : 'Basic Profile' },
           { id: 'address', icon: MapPin, label: lang === 'bn' ? 'ঠিকানা ও অবস্থান' : 'Address & Location' },
@@ -1185,14 +1185,14 @@ function SettingsContent() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id as TabType)}
-              className={`flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition shrink-0 ${
+              className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-bold text-xs transition shrink-0 sm:w-full ${
                 isActive
                   ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm ring-1 ring-sky-500/20'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/60'
               }`}
             >
               <Icon className="w-3.5 h-3.5 shrink-0" />
-              <span>{tab.label}</span>
+              <span className="truncate">{tab.label}</span>
               {tab.badge && (
                 <span className={`px-1.5 py-0.2 rounded-full text-[8px] font-black shrink-0 ${
                   tab.badge === 'Verified' ? 'bg-emerald-500/15 text-emerald-600' : 'bg-amber-500/15 text-amber-600'
