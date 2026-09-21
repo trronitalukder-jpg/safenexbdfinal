@@ -334,6 +334,7 @@ function SettingsContent() {
   // Telegram Integration State
   const [telegramStatus, setTelegramStatus] = useState<{
     connected: boolean;
+    isConnected?: boolean;
     telegramUsername?: string;
     telegramChatId?: string;
     telegramNotifications?: boolean;
@@ -423,6 +424,13 @@ function SettingsContent() {
     } finally {
       setUpdatingTelegramPref(false);
     }
+  };
+
+  const handleConnectTelegram = () => {
+    const botUser = telegramStatus?.botUsername || 'SafnexBDBot';
+    const targetUrl =
+      telegramStatus?.linkUrl || `https://t.me/${botUser}?start=u_${user?.id || ''}`;
+    window.open(targetUrl, '_blank');
   };
 
   useEffect(() => {
@@ -3043,7 +3051,7 @@ function SettingsContent() {
                   </div>
 
                   {/* Status Badge */}
-                  {telegramStatus?.connected ? (
+                  {Boolean(telegramStatus?.connected || telegramStatus?.isConnected) ? (
                     <span className="px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 font-bold text-[11px] flex items-center gap-1.5">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>{lang === 'bn' ? 'সংযুক্ত (Connected)' : 'Connected'}</span>
@@ -3073,7 +3081,7 @@ function SettingsContent() {
                 )}
 
                 {/* If Connected */}
-                {telegramStatus?.connected ? (
+                {Boolean(telegramStatus?.connected || telegramStatus?.isConnected) ? (
                   <div className="space-y-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs">
                       <div className="space-y-0.5">
@@ -3082,18 +3090,18 @@ function SettingsContent() {
                         </div>
                         <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                           <span>
-                            {telegramStatus.telegramUsername
+                            {telegramStatus?.telegramUsername
                               ? `@${telegramStatus.telegramUsername}`
                               : 'Telegram User'}
                           </span>
                           <span className="text-[10px] text-slate-400 font-mono">
-                            ID: {telegramStatus.telegramChatId}
+                            ID: {telegramStatus?.telegramChatId}
                           </span>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {telegramStatus.botUsername && (
+                        {telegramStatus?.botUsername && (
                           <a
                             href={`https://t.me/${telegramStatus.botUsername}`}
                             target="_blank"
@@ -3133,7 +3141,7 @@ function SettingsContent() {
                         </div>
                         <input
                           type="checkbox"
-                          checked={Boolean(telegramStatus.telegramNotifications)}
+                          checked={Boolean(telegramStatus?.telegramNotifications)}
                           onChange={(e) =>
                             handleToggleTelegramPref('telegramNotifications', e.target.checked)
                           }
@@ -3156,7 +3164,7 @@ function SettingsContent() {
                         </div>
                         <input
                           type="checkbox"
-                          checked={Boolean(telegramStatus.telegram2FaEnabled)}
+                          checked={Boolean(telegramStatus?.telegram2FaEnabled)}
                           onChange={(e) =>
                             handleToggleTelegramPref('telegram2FaEnabled', e.target.checked)
                           }
@@ -3182,27 +3190,23 @@ function SettingsContent() {
                       </div>
                     </div>
 
-                    {telegramStatus?.linkUrl ? (
-                      <a
-                        href={telegramStatus.linkUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md shadow-sky-600/20 transition active:scale-95 flex items-center justify-center gap-2 shrink-0"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        <span>{lang === 'bn' ? '🔗 টেলিগ্রাম কানেক্ট করুন' : 'Connect Telegram'}</span>
-                      </a>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={fetchTelegramStatus}
-                        disabled={loadingTelegramStatus}
-                        className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-1.5"
-                      >
+                    <button
+                      type="button"
+                      onClick={handleConnectTelegram}
+                      disabled={loadingTelegramStatus && !telegramStatus}
+                      className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md shadow-sky-600/20 transition active:scale-95 flex items-center justify-center gap-2 shrink-0 disabled:opacity-60"
+                    >
+                      {loadingTelegramStatus && !telegramStatus ? (
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>{lang === 'bn' ? 'লোড হচ্ছে...' : 'Loading...'}</span>
-                      </button>
-                    )}
+                      ) : (
+                        <Send className="w-3.5 h-3.5" />
+                      )}
+                      <span>
+                        {loadingTelegramStatus && !telegramStatus
+                          ? (lang === 'bn' ? 'লোড হচ্ছে...' : 'Loading...')
+                          : (lang === 'bn' ? '🔗 টেলিগ্রাম কানেক্ট করুন' : 'Connect Telegram')}
+                      </span>
+                    </button>
                   </div>
                 )}
               </div>

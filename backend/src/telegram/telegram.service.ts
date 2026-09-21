@@ -468,13 +468,18 @@ export class TelegramService {
     });
 
     const settings = await this.getSettings();
+    const botUsername = settings.botUsername || 'SafnexBDBot';
+    const linkUrl = `https://t.me/${botUsername}?start=u_${userId}`;
 
     return {
+      connected: !!user?.telegramChatId,
       isConnected: !!user?.telegramChatId,
+      telegramChatId: user?.telegramChatId,
       telegramUsername: user?.telegramUsername,
       telegramNotifications: user?.telegramNotifications ?? true,
       telegram2FaEnabled: user?.telegram2FaEnabled ?? false,
-      botUsername: settings.botUsername || 'SafnexBDBot',
+      botUsername,
+      linkUrl,
       botEnabled: settings.isEnabled,
       allowUserSearch: settings.allowUserSearch,
       allowP2pChat: settings.allowP2pChat,
