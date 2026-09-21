@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards, Req } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -131,6 +131,22 @@ export class SettingsController {
     @Body() body: any,
   ) {
     return this.settingsService.cleanTestData(adminId, body);
+  }
+
+  /**
+   * Public endpoint to receive client events and dispatch them to Meta CAPI
+   */
+  @Public()
+  @Post('tracking/capi-event')
+  async sendMetaCapiEvent(
+    @Body() body: { eventName: string; params?: any },
+    @Req() req: any,
+  ) {
+    const ip =
+      req.headers['x-forwarded-for']?.toString().split(',')[0].trim() ||
+      req.socket?.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    return this.settingsService.sendMetaCapiEvent(body.eventName, body.params, ip, userAgent);
   }
 }
 

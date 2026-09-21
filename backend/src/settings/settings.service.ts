@@ -220,12 +220,14 @@ export class SettingsService {
 
     // Mask or omit server-side secret tokens
     const publicTracking = {
-      facebookPixelId: all.tracking.facebookPixelId || '',
-      googleAnalyticsId: all.tracking.googleAnalyticsId || '',
-      gtmId: all.tracking.gtmId || '',
-      tiktokPixelId: all.tracking.tiktokPixelId || '',
+      facebookPixelId: (all.tracking.facebookPixelId || '').trim(),
+      facebookTestEventCode: (all.tracking.facebookTestEventCode || '').trim(),
+      googleAnalyticsId: (all.tracking.googleAnalyticsId || '').trim(),
+      gtmId: (all.tracking.gtmId || '').trim(),
+      tiktokPixelId: (all.tracking.tiktokPixelId || '').trim(),
       customHeadScripts: all.tracking.customHeadScripts || '',
       customBodyScripts: all.tracking.customBodyScripts || '',
+      events: all.tracking.events || DEFAULT_SETTINGS.tracking.events,
     };
 
     return {
@@ -740,5 +742,87 @@ export class SettingsService {
       deletedLedgers: deletedLedgersCount,
       deletedUsers: deletedUsersCount,
     };
+  }
+
+  /**
+   * Send server-side event to Meta Conversions API (CAPI)
+   */
+  async sendMetaCapiEvent(
+    eventName: string,
+    params: Record<string, any> = {},
+    clientIp?: string,
+    userAgent?: string,
+  ) {
+    const all = await this.getAllSettings();
+    const pixelId = (all.tracking.facebookPixelId || '').trim();
+    const token = (all.tracking.facebookCapiToken || '').trim();
+    const testEventCode = (all.tracking.facebookTestEventCode || '').trim();
+
+    if (!pixelId || !token) {
+      return { success: false, message: 'Meta Pixel ID or CAPI Access Token not configured' };
+    }
+
+    try {
+      const crypto = await import('crypto');
+      const hash = (str: string) =>
+        crypto.createHash('sha256').update(str.trim().toLowerCase()).digest('hex');
+
+      const userData: Record<string, any> = {};
+      if (clientIp) userData.client_ip_address = clientIp;
+      if (userAgent) userData.client_user_agent = userAgent;
+      if (params.email) userData.em = [hash(params.email)];
+      if (params.phone) userData.ph = [hash(params.phone)];
+
+      const customData: Record<string, any> = {
+        currency: params.currency || 'BDT',
+      };
+      if (params.value !== undefined) customData.value = Number(params.value);
+      if (params.content_name) customData.content_name = params.content_name;
+      if (params.content_category) customData.content_category = params.content_category;
+      if (params.content_ids) {
+        customData.content_ids = Array.isArray(params.content_ids)
+          ? params.content_ids
+          : [params.content_ids];
+      }
+      if (params.content_type) customData.content_type = params.content_type;
+      if (params.order_id || params.transaction_id) {
+        customData.order_id = params.order_id || params.transaction_id;
+      }
+
+      const eventPayload: any = {
+        event_name: eventName,
+        event_time: Math.floor(Date.now() / 1000),
+        action_source: 'website',
+        event_source_url: params.page_path || 'https://safnexbd.com',
+        user_data: userData,
+        custom_data: customData,
+      };
+
+      const capiBody: any = {
+        data: [eventPayload],
+      };
+
+      if (testEventCode) {
+        capiBody.test_event_code = testEventCode;
+      }
+
+      const response = await fetch(
+        `https://graph.facebook.com/v19.0/${pixelId}/events?access_token=${token}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(capiBody),
+        },
+      );
+
+      const resData = await response.json();
+      return {
+        success: response.ok,
+        data: resData,
+      };
+    } catch (err: any) {
+      console.error('Meta CAPI Error:', err);
+      return { success: false, message: err.message };
+    }
   }
 }

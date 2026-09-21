@@ -1,5 +1,7 @@
 'use client';
 
+import { api } from '@/lib/api';
+
 export type StandardEventName =
   | 'PageView'
   | 'ViewContent'
@@ -132,6 +134,21 @@ export function trackEvent(eventName: StandardEventName, params: TrackingParams 
   } catch (err) {
     if (isDebug) console.warn('[Tracking] TikTok Pixel error:', err);
   }
+
+  // 5. Server-Side Meta Conversions API (CAPI) dual tracking
+  try {
+    api
+      .post('/settings/tracking/capi-event', {
+        eventName,
+        params: {
+          ...enrichedParams,
+          page_path: typeof window !== 'undefined' ? window.location.href : '',
+        },
+      })
+      .catch(() => {});
+  } catch {
+    // Non-blocking
+  }
 }
 
 /**
@@ -170,3 +187,4 @@ export function trackCustomEvent(eventName: string, params: Record<string, any> 
     console.warn('[Tracking] GTM Custom Event error:', err);
   }
 }
+

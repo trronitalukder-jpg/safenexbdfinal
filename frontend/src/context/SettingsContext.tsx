@@ -257,7 +257,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     // 3. Meta / Facebook Pixel
-    if (settings.tracking.facebookPixelId && !document.getElementById('fb-pixel-script')) {
+    const pixelId = (settings.tracking.facebookPixelId || '').trim();
+    if (pixelId && !document.getElementById('fb-pixel-script')) {
       const fbScript = document.createElement('script');
       fbScript.id = 'fb-pixel-script';
       fbScript.innerHTML = `
@@ -269,10 +270,18 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         t.src=v;s=b.getElementsByTagName(e)[0];
         s.parentNode.insertBefore(t,s)}(window, document,'script',
         'https://connect.facebook.net/en_US/fbevents.js');
-        fbq('init', '${settings.tracking.facebookPixelId}');
+        fbq('init', '${pixelId}');
         fbq('track', 'PageView');
       `;
       document.head.appendChild(fbScript);
+
+      // Noscript fallback
+      if (!document.getElementById('fb-pixel-noscript')) {
+        const noscript = document.createElement('noscript');
+        noscript.id = 'fb-pixel-noscript';
+        noscript.innerHTML = `<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1" />`;
+        document.body.appendChild(noscript);
+      }
     }
 
     // 4. Google Tag Manager (GTM)
