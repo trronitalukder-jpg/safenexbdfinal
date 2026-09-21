@@ -490,7 +490,7 @@ model Category {
   sortOrder       Int                   @default(0)
   metaTitle       String?               @db.VarChar(255)
   metaDescription String?               @db.Text
-  metaKeywords    String?               @db.VarChar(255)
+  metaKeywords    String?               @db.Text
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
 
@@ -544,7 +544,7 @@ model Product {
   viewsCount      Int                 @default(0)
   metaTitle       String?             @db.VarChar(255)
   metaDescription String?             @db.Text
-  metaKeywords    String?             @db.VarChar(255)
+  metaKeywords    String?             @db.Text
   canonicalUrl    String?             @db.VarChar(255)
   ogTitle         String?             @db.VarChar(255)
   ogDescription   String?             @db.Text
