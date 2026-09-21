@@ -24,6 +24,7 @@ import {
   Globe,
   LogOut,
   BookOpen,
+  Home,
   Smartphone,
   Download,
   Bell,
@@ -132,11 +133,24 @@ export default function DashboardLayout({
                 </button>
               </div>
 
+              {/* Home Page link on mobile */}
+              <Link
+                href="/"
+                onClick={() => setMobileDrawerOpen(false)}
+                className="mt-3 mb-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+              >
+                <div className="flex items-center gap-2">
+                  <Home className="w-4 h-4 text-sky-500" />
+                  <span>{lang === 'bn' ? 'হোম পেজে যান' : 'Home Page'}</span>
+                </div>
+                <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+              </Link>
+
               {/* Browse Marketplace link on mobile */}
               <Link
                 href="/products"
                 onClick={() => setMobileDrawerOpen(false)}
-                className="my-3 px-3 py-2 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex items-center justify-between text-xs font-bold"
+                className="mb-3 px-3 py-2 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex items-center justify-between text-xs font-bold"
               >
                 <div className="flex items-center gap-2">
                   <ShoppingBag className="w-4 h-4" />
@@ -258,8 +272,18 @@ export default function DashboardLayout({
             </div>
           </div>
 
-          {/* Right: Browse Marketplace, Language, Theme, Notifications and User Avatar */}
+          {/* Right: Home, Browse Marketplace, Language, Theme, Notifications and User Avatar */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            {/* Direct Home Page Link */}
+            <Link
+              href="/"
+              title={lang === 'bn' ? 'হোম পেজে যান' : 'Go to Home Page'}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 transition"
+            >
+              <Home className="w-3.5 h-3.5 text-sky-500" />
+              <span>{lang === 'bn' ? 'হোম' : 'Home'}</span>
+            </Link>
+
             {/* Direct Marketplace Link */}
             <Link
               href="/products"

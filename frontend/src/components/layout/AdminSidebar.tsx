@@ -18,6 +18,7 @@ import {
   ChevronDown,
   ExternalLink,
   ChevronsUpDown,
+  Home,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -353,13 +354,13 @@ export const AdminSidebar = ({ onClose, isMobile = false }: AdminSidebarProps) =
       {/* 3. FIXED BOTTOM FOOTER (PERSISTENT AT BOTTOM) */}
       <div className="flex-shrink-0 p-3.5 border-t border-slate-800 bg-slate-900/95 backdrop-blur space-y-2.5">
         <Link
-          href="/dashboard"
+          href="/"
           onClick={() => onClose?.()}
           className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-bold text-slate-200 hover:text-white bg-slate-800/70 hover:bg-slate-800 border border-slate-700 transition group shadow-xs"
         >
           <div className="flex items-center gap-2.5">
-            <ChevronLeft className="w-4.5 h-4.5 text-amber-400 transition-transform group-hover:-translate-x-1" />
-            <span>{lang === 'bn' ? 'ইউজার প্যানেলে ফিরুন' : 'Back to User Panel'}</span>
+            <Home className="w-4.5 h-4.5 text-amber-400 transition-transform group-hover:scale-110" />
+            <span>{lang === 'bn' ? 'হোম পেজে যান' : 'Go to Home Page'}</span>
           </div>
           <ExternalLink className="w-3.5 h-3.5 text-slate-400 opacity-70 group-hover:opacity-100" />
         </Link>

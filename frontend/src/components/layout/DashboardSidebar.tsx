@@ -25,6 +25,7 @@ import {
   Globe,
   ExternalLink,
   BookOpen,
+  Home,
   Smartphone,
   Download,
   Bell,
@@ -76,6 +77,18 @@ export const DashboardSidebar = () => {
             DASHBOARD
           </span>
         </div>
+
+        {/* Back to Home Page Action */}
+        <Link
+          href="/"
+          className="w-full mb-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs font-bold transition group"
+        >
+          <div className="flex items-center gap-2">
+            <Home className="w-4 h-4 text-sky-500 group-hover:scale-110 transition" />
+            <span>{lang === 'bn' ? 'হোম পেজে যান' : 'Go to Home'}</span>
+          </div>
+          <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+        </Link>
 
         {/* Back to Public Marketplace Action */}
         <Link

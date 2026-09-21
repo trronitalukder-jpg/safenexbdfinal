@@ -12,6 +12,7 @@ import {
   Moon,
   ChevronLeft,
   BookOpen,
+  Home,
   Lock,
   Bell,
   Sparkles,
@@ -339,14 +340,14 @@ export default function AdminLayout({
           )}
         </div>
 
-          {/* Quick User Dashboard Link */}
+          {/* Quick Home Page Link */}
           <Link
-            href="/dashboard"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 transition"
-            title={lang === 'bn' ? 'ইউজার ড্যাশবোর্ড' : 'User Dashboard'}
+            href="/"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 transition"
+            title={lang === 'bn' ? 'হোম পেজে যান' : 'Go to Home Page'}
           >
-            <ChevronLeft className="w-3.5 h-3.5 text-amber-500" />
-            <span>{lang === 'bn' ? 'ইউজার প্যানেল' : 'User Panel'}</span>
+            <Home className="w-3.5 h-3.5 text-amber-500" />
+            <span>{lang === 'bn' ? 'হোম পেজ' : 'Home'}</span>
           </Link>
 
           {/* Guides Button (left of language toggle) */}
