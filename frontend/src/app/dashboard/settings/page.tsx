@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import {
   Settings,
   CreditCard,
@@ -330,6 +331,19 @@ function SettingsContent() {
       setLoadingAccounts(false);
     }
   };
+
+  // Calculate profile completion score
+  const completionScore = React.useMemo(() => {
+    let score = 0;
+    if (user?.avatarUrl) score += 15;
+    if (user?.firstName && user?.lastName) score += 15;
+    if (user?.phone) score += 15;
+    if (user?.headline || user?.bio) score += 15;
+    if (user?.city || user?.district || user?.address) score += 15;
+    if (user?.profession || user?.institution || user?.skills) score += 10;
+    if (user?.isVerified) score += 15;
+    return Math.min(100, score);
+  }, [user]);
 
   // Telegram Integration State
   const [telegramStatus, setTelegramStatus] = useState<{
@@ -1061,39 +1075,99 @@ function SettingsContent() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-16 animate-in fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3">
-            <div className="p-2 rounded-2xl bg-sky-500/10 text-sky-500 dark:bg-sky-500/20">
-              <Settings className="w-6 h-6" />
-            </div>
-            <span>{lang === 'bn' ? 'অ্যাকাউন্ট সেটিংস ও নিরাপত্তা' : 'Account & Security Settings'}</span>
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            {lang === 'bn'
-              ? 'প্রোফাইল আপডেট, পাসওয়ার্ড পরিবর্তন, উইথড্র অ্যাকাউন্ট ম্যানেজমেন্ট এবং সিকিউরিটি কনফিগারেশন।'
-              : 'Manage profile, change password, configure saved withdrawal payout accounts, and security preferences.'}
-          </p>
-        </div>
+      {/* Header & Quick Profile Overview */}
+      <div className="bg-gradient-to-r from-slate-900 via-sky-950 to-indigo-950 rounded-3xl p-6 sm:p-7 text-white shadow-xl shadow-sky-950/20 relative overflow-hidden">
+        {/* Ambient glow */}
+        <div className="absolute top-0 right-0 w-80 h-80 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Quick User ID Tag */}
-        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-2 px-3 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-xs shadow-xs self-start sm:self-auto">
-          <span className="text-slate-400 font-medium">User ID:</span>
-          <span className="font-mono font-bold text-sky-600 dark:text-sky-400">{user?.uniqueUserId || '...'}</span>
-          <button
-            type="button"
-            onClick={handleCopyUserId}
-            title={lang === 'bn' ? 'কপি করুন' : 'Copy ID'}
-            className="p-1 text-slate-400 hover:text-sky-600 transition"
-          >
-            {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-          </button>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          {/* User info */}
+          <div className="flex items-center gap-4 sm:gap-5">
+            <div className="relative shrink-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl overflow-hidden border-2 border-white/20 bg-white/10 backdrop-blur-md shadow-lg">
+                {user?.avatarUrl ? (
+                  <img
+                    src={getImageUrl(user.avatarUrl)}
+                    alt={user.firstName || 'User'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center font-black text-2xl text-white">
+                    {user?.firstName?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                  </div>
+                )}
+              </div>
+              {user?.isVerified && (
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 border-2 border-slate-900 flex items-center justify-center shadow-sm">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-lg sm:text-2xl font-black tracking-tight">
+                  {user?.firstName ? `${user.firstName} ${user.lastName || ''}` : user?.email}
+                </h1>
+                {user?.isVerified ? (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Verified
+                  </span>
+                ) : user?.verificationStatus === 'PENDING' ? (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    Verification Pending
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-300">
+                <span className="font-mono text-[11px] bg-white/10 px-2.5 py-0.5 rounded-lg flex items-center gap-1.5">
+                  <span>ID: {user?.uniqueUserId || '...'}</span>
+                  <button
+                    type="button"
+                    onClick={handleCopyUserId}
+                    className="p-0.5 hover:text-sky-300 transition"
+                    title={lang === 'bn' ? 'কপি করুন' : 'Copy ID'}
+                  >
+                    {copiedId ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  </button>
+                </span>
+                {user?.phone && <span>{user.phone}</span>}
+                {user?.email && <span className="hidden sm:inline text-slate-400">• {user.email}</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* Actions & Completion */}
+          <div className="flex flex-col sm:flex-row md:flex-col items-start md:items-end gap-3 shrink-0">
+            <Link
+              href={`/users/${user?.uniqueUserId || user?.id}`}
+              target="_blank"
+              className="px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 text-white font-bold text-xs flex items-center gap-2 transition active:scale-95 shadow-sm"
+            >
+              <ExternalLink className="w-4 h-4 text-sky-400" />
+              <span>{lang === 'bn' ? 'পাবলিক প্রোফাইল ভিউ করুন ↗' : 'View Public Profile ↗'}</span>
+            </Link>
+
+            {/* Profile Strength Progress Bar */}
+            <div className="w-full sm:w-56 space-y-1">
+              <div className="flex justify-between text-[11px] font-bold text-slate-300">
+                <span>{lang === 'bn' ? 'প্রোফাইল সম্পূর্ণতা:' : 'Profile Strength:'}</span>
+                <span className="text-sky-400 font-mono">{completionScore}%</span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-sky-400 to-emerald-400 rounded-full transition-all duration-500"
+                  style={{ width: `${completionScore}%` }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/70 dark:border-slate-700/60">
+      {/* Navigation Tabs (Scrollable & Responsive) */}
+      <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 overflow-x-auto no-scrollbar scroll-smooth">
         {[
           { id: 'profile', icon: User, label: lang === 'bn' ? 'বেসিক প্রোফাইল' : 'Basic Profile' },
           { id: 'address', icon: MapPin, label: lang === 'bn' ? 'ঠিকানা ও অবস্থান' : 'Address & Location' },
@@ -1111,16 +1185,16 @@ function SettingsContent() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id as TabType)}
-              className={`flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl font-bold text-xs text-center transition ${
+              className={`flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition shrink-0 ${
                 isActive
                   ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm ring-1 ring-sky-500/20'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/60'
               }`}
             >
               <Icon className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{tab.label}</span>
+              <span>{tab.label}</span>
               {tab.badge && (
-                <span className={`px-1 py-0.2 rounded-full text-[8px] font-black shrink-0 ${
+                <span className={`px-1.5 py-0.2 rounded-full text-[8px] font-black shrink-0 ${
                   tab.badge === 'Verified' ? 'bg-emerald-500/15 text-emerald-600' : 'bg-amber-500/15 text-amber-600'
                 }`}>
                   {tab.badge}
