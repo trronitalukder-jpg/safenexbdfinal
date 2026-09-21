@@ -16,6 +16,15 @@ export class AdminService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+    const nonStaffUserFilter = {
+      isEmployee: false,
+      userRoles: {
+        none: {
+          role: { name: { in: ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'SUPPORT_ADMIN'] } },
+        },
+      },
+    };
+
     const [
       totalUsers,
       activeUsers,
@@ -33,9 +42,9 @@ export class AdminService {
       recentTransactions,
       recentUsers,
     ] = await Promise.all([
-      this.prisma.user.count({ where: { deletedAt: null } }),
-      this.prisma.user.count({ where: { isActive: true, deletedAt: null } }),
-      this.prisma.user.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+      this.prisma.user.count({ where: { deletedAt: null, ...nonStaffUserFilter } }),
+      this.prisma.user.count({ where: { isActive: true, deletedAt: null, ...nonStaffUserFilter } }),
+      this.prisma.user.count({ where: { createdAt: { gte: thirtyDaysAgo }, ...nonStaffUserFilter } }),
       this.prisma.product.count({ where: { deletedAt: null } }),
       this.prisma.product.count({ where: { productType: 'PHYSICAL', deletedAt: null } }),
       this.prisma.product.count({ where: { productType: 'DIGITAL_DOWNLOAD', deletedAt: null } }),
@@ -78,6 +87,7 @@ export class AdminService {
         },
       }),
       this.prisma.user.findMany({
+        where: { deletedAt: null, ...nonStaffUserFilter },
         take: 5,
         orderBy: { createdAt: 'desc' },
         select: {
@@ -140,7 +150,14 @@ export class AdminService {
     const page = parseInt(query.page, 10) || 1;
     const limit = parseInt(query.limit, 10) || 20;
     const skip = (page - 1) * limit;
-    const where: any = {};
+    const where: any = {
+      isEmployee: false,
+      userRoles: {
+        none: {
+          role: { name: { in: ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'SUPPORT_ADMIN'] } },
+        },
+      },
+    };
 
     if (showDeleted === 'true') {
       where.deletedAt = { not: null };

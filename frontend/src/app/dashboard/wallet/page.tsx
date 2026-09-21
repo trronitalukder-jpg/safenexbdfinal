@@ -105,6 +105,7 @@ function WalletContent() {
   const [senderAccount, setSenderAccount] = useState('');
   const [transactionNumber, setTransactionNumber] = useState('');
   const [proofUrl, setProofUrl] = useState('');
+  const [isSubmittingRecharge, setIsSubmittingRecharge] = useState(false);
   const [rechargeSuccess, setRechargeSuccess] = useState('');
   const [rechargeError, setRechargeError] = useState('');
   const [copiedNumber, setCopiedNumber] = useState(false);
@@ -300,6 +301,7 @@ function WalletContent() {
   }, [withdrawOtpCooldown]);
 
   const handleInitiateGateway = async (gatewayType: 'BKASH' | 'SSLCOMMERZ') => {
+    if (isInitiatingGateway) return;
     setRechargeError('');
     setRechargeSuccess('');
     setIsInitiatingGateway(true);
@@ -320,7 +322,7 @@ function WalletContent() {
   };
 
   const handleExecuteGateway = async () => {
-    if (!gatewaySession) return;
+    if (!gatewaySession || isExecutingGateway) return;
     setIsExecutingGateway(true);
     setRechargeError('');
     try {
@@ -339,7 +341,7 @@ function WalletContent() {
       setTimeout(() => {
         setShowRechargeModal(false);
         setRechargeSuccess('');
-      }, 3500);
+      }, 1000);
     } catch (err: any) {
       setRechargeError(err.response?.data?.message || err.message || 'Payment execution failed');
     } finally {
@@ -349,6 +351,8 @@ function WalletContent() {
 
   const handleRechargeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRecharge) return;
+    setIsSubmittingRecharge(true);
     setRechargeError('');
     setRechargeSuccess('');
 
@@ -368,9 +372,17 @@ function WalletContent() {
       );
       loadData();
       refreshMe();
-      setTimeout(() => setShowRechargeModal(false), 2500);
+      setSenderAccount('');
+      setTransactionNumber('');
+      setProofUrl('');
+      setTimeout(() => {
+        setShowRechargeModal(false);
+        setRechargeSuccess('');
+        setIsSubmittingRecharge(false);
+      }, 1000);
     } catch (err: any) {
-      setRechargeError(err.message || 'Failed to submit recharge request');
+      setRechargeError(err.message || err.response?.data?.message || 'Failed to submit recharge request');
+      setIsSubmittingRecharge(false);
     }
   };
 
@@ -440,6 +452,8 @@ function WalletContent() {
 
   const handleWithdrawSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingWithdraw) return;
+
     setWithdrawError('');
     setWithdrawSuccess('');
 
@@ -537,6 +551,9 @@ function WalletContent() {
       payload.password = withdrawPassword.trim();
     }
 
+    // Lock immediately before any async requests to prevent double-click execution
+    setIsSubmittingWithdraw(true);
+
     // DUAL-MODE WITHDRAWAL: Check Security Settings for Withdrawal OTP
     let isOtpRequired = withdrawOtpEnabled;
     try {
@@ -551,7 +568,6 @@ function WalletContent() {
     }
 
     if (isOtpRequired) {
-      setIsSubmittingWithdraw(true);
       try {
         setPendingWithdrawPayload(payload);
         setWithdrawOtpCode('');
@@ -580,7 +596,6 @@ function WalletContent() {
     }
 
     // Direct submit when OTP is OFF
-    setIsSubmittingWithdraw(true);
     try {
       await api.post('/wallet/withdraw', payload);
       setWithdrawSuccess(
@@ -599,10 +614,10 @@ function WalletContent() {
         setBranchName('');
         setCustomBankName('');
         setWithdrawSuccess('');
-      }, 2500);
+        setIsSubmittingWithdraw(false);
+      }, 1000);
     } catch (err: any) {
       setWithdrawError(err.message || err.response?.data?.message || 'Failed to submit withdrawal request');
-    } finally {
       setIsSubmittingWithdraw(false);
     }
   };
@@ -610,6 +625,7 @@ function WalletContent() {
   // Confirm Withdrawal with Password (First-time / Unsaved Account auto-save flow)
   const handleConfirmWithdrawWithPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingWithdraw) return;
     if (!withdrawPassword.trim()) {
       setWithdrawPasswordError(
         lang === 'bn' ? 'নিরাপত্তার জন্য আপনার পাসওয়ার্ড দিন' : 'Enter your password for security'
@@ -646,7 +662,7 @@ function WalletContent() {
         setBranchName('');
         setCustomBankName('');
         setWithdrawSuccess('');
-      }, 3000);
+      }, 1000);
     } catch (err: any) {
       setWithdrawPasswordError(
         err.response?.data?.message || err.message || (lang === 'bn' ? 'উইথড্র আবেদন ব্যর্থ হয়েছে' : 'Failed to submit withdrawal')
@@ -685,6 +701,7 @@ function WalletContent() {
   // Confirm Withdrawal with 6-digit OTP code
   const handleConfirmWithdrawWithOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingWithdraw) return;
     if (!withdrawOtpCode.trim()) {
       setWithdrawError('অনুগ্রহ করে ৬-সংখ্যার ওটিপি কোডটি প্রদান করুন');
       return;
@@ -718,7 +735,7 @@ function WalletContent() {
         setBranchName('');
         setCustomBankName('');
         setWithdrawSuccess('');
-      }, 3000);
+      }, 1000);
     } catch (err: any) {
       setWithdrawError(err.message || err.response?.data?.message || 'ভুল ওটিপি কোড অথবা আবেদন ব্যর্থ হয়েছে');
     } finally {
@@ -1474,7 +1491,8 @@ function WalletContent() {
               <button
                 type="button"
                 onClick={() => setShowRechargeModal(false)}
-                className="w-1/3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold transition text-xs"
+                disabled={isSubmittingRecharge}
+                className="w-1/3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold transition text-xs disabled:opacity-50"
               >
                 {t('cancel')}
               </button>
@@ -1505,11 +1523,20 @@ function WalletContent() {
                 <button
                   type="submit"
                   form="recharge-form"
-                  disabled={Number(rechargeAmount) <= 0}
+                  disabled={isSubmittingRecharge || Number(rechargeAmount) <= 0}
                   className="w-2/3 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold text-xs transition shadow-md shadow-sky-600/20 flex items-center justify-center gap-1.5"
                 >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>{lang === 'bn' ? 'ম্যানুয়াল রিকোয়েস্ট পাঠান' : 'Submit Recharge'}</span>
+                  {isSubmittingRecharge ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>{lang === 'bn' ? 'সাবমিট হচ্ছে...' : 'Submitting...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'ম্যানুয়াল রিকোয়েস্ট পাঠান' : 'Submit Recharge'}</span>
+                    </>
+                  )}
                 </button>
               )}
             </div>

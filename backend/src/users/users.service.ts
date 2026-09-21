@@ -25,6 +25,7 @@ export class UsersService {
     const whereClause: any = {
       isActive: true,
       deletedAt: null,
+      isEmployee: false,
     };
 
     if (query) {
@@ -78,11 +79,11 @@ export class UsersService {
     }
 
     // Check if Super Admin chat presence/visibility is enabled
+    let isSuperAdminVisible = false;
     try {
       const superAdminVisibilitySetting = await this.prisma.systemSetting.findUnique({
         where: { key: 'super_admin_chat_visibility' },
       });
-      let isSuperAdminVisible = false;
       if (superAdminVisibilitySetting?.value) {
         const val =
           typeof superAdminVisibilitySetting.value === 'string'
@@ -90,17 +91,20 @@ export class UsersService {
             : superAdminVisibilitySetting.value;
         isSuperAdminVisible = val?.isVisible === true;
       }
-
-      if (!isSuperAdminVisible) {
-        whereClause.userRoles = {
-          none: {
-            role: { name: 'SUPER_ADMIN' },
-          },
-        };
-      }
     } catch {
       // Ignore if setting not initialized yet
     }
+
+    // Exclude staff and admin accounts from normal marketplace user search
+    const excludedRoles = isSuperAdminVisible
+      ? ['ADMIN', 'EMPLOYEE', 'SUPPORT_ADMIN']
+      : ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'SUPPORT_ADMIN'];
+
+    whereClause.userRoles = {
+      none: {
+        role: { name: { in: excludedRoles } },
+      },
+    };
 
     // 1. Fetch active USER_ID bids (respecting scope if provided)
     const bidWhere: any = {

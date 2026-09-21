@@ -237,6 +237,29 @@ export class WalletService {
       );
     }
 
+    // Check duplicate pending recharge with same transactionNumber or rapid re-submission
+    const existingPending = await this.prisma.rechargeRequest.findFirst({
+      where: {
+        userId,
+        status: 'PENDING',
+        transactionNumber: dto.transactionNumber.trim(),
+      },
+    });
+    if (existingPending) {
+      throw new BadRequestException('এই ট্রানজেকশন নম্বরটির একটি রিচার্জ রিকোয়েস্ট ইতিমধ্যে পেন্ডিং রয়েছে। অনুগ্রহ করে অপেক্ষা করুন।');
+    }
+
+    const recentPending = await this.prisma.rechargeRequest.findFirst({
+      where: {
+        userId,
+        status: 'PENDING',
+        createdAt: { gte: new Date(Date.now() - 10000) },
+      },
+    });
+    if (recentPending) {
+      throw new BadRequestException('একটি রিচার্জ আবেদন ইতিমধ্যে প্রক্রিয়াধীন রয়েছে। অনুগ্রহ করে কয়েক সেকেন্ড অপেক্ষা করুন।');
+    }
+
     const recharge = await this.prisma.$transaction(async (tx) => {
       let wallet = await tx.wallet.findUnique({
         where: { userId },
@@ -639,6 +662,18 @@ export class WalletService {
    * Rule: Only Available Balance can be withdrawn. Hold balance is strictly excluded.
    */
   async submitWithdrawalRequest(userId: string, dto: CreateWithdrawalRequestDto) {
+    // Check if a pending withdrawal request was submitted by this user in the last 10 seconds
+    const recentWithdraw = await this.prisma.withdrawalRequest.findFirst({
+      where: {
+        userId,
+        status: 'PENDING',
+        createdAt: { gte: new Date(Date.now() - 10000) },
+      },
+    });
+    if (recentWithdraw) {
+      throw new BadRequestException('একটি উইথড্র রিকোয়েস্ট ইতিমধ্যে প্রক্রিয়াধীন রয়েছে। অনুগ্রহ করে কয়েক সেকেন্ড অপেক্ষা করুন।');
+    }
+
     // Verify OTP if Security Mode requires Withdrawal OTP
     if (this.smsService) {
       const secModes = await this.smsService.getSecurityModesConfig();
