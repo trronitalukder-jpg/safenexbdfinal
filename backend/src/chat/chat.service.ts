@@ -1,10 +1,24 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  forwardRef,
+  Inject,
+  Injectable,
+  NotFoundException,
+  Optional,
+} from '@nestjs/common';
 import { MessageType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { TelegramService } from '../telegram/telegram.service';
 
 @Injectable()
 export class ChatService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Optional()
+    @Inject(forwardRef(() => TelegramService))
+    private telegramService?: TelegramService,
+  ) {}
 
   /**
    * Find or create 1-to-1 conversation between two users
@@ -489,6 +503,35 @@ export class ChatService {
         })),
       };
     });
+
+    // Trigger Telegram Notification for recipient if connected
+    if (this.telegramService) {
+      const recipient = convParticipants.find((p) => p.userId !== params.senderId);
+      if (recipient?.userId) {
+        const senderName = `${sender.firstName} ${sender.lastName}`.trim();
+        const snippet =
+          params.content.length > 80
+            ? params.content.slice(0, 77) + '...'
+            : params.content;
+        this.telegramService
+          .sendUserAlert(
+            recipient.userId,
+            'chatMessage',
+            {
+              senderName,
+              senderUniqueId: sender.uniqueUserId,
+              messageSnippet: snippet,
+            },
+            [
+              {
+                text: `💬 চ্যাট দেখুন (@${sender.uniqueUserId})`,
+                callback_data: `chat_with_${sender.id}`,
+              },
+            ],
+          )
+          .catch(() => null);
+      }
+    }
 
     return message;
   }

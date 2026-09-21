@@ -21,6 +21,7 @@ import { EmployeesModule } from './employees/employees.module';
 import { SmsModule } from './sms/sms.module';
 import { PartnerModule } from './partner/partner.module';
 import { OperationsModule } from './operations/operations.module';
+import { TelegramModule } from './telegram/telegram.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { OperationsModule } from './operations/operations.module';
     EmployeesModule,
     PartnerModule,
     OperationsModule,
+    TelegramModule,
   ],
   providers: [
     {

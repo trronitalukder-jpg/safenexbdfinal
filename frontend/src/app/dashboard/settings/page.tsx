@@ -38,6 +38,7 @@ import {
   Award,
   ExternalLink,
   FileText,
+  Send,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguage } from '@/context/LanguageContext';
@@ -330,6 +331,100 @@ function SettingsContent() {
     }
   };
 
+  // Telegram Integration State
+  const [telegramStatus, setTelegramStatus] = useState<{
+    connected: boolean;
+    telegramUsername?: string;
+    telegramChatId?: string;
+    telegramNotifications?: boolean;
+    telegram2FaEnabled?: boolean;
+    botUsername?: string;
+    linkUrl?: string;
+  } | null>(null);
+  const [loadingTelegramStatus, setLoadingTelegramStatus] = useState(false);
+  const [updatingTelegramPref, setUpdatingTelegramPref] = useState(false);
+  const [telegramActionMsg, setTelegramActionMsg] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
+
+  const fetchTelegramStatus = async () => {
+    setLoadingTelegramStatus(true);
+    try {
+      const res: any = await api.get('/telegram/status');
+      const data = res?.data !== undefined ? res.data : res;
+      setTelegramStatus(data);
+    } catch (err) {
+      console.error('Failed to load telegram status:', err);
+    } finally {
+      setLoadingTelegramStatus(false);
+    }
+  };
+
+  const handleToggleTelegramPref = async (
+    field: 'telegramNotifications' | 'telegram2FaEnabled',
+    value: boolean,
+  ) => {
+    setUpdatingTelegramPref(true);
+    setTelegramActionMsg(null);
+    try {
+      const res: any = await api.patch('/telegram/preferences', { [field]: value });
+      const data = res?.data !== undefined ? res.data : res;
+      setTelegramStatus((prev: any) => ({ ...prev, ...data }));
+      setTelegramActionMsg({
+        type: 'success',
+        text:
+          lang === 'bn'
+            ? 'টেলিগ্রাম প্রেফারেন্স সফলভাবে আপডেট করা হয়েছে!'
+            : 'Telegram preferences updated successfully!',
+      });
+      setTimeout(() => setTelegramActionMsg(null), 3000);
+    } catch (err: any) {
+      setTelegramActionMsg({
+        type: 'error',
+        text:
+          err.response?.data?.message ||
+          (lang === 'bn' ? 'প্রেফারেন্স পরিবর্তন ব্যর্থ হয়েছে' : 'Failed to update preferences'),
+      });
+    } finally {
+      setUpdatingTelegramPref(false);
+    }
+  };
+
+  const handleDisconnectTelegram = async () => {
+    if (
+      !confirm(
+        lang === 'bn'
+          ? 'আপনি কি নিশ্চিত যে আপনার টেলিগ্রাম অ্যাকাউন্টটি বিচ্ছিন্ন করতে চান?'
+          : 'Are you sure you want to disconnect Telegram?',
+      )
+    )
+      return;
+    setUpdatingTelegramPref(true);
+    setTelegramActionMsg(null);
+    try {
+      await api.post('/telegram/disconnect');
+      await fetchTelegramStatus();
+      setTelegramActionMsg({
+        type: 'success',
+        text:
+          lang === 'bn'
+            ? 'টেলিগ্রাম সফলভাবে ডিসকানেক্ট করা হয়েছে'
+            : 'Telegram disconnected successfully',
+      });
+      setTimeout(() => setTelegramActionMsg(null), 3000);
+    } catch (err: any) {
+      setTelegramActionMsg({
+        type: 'error',
+        text:
+          err.response?.data?.message ||
+          (lang === 'bn' ? 'ডিসকানেক্ট করতে ব্যর্থ হয়েছে' : 'Failed to disconnect'),
+      });
+    } finally {
+      setUpdatingTelegramPref(false);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       setFirstName(user.firstName || '');
@@ -384,7 +479,14 @@ function SettingsContent() {
       setAvatarPreview(user.avatarUrl || null);
     }
     loadPaymentAccounts();
+    fetchTelegramStatus();
   }, [user]);
+
+  useEffect(() => {
+    if (activeTab === 'preferences') {
+      fetchTelegramStatus();
+    }
+  }, [activeTab]);
 
   // Avatar upload
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2917,6 +3019,190 @@ function SettingsContent() {
                     {lang === 'bn'
                       ? '⚠️ আপনার ব্রাউজারে নোটিফিকেশন ব্লক করা রয়েছে। চালু করতে ব্রাউজারের URL বারে তালার (Lock) আইকনে ক্লিক করে Notification "Allow" করুন।'
                       : '⚠️ Notifications are blocked in your browser settings. To unblock, click the lock icon in your browser URL address bar and set Notifications to "Allow".'}
+                  </div>
+                )}
+              </div>
+
+              {/* Telegram Instant Alerts & Bot Link */}
+              <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Send className="w-4 h-4 text-sky-500" />
+                      <span>
+                        {lang === 'bn'
+                          ? 'টেলিগ্রাম ইনস্ট্যান্ট নোটিফিকেশন ও বট সার্ভিস (Telegram Instant Alerts)'
+                          : 'Telegram Instant Alerts & Bot Service'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      {lang === 'bn'
+                        ? 'ব্রাউজার বন্ধ থাকলেও আপনার মোবাইলে সরাসরি নতুন চ্যাট মেসেজ, এসক্রো অর্ডার ও পেমেন্টের ইনস্ট্যান্ট অ্যালার্ট পান।'
+                        : 'Get instant notifications for new chat messages, escrow updates, and payments directly on Telegram.'}
+                    </p>
+                  </div>
+
+                  {/* Status Badge */}
+                  {telegramStatus?.connected ? (
+                    <span className="px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 font-bold text-[11px] flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'সংযুক্ত (Connected)' : 'Connected'}</span>
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 rounded-xl bg-slate-500/10 text-slate-500 border border-slate-500/25 font-bold text-[11px]">
+                      {lang === 'bn' ? 'সংযুক্ত নয়' : 'Not Connected'}
+                    </span>
+                  )}
+                </div>
+
+                {telegramActionMsg && (
+                  <div
+                    className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                      telegramActionMsg.type === 'success'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25'
+                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25'
+                    }`}
+                  >
+                    {telegramActionMsg.type === 'success' ? (
+                      <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    )}
+                    <span>{telegramActionMsg.text}</span>
+                  </div>
+                )}
+
+                {/* If Connected */}
+                {telegramStatus?.connected ? (
+                  <div className="space-y-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs">
+                      <div className="space-y-0.5">
+                        <div className="text-slate-500 text-[11px]">
+                          {lang === 'bn' ? 'সংযুক্ত টেলিগ্রাম প্রোফাইল:' : 'Linked Telegram Profile:'}
+                        </div>
+                        <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                          <span>
+                            {telegramStatus.telegramUsername
+                              ? `@${telegramStatus.telegramUsername}`
+                              : 'Telegram User'}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            ID: {telegramStatus.telegramChatId}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {telegramStatus.botUsername && (
+                          <a
+                            href={`https://t.me/${telegramStatus.botUsername}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 text-sky-600 dark:text-sky-300 font-bold text-[11px] hover:bg-sky-100 dark:hover:bg-sky-900 transition flex items-center gap-1.5"
+                          >
+                            <Send className="w-3 h-3" />
+                            <span>{lang === 'bn' ? 'বট ওপেন করুন' : 'Open Bot'}</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleDisconnectTelegram}
+                          disabled={updatingTelegramPref}
+                          className="px-3 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 font-bold text-[11px] hover:bg-rose-100 dark:hover:bg-rose-900 transition flex items-center gap-1 disabled:opacity-50"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>{lang === 'bn' ? 'ডিসকানেক্ট' : 'Disconnect'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Toggles */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      {/* Notifications Toggle */}
+                      <label className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 cursor-pointer">
+                        <div className="space-y-0.5 pr-2">
+                          <div className="font-bold text-xs text-slate-800 dark:text-slate-200">
+                            {lang === 'bn' ? 'টেলিগ্রাম নোটিফিকেশন' : 'Telegram Notifications'}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            {lang === 'bn'
+                              ? 'মেসেজ ও লেনদেনের ইনস্ট্যান্ট বার্তা পান'
+                              : 'Instant alerts for messages & escrow'}
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(telegramStatus.telegramNotifications)}
+                          onChange={(e) =>
+                            handleToggleTelegramPref('telegramNotifications', e.target.checked)
+                          }
+                          disabled={updatingTelegramPref}
+                          className="rounded text-sky-600 focus:ring-sky-500 w-4 h-4 cursor-pointer"
+                        />
+                      </label>
+
+                      {/* 2FA Toggle */}
+                      <label className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 cursor-pointer">
+                        <div className="space-y-0.5 pr-2">
+                          <div className="font-bold text-xs text-slate-800 dark:text-slate-200">
+                            {lang === 'bn' ? 'টেলিগ্রাম ২-ফ্যাক্টর ওটিপি (2FA)' : 'Telegram 2FA Security OTP'}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            {lang === 'bn'
+                              ? 'লগইন ও উইথড্রাল কোড টেলিগ্রামে পান'
+                              : 'Receive security codes in Telegram'}
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(telegramStatus.telegram2FaEnabled)}
+                          onChange={(e) =>
+                            handleToggleTelegramPref('telegram2FaEnabled', e.target.checked)
+                          }
+                          disabled={updatingTelegramPref}
+                          className="rounded text-sky-600 focus:ring-sky-500 w-4 h-4 cursor-pointer"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ) : (
+                  /* If NOT Connected */
+                  <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                        {lang === 'bn'
+                          ? '👉 এক ক্লিকে টেলিগ্রাম বট ওপেন করে "START" চাপুন। আপনার আইডি স্বয়ংক্রিয়ভাবে কানেক্ট হয়ে যাবে!'
+                          : '👉 Click to open Telegram and tap "START". Your account will link automatically!'}
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        {lang === 'bn'
+                          ? 'কোনো ফোন নাম্বার বা অতিরিক্ত পাসওয়ার্ড শেয়ারের প্রয়োজন নেই।'
+                          : 'No phone number sharing required. Completely secure & private.'}
+                      </div>
+                    </div>
+
+                    {telegramStatus?.linkUrl ? (
+                      <a
+                        href={telegramStatus.linkUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md shadow-sky-600/20 transition active:scale-95 flex items-center justify-center gap-2 shrink-0"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>{lang === 'bn' ? '🔗 টেলিগ্রাম কানেক্ট করুন' : 'Connect Telegram'}</span>
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={fetchTelegramStatus}
+                        disabled={loadingTelegramStatus}
+                        className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-1.5"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>{lang === 'bn' ? 'লোড হচ্ছে...' : 'Loading...'}</span>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

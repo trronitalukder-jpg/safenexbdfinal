@@ -81,7 +81,7 @@ export default function AdminSettingsPage() {
   const { lang } = useLanguage();
   const { refreshSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<
-    'general' | 'seo' | 'tracking' | 'localization' | 'footer' | 'system' | 'withdrawal' | 'operations' | 'performance' | 'chat_rules'
+    'general' | 'seo' | 'tracking' | 'localization' | 'footer' | 'system' | 'withdrawal' | 'operations' | 'performance' | 'chat_rules' | 'telegram'
   >('general');
 
   const [loading, setLoading] = useState(true);
@@ -193,6 +193,57 @@ export default function AdminSettingsPage() {
   });
   const [chatConfigSaving, setChatConfigSaving] = useState(false);
   const [chatConfigSuccess, setChatConfigSuccess] = useState(false);
+
+  // Telegram Bot State
+  const [telegramSettings, setTelegramSettings] = useState<any>({
+    enabled: false,
+    botToken: '',
+    botUsername: '',
+    adminGroupId: '',
+    allowUserSearch: true,
+    allowP2pChat: true,
+    enable2Fa: false,
+    enableMiniApp: true,
+    miniAppUrl: 'https://safnexbd.com',
+    alertEvents: {
+      chatMessage: true,
+      escrowPayRequest: true,
+      escrowRelease: true,
+      disputeOpened: true,
+      rechargeRequest: true,
+      withdrawalRequest: true,
+      securityLogin: true,
+    },
+    templates: {
+      chatMessage: '💬 <b>নতুন চ্যাট মেসেজ!</b>\n\nপ্রেরক: <b>{senderName}</b>\nমেসেজ: <i>"{messageText}"</i>\n\n👉 <a href="{linkUrl}">চ্যাট ওপেন করে রিপ্লাই দিন</a>',
+      escrowPayRequest: '💰 <b>এসক্রো পেমেন্ট রিকোয়েস্ট!</b>\n\nঅর্ডার: <b>#{orderId}</b>\nপরিমাণ: <b>৳{amount}</b>\nক্রেতা: <b>{buyerName}</b>\n\n👉 <a href="{linkUrl}">বিস্তারিত দেখুন</a>',
+      escrowRelease: '🎉 <b>টাকা রিলিজ করা হয়েছে!</b>\n\nঅর্ডার: <b>#{orderId}</b>\nপরিমাণ: <b>৳{amount}</b>\n\nআপনার ওয়ালেটে টাকা যুক্ত হয়েছে।\n👉 <a href="{linkUrl}">ব্যালেন্স চেক করুন</a>',
+      disputeOpened: '⚠️ <b>ডিসপ্যুট ওপেন হয়েছে!</b>\n\nঅর্ডার: <b>#{orderId}</b>\nকারণ: {reason}\n\n👉 <a href="{linkUrl}">ডিসপ্যুট সমাধান চ্যাটে যান</a>',
+      rechargeRequest: '📥 <b>ডিপোজিট রিকোয়েস্ট প্রাপ্তি!</b>\n\nপরিমাণ: <b>৳{amount}</b>\nমেথড: {method}\nTXN ID: <code>{trxId}</code>\nস্ট্যাটাস: <b>যাচাই করা হচ্ছে</b>',
+      withdrawalRequest: '💸 <b>উইথড্র রিকোয়েস্ট সাবমিট!</b>\n\nপরিমাণ: <b>৳{amount}</b>\nমেথড: {method}\nঅ্যাকাউন্ট: <code>{accountNumber}</code>\nস্ট্যাটাস: <b>প্রক্রিয়াকরণাধীন</b>',
+      securityLogin: '🔐 <b>নতুন লগইন অ্যালার্ট!</b>\n\nসময়: {time}\nআইপি: <code>{ip}</code>\nডিভাইস: {device}\n\nযদি এটি আপনি না হন, সাথে সাথে পাসওয়ার্ড পরিবর্তন করুন!',
+    },
+  });
+  const [loadingTelegram, setLoadingTelegram] = useState(false);
+  const [savingTelegram, setSavingTelegram] = useState(false);
+  const [telegramSaveSuccess, setTelegramSaveSuccess] = useState(false);
+  const [testingTelegram, setTestingTelegram] = useState(false);
+  const [telegramTestResult, setTelegramTestResult] = useState<{
+    success: boolean;
+    message: string;
+    botInfo?: any;
+  } | null>(null);
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [broadcastButtonText, setBroadcastButtonText] = useState('');
+  const [broadcastButtonUrl, setBroadcastButtonUrl] = useState('');
+  const [sendingBroadcast, setSendingBroadcast] = useState(false);
+  const [broadcastResult, setBroadcastResult] = useState<{
+    success: boolean;
+    sentCount?: number;
+    failedCount?: number;
+    message?: string;
+  } | null>(null);
+  const [showTelegramToken, setShowTelegramToken] = useState(false);
 
   // Settings State
   const [settings, setSettings] = useState<any>({
@@ -386,13 +437,122 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const fetchTelegramSettings = async () => {
+    setLoadingTelegram(true);
+    try {
+      const res: any = await api.get('/telegram/admin/settings');
+      const data = res?.data !== undefined ? res.data : res;
+      if (data && typeof data === 'object') {
+        setTelegramSettings((prev: any) => ({
+          ...prev,
+          ...data,
+          alertEvents: { ...prev.alertEvents, ...(data.alertEvents || {}) },
+          templates: { ...prev.templates, ...(data.templates || {}) },
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch telegram settings:', err);
+    } finally {
+      setLoadingTelegram(false);
+    }
+  };
+
+  const handleSaveTelegramSettings = async () => {
+    setSavingTelegram(true);
+    setTelegramSaveSuccess(false);
+    setErrorMessage('');
+    try {
+      const res: any = await api.patch('/telegram/admin/settings', telegramSettings);
+      const data = res?.data !== undefined ? res.data : res;
+      if (data && typeof data === 'object') {
+        setTelegramSettings((prev: any) => ({
+          ...prev,
+          ...data,
+          alertEvents: { ...prev.alertEvents, ...(data.alertEvents || {}) },
+          templates: { ...prev.templates, ...(data.templates || {}) },
+        }));
+      }
+      setTelegramSaveSuccess(true);
+      setTimeout(() => setTelegramSaveSuccess(false), 3500);
+    } catch (err: any) {
+      console.error('Failed to save telegram settings:', err);
+      setErrorMessage(
+        err.response?.data?.message ||
+          (lang === 'bn' ? 'টেলিগ্রাম সেটিংস সংরক্ষণ ব্যর্থ হয়েছে!' : 'Failed to save telegram settings!'),
+      );
+    } finally {
+      setSavingTelegram(false);
+    }
+  };
+
+  const handleTestTelegram = async () => {
+    setTestingTelegram(true);
+    setTelegramTestResult(null);
+    try {
+      const res: any = await api.post('/telegram/admin/test', {
+        botToken: telegramSettings.botToken,
+      });
+      const data = res?.data !== undefined ? res.data : res;
+      setTelegramTestResult(data);
+    } catch (err: any) {
+      setTelegramTestResult({
+        success: false,
+        message: err.response?.data?.message || err.message || 'Connection failed',
+      });
+    } finally {
+      setTestingTelegram(false);
+    }
+  };
+
+  const handleSendBroadcast = async () => {
+    if (!broadcastMessage.trim()) {
+      alert(lang === 'bn' ? 'অনুগ্রহ করে ব্রডকাস্ট মেসেজ লিখুন!' : 'Please enter a broadcast message!');
+      return;
+    }
+    if (
+      !confirm(
+        lang === 'bn'
+          ? 'আপনি কি নিশ্চিত যে সকল কানেক্টেড টেলিগ্রাম ইউজারের কাছে এই মেসেজটি পাঠাতে চান?'
+          : 'Are you sure you want to broadcast this message to all connected users?',
+      )
+    )
+      return;
+    setSendingBroadcast(true);
+    setBroadcastResult(null);
+    try {
+      const res: any = await api.post('/telegram/admin/broadcast', {
+        message: broadcastMessage,
+        buttonText: broadcastButtonText,
+        buttonUrl: broadcastButtonUrl,
+      });
+      const data = res?.data !== undefined ? res.data : res;
+      setBroadcastResult(data);
+      if (data?.success) {
+        setBroadcastMessage('');
+        setBroadcastButtonText('');
+        setBroadcastButtonUrl('');
+      }
+    } catch (err: any) {
+      setBroadcastResult({
+        success: false,
+        message: err.response?.data?.message || err.message || 'Broadcast failed',
+      });
+    } finally {
+      setSendingBroadcast(false);
+    }
+  };
+
   useEffect(() => {
     fetchSettings();
+    fetchTelegramSettings();
   }, []);
 
   useEffect(() => {
     if (activeTab === 'performance') {
       fetchMaintenanceStats();
+    }
+    if (activeTab === 'telegram') {
+      fetchTelegramSettings();
     }
   }, [activeTab]);
 
@@ -461,6 +621,9 @@ export default function AdminSettingsPage() {
   const handleSave = async (categoryToSave?: string) => {
     if (activeTab === 'chat_rules' || categoryToSave === 'chat_rules') {
       return handleSaveChatConfig();
+    }
+    if (activeTab === 'telegram' || categoryToSave === 'telegram') {
+      return handleSaveTelegramSettings();
     }
 
     setSaving(true);
@@ -601,6 +764,12 @@ export default function AdminSettingsPage() {
       icon: MessageCircle,
       desc: lang === 'bn' ? 'চ্যাট সেফটি রুলস ও কুইক মেসেজ টেমপ্লেট' : 'Chat safety rules banner & quick message templates',
     },
+    {
+      id: 'telegram' as const,
+      label: lang === 'bn' ? '🤖 টেলিগ্রাম বট' : '🤖 Telegram Bot',
+      icon: Send,
+      desc: lang === 'bn' ? 'বট কনফিগ, নোটিফিকেশন, পি২পি চ্যাট ও ব্রডকাস্ট' : 'Bot credentials, alerts, P2P chat & broadcast',
+    },
   ];
 
   if (loading) {
@@ -617,26 +786,33 @@ export default function AdminSettingsPage() {
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2.5">
+            <div className="p-2 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
               <Settings className="w-6 h-6" />
             </div>
-            <span>{lang === 'bn' ? 'ওয়েবসাইট সেটিংস ও কন্ট্রোল' : 'Website Settings & Configuration'}</span>
+            <span>
+              {lang === 'bn'
+                ? 'প্ল্যাটফর্ম সেটিংস ও কনফিগারেশন'
+                : 'Platform Settings & Configuration'}
+            </span>
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             {lang === 'bn'
-              ? 'ব্র্যান্ডিং, এসইও, পিক্সেল ট্র্যাকিং, টাইমজোন, ফুটার ও নিরাপত্তা কনফিগারেশন সম্পূর্ণ নিয়ন্ত্রণ করুন।'
-              : 'Complete production management of branding, SEO metadata, pixel tracking, timezones, and footer links.'}
+              ? 'ওয়েবসাইটের গ্লোবাল ব্রান্ডিং, এসইও, ফেসবুক পিক্সেল, সিকিউরিটি, উইথড্র ও টেলিগ্রাম অটোমেশন নিয়ন্ত্রণ করুন।'
+              : 'Configure website branding, SEO, tracking pixels, security gates, withdrawals and Telegram automation.'}
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 self-end sm:self-auto">
           <button
-            onClick={fetchSettings}
-            disabled={saving}
-            className="flex items-center gap-2 px-3.5 py-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold shadow-sm transition"
+            onClick={() => {
+              fetchSettings();
+              fetchTelegramSettings();
+            }}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>{lang === 'bn' ? 'রিফ্রেশ' : 'Refresh'}</span>
@@ -644,22 +820,22 @@ export default function AdminSettingsPage() {
 
           <button
             onClick={() => handleSave()}
-            disabled={saving || chatConfigSaving}
+            disabled={saving || chatConfigSaving || savingTelegram}
             className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-amber-500/20 transition disabled:opacity-50"
           >
-            {saving || chatConfigSaving ? (
+            {saving || chatConfigSaving || savingTelegram ? (
               <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : saveSuccess || chatConfigSuccess ? (
+            ) : saveSuccess || chatConfigSuccess || telegramSaveSuccess ? (
               <Check className="w-4 h-4 text-slate-950" />
             ) : (
               <Save className="w-4 h-4" />
             )}
             <span>
-              {saving || chatConfigSaving
+              {saving || chatConfigSaving || savingTelegram
                 ? lang === 'bn'
                   ? 'সংরক্ষণ হচ্ছে...'
                   : 'Saving...'
-                : saveSuccess || chatConfigSuccess
+                : saveSuccess || chatConfigSuccess || telegramSaveSuccess
                 ? lang === 'bn'
                   ? 'সংরক্ষিত হয়েছে!'
                   : 'Saved Successfully!'
@@ -672,12 +848,12 @@ export default function AdminSettingsPage() {
       </div>
 
       {/* Alert Notifications */}
-      {(saveSuccess || chatConfigSuccess) && (
+      {(saveSuccess || chatConfigSuccess || telegramSaveSuccess) && (
         <div className="flex items-center gap-2.5 p-4 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl text-emerald-700 dark:text-emerald-400 text-xs font-medium animate-in fade-in">
           <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
           <span>
             {lang === 'bn'
-              ? 'ওয়েবসাইট ও চ্যাট সেটিংস সফলভাবে সংরক্ষিত ও কার্যকর হয়েছে!'
+              ? 'ওয়েবসাইট, চ্যাট ও টেলিগ্রাম সেটিংস সফলভাবে সংরক্ষিত ও কার্যকর হয়েছে!'
               : 'Settings updated and synchronized successfully across the platform!'}
           </span>
         </div>
@@ -691,7 +867,7 @@ export default function AdminSettingsPage() {
       )}
 
       {/* Tabs Navigation */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-2 bg-slate-100 dark:bg-slate-900/60 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-11 gap-2 bg-slate-100 dark:bg-slate-900/60 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -3875,6 +4051,780 @@ export default function AdminSettingsPage() {
                 </span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 11: Telegram Bot & Automation Engine */}
+      {activeTab === 'telegram' && (
+        <div className="space-y-6">
+          {/* Section 1: Header & Save Button */}
+          <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-sky-500/10 text-sky-500 border border-sky-500/20">
+                  <Send className="w-5 h-5" />
+                </div>
+                <span>
+                  {lang === 'bn'
+                    ? '🤖 টেলিগ্রাম ইন্টেলিজেন্ট বট ও নোটিফিকেশন ইঞ্জিন'
+                    : 'Telegram Bot & Instant Alert Engine'}
+                </span>
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {lang === 'bn'
+                  ? 'টেলিগ্রাম বট টোকেন, ৭টি রিয়েল-টাইম ইভেন্ট অ্যালার্ট, ডিরেক্ট পি২পি চ্যাট, ইউজার সার্চ ও ব্রডকাস্ট অ্যানাউন্সমেন্ট সম্পূর্ণ নিয়ন্ত্রণ করুন।'
+                  : 'Manage bot token, 7 real-time event alerts, direct P2P chat, user search, and mass broadcast announcements.'}
+              </p>
+            </div>
+
+            <button
+              onClick={handleSaveTelegramSettings}
+              disabled={savingTelegram}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-amber-500/20 transition disabled:opacity-50 shrink-0"
+            >
+              {savingTelegram ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : telegramSaveSuccess ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              <span>
+                {savingTelegram
+                  ? lang === 'bn'
+                    ? 'সংরক্ষণ হচ্ছে...'
+                    : 'Saving...'
+                  : telegramSaveSuccess
+                  ? lang === 'bn'
+                    ? 'সংরক্ষিত হয়েছে!'
+                    : 'Saved Successfully!'
+                  : lang === 'bn'
+                  ? 'টেলিগ্রাম সেটিংস সেভ করুন'
+                  : 'Save Telegram Settings'}
+              </span>
+            </button>
+          </div>
+
+          {/* Section 2: Master Switch & Core Credentials */}
+          <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-sky-500" />
+                  <span>
+                    {lang === 'bn'
+                      ? '১. বট মাস্টার সুইচ ও এপিআই ক্রেডেনশিয়াল (Credentials & Master Switch)'
+                      : '1. Bot Master Switch & API Credentials'}
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {lang === 'bn'
+                    ? 'টেলিগ্রাম বট অ্যাক্টিভ করুন এবং @BotFather থেকে পাওয়া টোকেন ও বট ইউজারনেম কনফিগার করুন।'
+                    : 'Activate Telegram bot integration and configure BotFather token and bot username.'}
+                </p>
+              </div>
+
+              {/* Master Switch Toggle */}
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={Boolean(telegramSettings.enabled)}
+                  onChange={(e) =>
+                    setTelegramSettings({ ...telegramSettings, enabled: e.target.checked })
+                  }
+                  className="sr-only peer"
+                />
+                <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
+                <span className="ml-2.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {telegramSettings.enabled
+                    ? lang === 'bn'
+                      ? 'বট সার্ভিস চালু'
+                      : 'Bot Service Active'
+                    : lang === 'bn'
+                    ? 'বট সার্ভিস বন্ধ'
+                    : 'Bot Service Disabled'}
+                </span>
+              </label>
+            </div>
+
+            {/* Inputs Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Bot Token */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                  <span>{lang === 'bn' ? 'টেলিগ্রাম বট টোকেন (Bot Token)' : 'Telegram Bot Token'}</span>
+                  <span className="text-[10px] text-amber-500 font-normal">@BotFather থেকে সংগৃহীত</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showTelegramToken ? 'text' : 'password'}
+                    value={telegramSettings.botToken || ''}
+                    onChange={(e) =>
+                      setTelegramSettings({ ...telegramSettings, botToken: e.target.value.trim() })
+                    }
+                    placeholder="7123456789:AAHxyz...abc123"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white pr-10 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowTelegramToken(!showTelegramToken)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    {showTelegramToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  {lang === 'bn'
+                    ? 'টেলিগ্রামে @BotFather-এ /newbot লিখে নতুন বট তৈরি করে টোকেনটি এখানে পেস্ট করুন।'
+                    : 'Create a bot in Telegram via @BotFather and paste the API token here.'}
+                </p>
+              </div>
+
+              {/* Bot Username */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'বট ইউজারনেম (Bot Username)' : 'Bot Username'}
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
+                    @
+                  </span>
+                  <input
+                    type="text"
+                    value={telegramSettings.botUsername || ''}
+                    onChange={(e) =>
+                      setTelegramSettings({
+                        ...telegramSettings,
+                        botUsername: e.target.value.replace(/^@/, '').trim(),
+                      })
+                    }
+                    placeholder="safnexbd_bot"
+                    className="w-full pl-8 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  {lang === 'bn'
+                    ? 'ইউজাররা এই ইউজারনেমের মাধ্যমে বটে যুক্ত হবে (যেমন: safnexbd_bot)'
+                    : 'Users connect via t.me/<botUsername> (without @)'}
+                </p>
+              </div>
+
+              {/* Admin Group ID */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                  <span>
+                    {lang === 'bn'
+                      ? 'অ্যাডমিন গ্রুপ / চ্যানেল চ্যাট আইডি'
+                      : 'Admin Group / Channel Chat ID'}
+                  </span>
+                  <span className="text-[10px] text-slate-400">অপশনাল</span>
+                </label>
+                <input
+                  type="text"
+                  value={telegramSettings.adminGroupId || ''}
+                  onChange={(e) =>
+                    setTelegramSettings({ ...telegramSettings, adminGroupId: e.target.value.trim() })
+                  }
+                  placeholder="-1001234567890"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                />
+                <p className="text-[11px] text-slate-400">
+                  {lang === 'bn'
+                    ? 'নতুন ডিসপ্যুট ক্লেইম বা বড় লেনদেনের সতর্কবার্তা এই গ্রুপে রিয়েল-টাইমে পাঠানো হবে।'
+                    : 'New disputes and high-value transaction alerts will be sent here in real-time.'}
+                </p>
+              </div>
+
+              {/* Mini App URL */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'টেলিগ্রাম মিনি অ্যাপ / ওয়েব URL' : 'Telegram Mini App / Web URL'}
+                </label>
+                <input
+                  type="text"
+                  value={telegramSettings.miniAppUrl || 'https://safnexbd.com'}
+                  onChange={(e) =>
+                    setTelegramSettings({ ...telegramSettings, miniAppUrl: e.target.value.trim() })
+                  }
+                  placeholder="https://safnexbd.com"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                />
+                <p className="text-[11px] text-slate-400">
+                  {lang === 'bn'
+                    ? 'বট মেসেজের লিঙ্ক বাটনগুলোতে এই ওয়েব লিংক যুক্ত থাকবে।'
+                    : 'Base URL used for direct deep links in notification action buttons.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Test Connection Action */}
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleTestTelegram}
+                  disabled={testingTelegram || !telegramSettings.botToken}
+                  className="flex items-center gap-2 px-4 py-2 bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 dark:hover:bg-sky-900/60 text-sky-600 dark:text-sky-300 border border-sky-200 dark:border-sky-800 rounded-xl text-xs font-bold transition disabled:opacity-50"
+                >
+                  {testingTelegram ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5" />
+                  )}
+                  <span>
+                    {testingTelegram
+                      ? lang === 'bn'
+                        ? 'কানেকশন টেস্ট হচ্ছে...'
+                        : 'Testing...'
+                      : lang === 'bn'
+                      ? '🧪 টেস্ট বট কানেকশন'
+                      : '🧪 Test Bot Connection'}
+                  </span>
+                </button>
+
+                {telegramTestResult && (
+                  <div
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold ${
+                      telegramTestResult.success
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25'
+                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25'
+                    }`}
+                  >
+                    {telegramTestResult.success ? (
+                      <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    )}
+                    <span>
+                      {telegramTestResult.success
+                        ? `✅ সংযোগ সফল! (${telegramTestResult.botInfo?.firstName} - @${telegramTestResult.botInfo?.username})`
+                        : `❌ ব্যর্থ: ${telegramTestResult.message}`}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {telegramSettings.botUsername && (
+                <a
+                  href={`https://t.me/${telegramSettings.botUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs text-sky-500 hover:text-sky-600 dark:hover:text-sky-400 font-semibold"
+                >
+                  <span>@{telegramSettings.botUsername} বট ওপেন করুন</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* Section 3: Interactive Bot Features & Permissions */}
+          <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+            <div className="pb-3 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Users className="w-5 h-5 text-amber-500" />
+                <span>
+                  {lang === 'bn'
+                    ? '২. টেলিগ্রাম ইন্টারেক্টিভ ফিচার ও পারমিশন কন্ট্রোল'
+                    : '2. Telegram Interactive Features & Permissions'}
+                </span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                {lang === 'bn'
+                  ? 'ইউজাররা টেলিগ্রামের ভেতর থেকে সরাসরি যেসব সুবিধা ব্যবহার করতে পারবে তা অন/অফ করুন।'
+                  : 'Toggle in-bot capabilities like P2P user search, direct Telegram chat, 2FA, and Mini App.'}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Feature 1: User Search */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <span>🔍</span>
+                    <span>{lang === 'bn' ? 'টেলিগ্রাম ইউজার সার্চ (User Search via Bot)' : 'User Search via Bot'}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    {lang === 'bn'
+                      ? 'ইউজাররা টেলিগ্রাম বটে /search <নাম/আইডি> টাইপ করে যেকোনো ট্রেডারের প্রোফাইল, রেটিং ও ব্যাজ দেখতে পারবে।'
+                      : 'Allows users to search for traders via /search and inspect public rating cards directly in Telegram.'}
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(telegramSettings.allowUserSearch)}
+                    onChange={(e) =>
+                      setTelegramSettings({
+                        ...telegramSettings,
+                        allowUserSearch: e.target.checked,
+                      })
+                    }
+                    className="sr-only peer"
+                  />
+                  <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                </label>
+              </div>
+
+              {/* Feature 2: P2P Chat */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <span>💬</span>
+                    <span>{lang === 'bn' ? 'টেলিগ্রাম ডিরেক্ট পি২পি চ্যাট (P2P Chat via Bot)' : 'P2P Chat via Bot'}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    {lang === 'bn'
+                      ? 'ওয়েবসাইটে লগইন না করেই টেলিগ্রাম চ্যাট উইন্ডো থেকে সরাসরি অন্য ইউজারের সাথে ২-ওয়ে কথা বলতে পারবে।'
+                      : 'Enables 2-way real-time messaging between users via Telegram with web synchronization.'}
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(telegramSettings.allowP2pChat)}
+                    onChange={(e) =>
+                      setTelegramSettings({
+                        ...telegramSettings,
+                        allowP2pChat: e.target.checked,
+                      })
+                    }
+                    className="sr-only peer"
+                  />
+                  <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                </label>
+              </div>
+
+              {/* Feature 3: Telegram 2FA */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <span>🔐</span>
+                    <span>{lang === 'bn' ? 'টেলিগ্রাম ২-ফ্যাক্টর অথেনটিকেশন (2FA Support)' : 'Telegram 2FA Support'}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    {lang === 'bn'
+                      ? 'লগইন ও উইথড্রালের সময় ওটিপি সিকিউরিটি কোড এসএমএসের বিকল্প হিসেবে টেলিগ্রাম বটে পাঠানোর সুযোগ দিন।'
+                      : 'Permit users to receive instant 2FA login & withdrawal verification codes in Telegram.'}
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(telegramSettings.enable2Fa)}
+                    onChange={(e) =>
+                      setTelegramSettings({
+                        ...telegramSettings,
+                        enable2Fa: e.target.checked,
+                      })
+                    }
+                    className="sr-only peer"
+                  />
+                  <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                </label>
+              </div>
+
+              {/* Feature 4: Mini App */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <span>📱</span>
+                    <span>{lang === 'bn' ? 'টেলিগ্রাম মিনি অ্যাপ বাটন (Mini App / Web App)' : 'Mini App / Web App'}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    {lang === 'bn'
+                      ? 'টেলিগ্রামের ভেতরেই SafnexBD-এর ফুল ইন্টারফেস ওপেন করার ওয়েবভিউ বাটন প্রদর্শন করুন।'
+                      : 'Display an inline WebApp button to open SafnexBD directly inside Telegram.'}
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(telegramSettings.enableMiniApp)}
+                    onChange={(e) =>
+                      setTelegramSettings({
+                        ...telegramSettings,
+                        enableMiniApp: e.target.checked,
+                      })
+                    }
+                    className="sr-only peer"
+                  />
+                  <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: 7 Event Alert Toggles */}
+          <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+            <div className="pb-3 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Zap className="w-5 h-5 text-emerald-500" />
+                <span>
+                  {lang === 'bn'
+                    ? '৩. ইভেন্ট-ভিত্তিক নোটিফিকেশন সুইচ (Event-based Alerts)'
+                    : '3. Event-based Instant Alert Toggles'}
+                </span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                {lang === 'bn'
+                  ? 'কোন কোন প্ল্যাটফর্ম ইভেন্টে ব্যবহারকারী বা অ্যাডমিনদের কাছে নোটিফিকেশন পাঠানো হবে তা নির্ধারণ করুন।'
+                  : 'Toggle specific event triggers for automatic real-time alerts.'}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                {
+                  key: 'chatMessage',
+                  icon: '💬',
+                  title: lang === 'bn' ? 'নতুন চ্যাট মেসেজ' : 'New Chat Message',
+                  desc: lang === 'bn' ? 'বায়ার বা সেলার মেসেজ দিলে অপর পক্ষের টেলিগ্রামে তৎক্ষণাৎ অ্যালার্ট পাঠানো।' : 'Send alert when a new message arrives.',
+                },
+                {
+                  key: 'escrowPayRequest',
+                  icon: '💰',
+                  title: lang === 'bn' ? 'এসক্রো পেমেন্ট রিকোয়েস্ট' : 'Escrow Payment Request',
+                  desc: lang === 'bn' ? 'অর্ডারে পেমেন্ট রিকোয়েস্ট তৈরি হলে বায়ারের কাছে অ্যালার্ট।' : 'Send alert on new escrow payment request.',
+                },
+                {
+                  key: 'escrowRelease',
+                  icon: '🎉',
+                  title: lang === 'bn' ? 'এসক্রো ফান্ড রিলিজ' : 'Escrow Fund Release',
+                  desc: lang === 'bn' ? 'বায়ার টাকা রিলিজ করলে সেলারের কাছে ব্যালেন্স যোগের বার্তা।' : 'Send alert when buyer releases payment.',
+                },
+                {
+                  key: 'disputeOpened',
+                  icon: '⚠️',
+                  title: lang === 'bn' ? 'নতুন ডিসপ্যুট ক্লেইম' : 'Dispute Claim Opened',
+                  desc: lang === 'bn' ? 'কোনো অর্ডারে ডিসপ্যুট ওপেন হলে দুই পক্ষ ও অ্যাডমিন গ্রুপে অ্যালার্ট।' : 'Send alert on dispute opened to all parties.',
+                },
+                {
+                  key: 'rechargeRequest',
+                  icon: '📥',
+                  title: lang === 'bn' ? 'ডিপোজিট / রিচার্জ বার্তা' : 'Deposit / Recharge Alert',
+                  desc: lang === 'bn' ? 'ইউজার রিচার্জের রিকোয়েস্ট দিলে বা ভেরিফাই হলে নোটিফিকেশন।' : 'Send alert on wallet deposit submissions.',
+                },
+                {
+                  key: 'withdrawalRequest',
+                  icon: '💸',
+                  title: lang === 'bn' ? 'উইথড্রাল রিকোয়েস্ট' : 'Withdrawal Request Alert',
+                  desc: lang === 'bn' ? 'উইথড্র সাবমিট ও স্ট্যাটাস আপডেটে তাৎক্ষণিক বার্তা পাঠানো।' : 'Send alert on withdrawal submissions and approvals.',
+                },
+                {
+                  key: 'securityLogin',
+                  icon: '🔐',
+                  title: lang === 'bn' ? 'সিকিউরিটি ও লগইন অ্যালার্ট' : 'Security & Login Alert',
+                  desc: lang === 'bn' ? 'নতুন ডিভাইস বা আইপি থেকে লগইন হলে সাথে সাথে নিরাপত্তা সতর্কবার্তা।' : 'Send alert when account logs in from new IP/device.',
+                },
+              ].map((ev) => {
+                const isChecked = Boolean(telegramSettings.alertEvents?.[ev.key]);
+                return (
+                  <div
+                    key={ev.key}
+                    className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 flex items-start justify-between gap-3"
+                  >
+                    <div className="space-y-1">
+                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                        <span>{ev.icon}</span>
+                        <span>{ev.title}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">{ev.desc}</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) =>
+                          setTelegramSettings({
+                            ...telegramSettings,
+                            alertEvents: {
+                              ...telegramSettings.alertEvents,
+                              [ev.key]: e.target.checked,
+                            },
+                          })
+                        }
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Section 5: Message Templates Editor */}
+          <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+            <div className="pb-3 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-indigo-500" />
+                <span>
+                  {lang === 'bn'
+                    ? '৪. কাস্টম মেসেজ টেমপ্লেট এডিটর (Message Templates)'
+                    : '4. Custom Message Templates Editor'}
+                </span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                {lang === 'bn'
+                  ? 'টেলিগ্রামে প্রেরিত বার্তাগুলো সম্পূর্ণ আপনার মতো করে কাস্টমাইজ করুন। HTML ট্যাগ (<b>, <i>, <a>, <code>) এবং ডাইনামিক ভেরিয়েবল সাপোর্ট করে।'
+                  : 'Customize notification templates with dynamic placeholder variables and standard HTML formatting.'}
+              </p>
+            </div>
+
+            {/* Variable Pills */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-1.5">
+              <div className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                {lang === 'bn' ? 'ব্যবহারযোগ্য ডাইনামিক ভেরিয়েবলসমূহ (ক্লিক করে কপি করুন):' : 'Available Dynamic Variables:'}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  '{userName}',
+                  '{senderName}',
+                  '{receiverName}',
+                  '{buyerName}',
+                  '{amount}',
+                  '{orderId}',
+                  '{reason}',
+                  '{messageText}',
+                  '{method}',
+                  '{trxId}',
+                  '{accountNumber}',
+                  '{time}',
+                  '{ip}',
+                  '{device}',
+                  '{linkUrl}',
+                ].map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(tag);
+                      alert(`Copied ${tag}`);
+                    }}
+                    className="px-2 py-0.5 rounded-lg bg-white dark:bg-slate-700/80 border border-slate-200 dark:border-slate-600 text-[10px] font-mono font-bold text-slate-700 dark:text-slate-200 hover:border-sky-500 transition"
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Templates Textarea Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {[
+                {
+                  key: 'chatMessage',
+                  title: '💬 নতুন চ্যাট মেসেজ টেমপ্লেট',
+                  defaultTmpl: '💬 <b>নতুন চ্যাট মেসেজ!</b>\n\nপ্রেরক: <b>{senderName}</b>\nমেসেজ: <i>"{messageText}"</i>\n\n👉 <a href="{linkUrl}">চ্যাট ওপেন করে রিপ্লাই দিন</a>',
+                },
+                {
+                  key: 'escrowPayRequest',
+                  title: '💰 এসক্রো পেমেন্ট রিকোয়েস্ট টেমপ্লেট',
+                  defaultTmpl: '💰 <b>এসক্রো পেমেন্ট রিকোয়েস্ট!</b>\n\nঅর্ডার: <b>#{orderId}</b>\nপরিমাণ: <b>৳{amount}</b>\nক্রেতা: <b>{buyerName}</b>\n\n👉 <a href="{linkUrl}">বিস্তারিত দেখুন</a>',
+                },
+                {
+                  key: 'escrowRelease',
+                  title: '🎉 এসক্রো ফান্ড রিলিজ টেমপ্লেট',
+                  defaultTmpl: '🎉 <b>টাকা রিলিজ করা হয়েছে!</b>\n\nঅর্ডার: <b>#{orderId}</b>\nপরিমাণ: <b>৳{amount}</b>\n\nআপনার ওয়ালেটে টাকা যুক্ত হয়েছে।\n👉 <a href="{linkUrl}">ব্যালেন্স চেক করুন</a>',
+                },
+                {
+                  key: 'disputeOpened',
+                  title: '⚠️ ডিসপ্যুট ক্লেইম টেমপ্লেট',
+                  defaultTmpl: '⚠️ <b>ডিসপ্যুট ওপেন হয়েছে!</b>\n\nঅর্ডার: <b>#{orderId}</b>\nকারণ: {reason}\n\n👉 <a href="{linkUrl}">ডিসপ্যুট সমাধান চ্যাটে যান</a>',
+                },
+                {
+                  key: 'rechargeRequest',
+                  title: '📥 ডিপোজিট / রিচার্জ টেমপ্লেট',
+                  defaultTmpl: '📥 <b>ডিপোজিট রিকোয়েস্ট প্রাপ্তি!</b>\n\nপরিমাণ: <b>৳{amount}</b>\nমেথড: {method}\nTXN ID: <code>{trxId}</code>\nস্ট্যাটাস: <b>যাচাই করা হচ্ছে</b>',
+                },
+                {
+                  key: 'withdrawalRequest',
+                  title: '💸 উইথড্রাল রিকোয়েস্ট টেমপ্লেট',
+                  defaultTmpl: '💸 <b>উইথড্র রিকোয়েস্ট সাবমিট!</b>\n\nপরিমাণ: <b>৳{amount}</b>\nমেথড: {method}\nঅ্যাকাউন্ট: <code>{accountNumber}</code>\nস্ট্যাটাস: <b>প্রক্রিয়াকরণাধীন</b>',
+                },
+                {
+                  key: 'securityLogin',
+                  title: '🔐 সিকিউরিটি ও লগইন অ্যালার্ট টেমপ্লেট',
+                  defaultTmpl: '🔐 <b>নতুন লগইন অ্যালার্ট!</b>\n\nসময়: {time}\nআইপি: <code>{ip}</code>\nডিভাইস: {device}\n\nযদি এটি আপনি না হন, সাথে সাথে পাসওয়ার্ড পরিবর্তন করুন!',
+                },
+              ].map((item) => (
+                <div key={item.key} className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                    <span>{item.title}</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setTelegramSettings({
+                          ...telegramSettings,
+                          templates: {
+                            ...telegramSettings.templates,
+                            [item.key]: item.defaultTmpl,
+                          },
+                        })
+                      }
+                      className="text-[10px] text-sky-500 hover:underline"
+                    >
+                      ডিফল্ট রিস্টোর
+                    </button>
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={telegramSettings.templates?.[item.key] || ''}
+                    onChange={(e) =>
+                      setTelegramSettings({
+                        ...telegramSettings,
+                        templates: {
+                          ...telegramSettings.templates,
+                          [item.key]: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 resize-y"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Section 6: Broadcast Announcement Tool */}
+          <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+            <div className="pb-3 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Send className="w-5 h-5 text-rose-500" />
+                <span>
+                  {lang === 'bn'
+                    ? '৫. 📢 টেলিগ্রাম ব্রডকাস্ট অ্যানাউন্সমেন্ট ইঞ্জিন'
+                    : '5. Broadcast Announcement Engine'}
+                </span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                {lang === 'bn'
+                  ? 'সকল কানেক্টেড টেলিগ্রাম ব্যবহারকারীদের কাছে এক ক্লিকে বিশেষ নোটিশ, অফার বা সিস্টেম বার্তা পাঠান।'
+                  : 'Broadcast system announcements, maintenance alerts, or offers to all connected Telegram users.'}
+              </p>
+            </div>
+
+            <div className="space-y-4 max-w-2xl">
+              {/* Message Textarea */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'ব্রডকাস্ট মেসেজ (HTML সমর্থিত)' : 'Broadcast Message (HTML Supported)'}
+                </label>
+                <textarea
+                  rows={4}
+                  value={broadcastMessage}
+                  onChange={(e) => setBroadcastMessage(e.target.value)}
+                  placeholder="📢 <b>বিশেষ বিজ্ঞপ্তি:</b> প্রিয় গ্রাহক, আমাদের সিস্টেমে নতুন আপডেট এসেছে..."
+                  className="w-full p-3.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                />
+              </div>
+
+              {/* Optional Inline Button */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {lang === 'bn' ? 'ইনলাইন বাটন টেক্সট (অপশনাল)' : 'Inline Button Text (Optional)'}
+                  </label>
+                  <input
+                    type="text"
+                    value={broadcastButtonText}
+                    onChange={(e) => setBroadcastButtonText(e.target.value)}
+                    placeholder="অফার দেখুন / ওয়েবসাইট ভিজিট"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {lang === 'bn' ? 'বাটন লিঙ্ক URL (অপশনাল)' : 'Button Link URL (Optional)'}
+                  </label>
+                  <input
+                    type="text"
+                    value={broadcastButtonUrl}
+                    onChange={(e) => setBroadcastButtonUrl(e.target.value)}
+                    placeholder="https://safnexbd.com/offers"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              {/* Send Broadcast Button & Result */}
+              <div className="pt-2 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleSendBroadcast}
+                  disabled={sendingBroadcast || !broadcastMessage.trim()}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-600/20 transition disabled:opacity-50"
+                >
+                  {sendingBroadcast ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                  <span>
+                    {sendingBroadcast
+                      ? lang === 'bn'
+                        ? 'মেসেজ পাঠানো হচ্ছে...'
+                        : 'Broadcasting...'
+                      : lang === 'bn'
+                      ? '🚀 ব্রডকাস্ট মেসেজ সেন্ড করুন'
+                      : 'Send Broadcast Now'}
+                  </span>
+                </button>
+
+                {broadcastResult && (
+                  <div
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold ${
+                      broadcastResult.success
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25'
+                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25'
+                    }`}
+                  >
+                    {broadcastResult.success ? (
+                      <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    )}
+                    <span>
+                      {broadcastResult.success
+                        ? `✅ সফলভাবে ${broadcastResult.sentCount || 0} জনের কাছে বার্তাটি পৌঁছেছে! (ব্যর্থ: ${broadcastResult.failedCount || 0})`
+                        : `❌ ব্রডকাস্ট ব্যর্থ: ${broadcastResult.message}`}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Save Button */}
+          <div className="pt-2 flex justify-end">
+            <button
+              onClick={handleSaveTelegramSettings}
+              disabled={savingTelegram}
+              className="flex items-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-amber-500/20 transition disabled:opacity-50"
+            >
+              {savingTelegram ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : telegramSaveSuccess ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              <span>
+                {savingTelegram
+                  ? lang === 'bn'
+                    ? 'সংরক্ষণ হচ্ছে...'
+                    : 'Saving...'
+                  : telegramSaveSuccess
+                  ? lang === 'bn'
+                    ? 'সংরক্ষিত হয়েছে!'
+                    : 'Saved Successfully!'
+                  : lang === 'bn'
+                  ? 'সব টেলিগ্রাম সেটিংস সেভ করুন'
+                  : 'Save All Telegram Settings'}
+              </span>
+            </button>
           </div>
         </div>
       )}

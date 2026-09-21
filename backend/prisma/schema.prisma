@@ -79,6 +79,14 @@ model User {
   isVerified      Boolean   @default(false)
   isEmployee      Boolean   @default(false)
   adminPermissions String?  @db.Text
+
+  // Telegram Integration
+  telegramChatId            String?   @db.VarChar(100)
+  telegramUsername          String?   @db.VarChar(100)
+  telegramNotifications     Boolean   @default(true)
+  telegram2FaEnabled        Boolean   @default(false)
+  telegramLastActiveSession String?   @db.VarChar(100)
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   deletedAt       DateTime?
@@ -118,6 +126,7 @@ model User {
   @@index([uniqueUserId])
   @@index([email])
   @@index([phone])
+  @@index([telegramChatId])
   @@map("users")
 }
 
