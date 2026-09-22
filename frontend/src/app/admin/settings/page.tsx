@@ -745,7 +745,22 @@ export default function AdminSettingsPage() {
   };
 
   const handleTestAi = async () => {
-    if (!settings.ai?.apiKey?.trim()) {
+    let apiKey = settings.ai?.apiKey?.trim() || '';
+    let baseUrl = settings.ai?.baseUrl?.trim() || '';
+
+    // If user accidentally pasted API key into baseUrl box
+    if (baseUrl.startsWith('sk-') || baseUrl.startsWith('gsk_')) {
+      if (!apiKey || !apiKey.startsWith('sk-')) {
+        apiKey = baseUrl;
+      }
+      baseUrl = apiKey.startsWith('sk-or-') ? 'https://openrouter.ai/api/v1' : '';
+      setSettings((prev: any) => ({
+        ...prev,
+        ai: { ...prev.ai, apiKey, baseUrl },
+      }));
+    }
+
+    if (!apiKey) {
       alert(lang === 'bn' ? 'অনুগ্রহ করে এআই API কী (API Key) লিখুন!' : 'Please enter an AI API Key!');
       return;
     }
@@ -753,10 +768,10 @@ export default function AdminSettingsPage() {
     setAiTestResult(null);
     try {
       const res: any = await api.post('/settings/ai/test-connection', {
-        provider: settings.ai.provider || 'GEMINI',
-        apiKey: settings.ai.apiKey,
-        modelName: settings.ai.modelName,
-        baseUrl: settings.ai.baseUrl,
+        provider: settings.ai?.provider || 'GEMINI',
+        apiKey,
+        modelName: settings.ai?.modelName,
+        baseUrl,
       });
       const data = res?.data !== undefined ? res.data : res;
       setAiTestResult(data);
@@ -5528,82 +5543,45 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
-            {/* Qwen / Custom Base URL */}
-            {settings.ai?.provider === 'QWEN' && (
-              <div className="p-4 bg-purple-500/5 rounded-2xl border border-purple-500/20 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    {lang === 'bn' ? 'এপিআই বেস ইউআরএল (API Base URL)' : 'API Base URL'}
-                    <span className="text-slate-400 font-normal ml-1">(Optional for OpenRouter / DashScope)</span>
-                  </label>
-                  <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold">
-                    OpenAI-Compatible
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  value={settings.ai?.baseUrl || ''}
-                  onChange={(e) =>
-                    setSettings((prev: any) => ({
-                      ...prev,
-                      ai: { ...prev.ai, baseUrl: e.target.value },
-                    }))
-                  }
-                  placeholder="https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-                {/* Presets */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[10px] text-slate-400 font-semibold mr-1">Quick Presets:</span>
-                  {[
-                    { label: 'OpenRouter', url: 'https://openrouter.ai/api/v1' },
-                    { label: 'DashScope (Intl)', url: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1' },
-                    { label: 'DashScope (China)', url: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
-                    { label: 'Groq', url: 'https://api.groq.com/openai/v1' },
-                    { label: 'Ollama (Local)', url: 'http://localhost:11434/v1' },
-                  ].map((preset) => (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      onClick={() =>
-                        setSettings((prev: any) => ({
-                          ...prev,
-                          ai: { ...prev.ai, baseUrl: preset.url },
-                        }))
-                      }
-                      className="text-[10px] px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-950 text-slate-600 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-400 border border-slate-200 dark:border-slate-700 transition cursor-pointer"
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* API Key Input & Test Connection */}
             <div className="space-y-3">
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                {settings.ai?.provider === 'QWEN'
-                  ? 'Qwen / OpenRouter API Key'
-                  : settings.ai?.provider === 'OPENAI'
-                  ? 'OpenAI API Key'
-                  : 'Google Gemini API Key'}
-                <span className="text-rose-500 ml-1">*</span>
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {settings.ai?.provider === 'QWEN'
+                    ? 'Qwen / OpenRouter API Key'
+                    : settings.ai?.provider === 'OPENAI'
+                    ? 'OpenAI API Key'
+                    : 'Google Gemini API Key'}
+                  <span className="text-rose-500 ml-1">*</span>
+                </label>
+                {settings.ai?.apiKey?.startsWith('sk-or-') && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-400">
+                    OpenRouter Key Detected
+                  </span>
+                )}
+              </div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                 <div className="relative flex-1">
                   <input
                     type={showAiKey ? 'text' : 'password'}
                     value={settings.ai?.apiKey || ''}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const val = e.target.value.trim();
                       setSettings((prev: any) => ({
                         ...prev,
-                        ai: { ...prev.ai, apiKey: e.target.value },
-                      }))
-                    }
+                        ai: {
+                          ...prev.ai,
+                          apiKey: val,
+                          baseUrl:
+                            val.startsWith('sk-or-') && !prev.ai?.baseUrl
+                              ? 'https://openrouter.ai/api/v1'
+                              : prev.ai?.baseUrl,
+                        },
+                      }));
+                    }}
                     placeholder={
                       settings.ai?.provider === 'QWEN'
-                        ? 'sk-... or sk-or-v1-...'
+                        ? 'sk-or-v1-... or sk-...'
                         : settings.ai?.provider === 'OPENAI'
                         ? 'sk-proj-...'
                         : 'AIzaSy...'
@@ -5623,7 +5601,7 @@ export default function AdminSettingsPage() {
                   type="button"
                   onClick={handleTestAi}
                   disabled={testingAi || !settings.ai?.apiKey}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 text-xs font-bold transition disabled:opacity-50"
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 text-xs font-bold transition disabled:opacity-50 cursor-pointer"
                 >
                   {testingAi ? (
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -5671,6 +5649,71 @@ export default function AdminSettingsPage() {
                 </div>
               )}
             </div>
+
+            {/* Qwen / Custom Base URL */}
+            {settings.ai?.provider === 'QWEN' && (
+              <div className="p-4 bg-purple-500/5 rounded-2xl border border-purple-500/20 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {lang === 'bn' ? 'এপিআই বেস ইউআরএল (API Base URL)' : 'API Base URL'}
+                    <span className="text-slate-400 font-normal ml-1">(Optional — auto-detected)</span>
+                  </label>
+                  <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold">
+                    OpenAI-Compatible
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  value={settings.ai?.baseUrl || ''}
+                  onChange={(e) => {
+                    const val = e.target.value.trim();
+                    if (val.startsWith('sk-') || val.startsWith('gsk_')) {
+                      // Auto-move to API key if user accidentally pasted key here
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        ai: {
+                          ...prev.ai,
+                          apiKey: val,
+                          baseUrl: val.startsWith('sk-or-') ? 'https://openrouter.ai/api/v1' : '',
+                        },
+                      }));
+                    } else {
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        ai: { ...prev.ai, baseUrl: e.target.value },
+                      }));
+                    }
+                  }}
+                  placeholder="https://openrouter.ai/api/v1"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+                {/* Presets */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[10px] text-slate-400 font-semibold mr-1">Quick Presets:</span>
+                  {[
+                    { label: 'OpenRouter', url: 'https://openrouter.ai/api/v1' },
+                    { label: 'DashScope (Intl)', url: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1' },
+                    { label: 'DashScope (China)', url: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
+                    { label: 'Groq', url: 'https://api.groq.com/openai/v1' },
+                    { label: 'Ollama (Local)', url: 'http://localhost:11434/v1' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() =>
+                        setSettings((prev: any) => ({
+                          ...prev,
+                          ai: { ...prev.ai, baseUrl: preset.url },
+                        }))
+                      }
+                      className="text-[10px] px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-950 text-slate-600 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-400 border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Model Selection & Risk Threshold */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

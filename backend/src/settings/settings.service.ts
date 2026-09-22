@@ -376,28 +376,42 @@ export class SettingsService {
         return { success: false, latency: Date.now() - startTime, message: err.message || 'OpenAI connection failed' };
       }
     } else if (prov === 'QWEN' || prov === 'CUSTOM') {
-      const model = modelName?.trim() || 'qwen-plus';
+      let effectiveKey = key;
       let endpoint = (baseUrl || '').trim();
+
+      // If user accidentally pasted API key into baseUrl
+      if (endpoint.startsWith('sk-') || endpoint.startsWith('gsk_')) {
+        if (!effectiveKey || !effectiveKey.startsWith('sk-')) {
+          effectiveKey = endpoint;
+        }
+        endpoint = '';
+      }
+
       if (!endpoint) {
-        if (key.startsWith('sk-or-')) {
+        if (effectiveKey.startsWith('sk-or-')) {
           endpoint = 'https://openrouter.ai/api/v1';
-        } else if (key.startsWith('gsk_')) {
+        } else if (effectiveKey.startsWith('gsk_')) {
           endpoint = 'https://api.groq.com/openai/v1';
         } else {
           endpoint = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
         }
+      } else if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
+        endpoint = `https://${endpoint}`;
       }
+
       const cleanBase = endpoint.replace(/\/+$/, '');
       const url = cleanBase.endsWith('/chat/completions')
         ? cleanBase
         : `${cleanBase}/chat/completions`;
 
+      const model = modelName?.trim() || (effectiveKey.startsWith('sk-or-') ? 'qwen/qwen-2.5-72b-instruct' : 'qwen-plus');
+
       try {
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${key}`,
+          Authorization: `Bearer ${effectiveKey}`,
         };
-        if (key.startsWith('sk-or-')) {
+        if (effectiveKey.startsWith('sk-or-')) {
           headers['HTTP-Referer'] = 'https://safnexbd.com';
           headers['X-Title'] = 'SafnexBD';
         }

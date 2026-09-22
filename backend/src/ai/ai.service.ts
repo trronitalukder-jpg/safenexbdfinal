@@ -217,19 +217,31 @@ Current message to analyze:
         );
         return this.parseAiResponse(response, heuristic);
       } else if (aiConfig.provider === 'QWEN' || aiConfig.provider === 'CUSTOM') {
+        let effectiveKey = (aiConfig.apiKey || '').trim();
         let endpoint = (aiConfig.baseUrl || '').trim();
+
+        if (endpoint.startsWith('sk-') || endpoint.startsWith('gsk_')) {
+          if (!effectiveKey || !effectiveKey.startsWith('sk-')) {
+            effectiveKey = endpoint;
+          }
+          endpoint = '';
+        }
+
         if (!endpoint) {
-          if (aiConfig.apiKey.startsWith('sk-or-')) {
+          if (effectiveKey.startsWith('sk-or-')) {
             endpoint = 'https://openrouter.ai/api/v1';
-          } else if (aiConfig.apiKey.startsWith('gsk_')) {
+          } else if (effectiveKey.startsWith('gsk_')) {
             endpoint = 'https://api.groq.com/openai/v1';
           } else {
             endpoint = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
           }
+        } else if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
+          endpoint = `https://${endpoint}`;
         }
+
         const response = await this.callOpenAi(
-          aiConfig.apiKey,
-          aiConfig.modelName || 'qwen-plus',
+          effectiveKey,
+          aiConfig.modelName || (effectiveKey.startsWith('sk-or-') ? 'qwen/qwen-2.5-72b-instruct' : 'qwen-plus'),
           systemPrompt,
           userPrompt,
           endpoint,
@@ -339,19 +351,31 @@ ${evidenceList.map((e) => `Uploaded by ${e.uploadedBy}: ${e.description || 'Evid
           userPrompt,
         );
       } else if (aiConfig.provider === 'QWEN' || aiConfig.provider === 'CUSTOM') {
+        let effectiveKey = (aiConfig.apiKey || '').trim();
         let endpoint = (aiConfig.baseUrl || '').trim();
+
+        if (endpoint.startsWith('sk-') || endpoint.startsWith('gsk_')) {
+          if (!effectiveKey || !effectiveKey.startsWith('sk-')) {
+            effectiveKey = endpoint;
+          }
+          endpoint = '';
+        }
+
         if (!endpoint) {
-          if (aiConfig.apiKey.startsWith('sk-or-')) {
+          if (effectiveKey.startsWith('sk-or-')) {
             endpoint = 'https://openrouter.ai/api/v1';
-          } else if (aiConfig.apiKey.startsWith('gsk_')) {
+          } else if (effectiveKey.startsWith('gsk_')) {
             endpoint = 'https://api.groq.com/openai/v1';
           } else {
             endpoint = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
           }
+        } else if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
+          endpoint = `https://${endpoint}`;
         }
+
         rawText = await this.callOpenAi(
-          aiConfig.apiKey,
-          aiConfig.modelName || 'qwen-plus',
+          effectiveKey,
+          aiConfig.modelName || (effectiveKey.startsWith('sk-or-') ? 'qwen/qwen-2.5-72b-instruct' : 'qwen-plus'),
           systemPrompt,
           userPrompt,
           endpoint,
