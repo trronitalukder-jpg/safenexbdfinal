@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   Logger,
+  OnModuleInit,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChatService } from '../chat/chat.service';
@@ -85,7 +86,7 @@ export const DEFAULT_TELEGRAM_SETTINGS: TelegramBotSettings = {
 };
 
 @Injectable()
-export class TelegramService {
+export class TelegramService implements OnModuleInit {
   private readonly logger = new Logger(TelegramService.name);
   private cachedSettings: TelegramBotSettings | null = null;
   private lastSettingsFetch = 0;
@@ -95,6 +96,23 @@ export class TelegramService {
     @Inject(forwardRef(() => ChatService))
     private chatService: ChatService,
   ) {}
+
+  async onModuleInit() {
+    try {
+      const settings = await this.getSettings();
+      if (settings?.isEnabled && settings?.botToken) {
+        this.logger.log('[Telegram] Auto-syncing bot commands and native WebApp menu button...');
+        const siteUrl = settings.miniAppUrl || 'https://safnexbd.com';
+        await Promise.allSettled([
+          this.setChatMenuButton(settings.botToken, siteUrl),
+          this.setMyCommands(settings.botToken),
+        ]);
+        this.logger.log('[Telegram] Bot commands and WebApp menu button synced successfully!');
+      }
+    } catch (err: any) {
+      this.logger.warn(`[Telegram] Failed to auto-sync bot menu: ${err?.message}`);
+    }
+  }
 
   /**
    * Fetch current telegram bot settings from DB (cached for 30s)
