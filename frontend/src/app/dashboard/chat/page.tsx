@@ -116,6 +116,7 @@ function MessengerChatContent() {
   const searchParams = useSearchParams();
   const targetUserId = searchParams.get('targetUserId');
   const productId = searchParams.get('productId');
+  const conversationIdParam = searchParams.get('conversationId');
   const { user } = useAuthStore();
   const { lang, t } = useLanguage();
   const socket = getSocket();
@@ -130,6 +131,9 @@ function MessengerChatContent() {
 
   // Conversations & People
   const [conversations, setConversations] = useState<any[]>([]);
+  const totalUnreadCount = useMemo(() => {
+    return conversations.reduce((sum, c) => sum + (Number(c.unreadCount) || 0), 0);
+  }, [conversations]);
   const [suggestedPeople, setSuggestedPeople] = useState<any[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -438,9 +442,28 @@ function MessengerChatContent() {
         if (!c.otherUser?.id || c.otherUser?.deletedAt || c.otherUser?.isActive === false) continue;
         if (!seen.has(c.otherUser.id)) {
           seen.add(c.otherUser.id);
-          deduped.push(c);
+          deduped.push({
+            ...c,
+            unreadCount: Number(c.unreadCount || 0),
+          });
         }
       }
+
+      // Strictly sort conversations by latest message timestamp descending so the newest message is always on top
+      deduped.sort((a, b) => {
+        const timeA = Math.max(
+          a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0,
+          a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0,
+          new Date(a.updatedAt || 0).getTime()
+        );
+        const timeB = Math.max(
+          b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0,
+          b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0,
+          new Date(b.updatedAt || 0).getTime()
+        );
+        return timeB - timeA;
+      });
+
       setConversations(deduped);
 
       // If active conversation was with a user that is no longer returned in conversations list, clear active conversation
@@ -462,7 +485,16 @@ function MessengerChatContent() {
         console.error('Failed to load registered users:', err);
       }
 
-      // Auto-select if targetUserId was supplied in URL
+      // 1. Auto-select if conversationId was supplied in URL
+      if (conversationIdParam) {
+        const found = deduped.find((c: any) => c.conversationId === conversationIdParam);
+        if (found) {
+          selectConversation(found);
+          return;
+        }
+      }
+
+      // 2. Auto-select if targetUserId was supplied in URL
       if (targetUserId) {
         const found = deduped.find(
           (c: any) => c.otherUser?.id === targetUserId || c.otherUser?.uniqueUserId === targetUserId,
@@ -486,6 +518,8 @@ function MessengerChatContent() {
                   conversationId: convData.id || convData.conversationId,
                   otherUser: u,
                   lastMessage: null,
+                  unreadCount: 0,
+                  updatedAt: new Date().toISOString(),
                 };
                 setConversations((prev) => {
                   const filtered = prev.filter((p) => p.otherUser?.id !== u.id);
@@ -530,7 +564,7 @@ function MessengerChatContent() {
 
   useEffect(() => {
     fetchConversations();
-  }, [targetUserId]);
+  }, [targetUserId, conversationIdParam]);
 
   // ---------------------------------------------------------------------------
   // Search People (Name, User ID, Phone, Email)
@@ -572,6 +606,12 @@ function MessengerChatContent() {
     }
 
     setActiveConversation(conv);
+    // Instantly clear unread badge/highlight for this conversation in state
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.conversationId === conv.conversationId ? { ...c, unreadCount: 0 } : c,
+      ),
+    );
     setMobileView('chat');
     setSearchQuery('');
     setSearchResults([]);
@@ -590,6 +630,7 @@ function MessengerChatContent() {
 
       socket.emit('join:conversation', { conversationId: conv.conversationId, userId: user?.id });
       socket.emit('message:seen', { conversationId: conv.conversationId, userId: user?.id });
+      api.post(`/chat/conversations/${conv.conversationId}/seen`).catch(() => null);
     } catch (err) {
       console.error('Failed to fetch messages:', err);
     } finally {
@@ -644,7 +685,9 @@ function MessengerChatContent() {
     if (!socket) return;
 
     const handleMessageReceive = (newMsg: any) => {
-      if (newMsg.conversationId === activeConversation?.conversationId) {
+      const isCurrentActive = newMsg.conversationId === activeConversation?.conversationId;
+
+      if (isCurrentActive) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === newMsg.id)) return prev;
           return [...prev, newMsg];
@@ -654,21 +697,46 @@ function MessengerChatContent() {
           conversationId: activeConversation.conversationId,
           userId: user?.id,
         });
+        api.post(`/chat/conversations/${activeConversation.conversationId}/seen`).catch(() => null);
       }
 
-      // Update conversations list snippet
-      setConversations((prev) =>
-        prev.map((c) => {
-          if (c.conversationId === newMsg.conversationId) {
-            return {
-              ...c,
-              lastMessage: newMsg,
-              updatedAt: new Date().toISOString(),
-            };
-          }
-          return c;
-        }),
-      );
+      // Float conversation to the very top (index 0) and update snippet & unreadCount
+      setConversations((prev) => {
+        const existingIndex = prev.findIndex((c) => c.conversationId === newMsg.conversationId);
+        const isFromSelf = newMsg.senderId === user?.id || newMsg.sender?.id === user?.id;
+
+        let targetConv: any;
+        let others: any[];
+
+        if (existingIndex !== -1) {
+          const old = prev[existingIndex];
+          const newUnread = isCurrentActive || isFromSelf ? 0 : (Number(old.unreadCount || 0) + 1);
+
+          targetConv = {
+            ...old,
+            lastMessage: newMsg,
+            lastMessageAt: newMsg.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            unreadCount: newUnread,
+          };
+          others = prev.filter((_, idx) => idx !== existingIndex);
+        } else {
+          // If conversation wasn't in current list, create it and float to top
+          const otherUser = !isFromSelf ? newMsg.sender : null;
+          targetConv = {
+            conversationId: newMsg.conversationId,
+            otherUser: otherUser,
+            lastMessage: newMsg,
+            lastMessageAt: newMsg.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            unreadCount: isCurrentActive || isFromSelf ? 0 : 1,
+          };
+          others = prev;
+        }
+
+        // Move to the very top!
+        return [targetConv, ...others];
+      });
     };
 
     const handleTransactionUpdate = (data: any) => {
@@ -935,11 +1003,17 @@ function MessengerChatContent() {
           return [...prev, savedMsg];
         });
 
-        // Update conversation in list and move to top
+        // Update conversation in list, reset unreadCount to 0, and move to top
         setConversations((prev) => {
           const updated = prev.map((c) =>
             c.conversationId === activeConversation.conversationId
-              ? { ...c, lastMessage: savedMsg, updatedAt: new Date().toISOString() }
+              ? {
+                  ...c,
+                  lastMessage: savedMsg,
+                  lastMessageAt: savedMsg.createdAt || new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  unreadCount: 0,
+                }
               : c,
           );
           const target = updated.find((c) => c.conversationId === activeConversation.conversationId);
@@ -1443,6 +1517,11 @@ function MessengerChatContent() {
                 {conversations.length}
               </span>
             )}
+            {totalUnreadCount > 0 && (
+              <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-sky-600 text-white shadow-sm ring-2 ring-sky-400/25 animate-pulse">
+                {totalUnreadCount} {lang === 'bn' ? 'নতুন' : 'new'}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -1587,6 +1666,7 @@ function MessengerChatContent() {
                     const other = conv.otherUser;
                     const dName = getUserDisplayName(other);
                     const isSelected = activeConversation?.conversationId === conv.conversationId;
+                    const isUnread = Number(conv.unreadCount || 0) > 0 && !isSelected;
                     const lastMsg = conv.lastMessage;
 
                     let lastSnippet = 'No messages yet';
@@ -1619,8 +1699,10 @@ function MessengerChatContent() {
                         onClick={() => selectConversation(conv)}
                         className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-all group relative ${
                           isSelected
-                            ? 'bg-emerald-50/80 dark:bg-emerald-950/30 border-l-4 border-emerald-600'
-                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                            ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-l-4 border-emerald-600 dark:border-emerald-500 shadow-sm'
+                            : isUnread
+                            ? 'bg-sky-50 dark:bg-sky-950/40 border-l-4 border-sky-600 dark:border-sky-500 shadow-[inset_0_1px_0_0_rgba(2,132,199,0.08)] ring-1 ring-sky-500/20 hover:bg-sky-100/70 dark:hover:bg-sky-900/40'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 border-l-4 border-transparent'
                         }`}
                       >
                         {/* Avatar */}
@@ -1635,13 +1717,33 @@ function MessengerChatContent() {
                             <img
                               src={getImageUrl(other.avatarUrl)}
                               alt={dName}
-                              className="w-12 h-12 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                              className={`w-12 h-12 rounded-full object-cover border transition-all ${
+                                isUnread
+                                  ? 'border-sky-500 dark:border-sky-400 ring-2 ring-sky-400/30 shadow-sm'
+                                  : 'border-slate-200 dark:border-slate-700'
+                              }`}
                             />
                           ) : (
-                            <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-bold flex items-center justify-center text-base border border-emerald-200 dark:border-emerald-800">
+                            <div
+                              className={`w-12 h-12 rounded-full font-bold flex items-center justify-center text-base border transition-all ${
+                                isUnread
+                                  ? 'bg-sky-100 dark:bg-sky-950/80 text-sky-700 dark:text-sky-300 border-sky-400 dark:border-sky-600 ring-2 ring-sky-400/30'
+                                  : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                              }`}
+                            >
                               {dName.charAt(0)}
                             </div>
                           )}
+
+                          {/* Pulsing glow indicator dot on avatar top-right if unread */}
+                          {isUnread && (
+                            <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 z-10" title="New unread message">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-sky-500 border-2 border-white dark:border-slate-900 shadow-sm"></span>
+                            </span>
+                          )}
+
+                          {/* Online indicator */}
                           <span
                             className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900 transition-colors ${
                               onlineUsers.has(other?.id)
@@ -1655,18 +1757,36 @@ function MessengerChatContent() {
                         {/* Info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-0.5">
-                            <h4
-                              className={`font-semibold text-sm truncate ${
-                                isSelected
-                                  ? 'text-emerald-900 dark:text-emerald-200'
-                                  : 'text-slate-900 dark:text-slate-100'
-                              }`}
-                            >
-                              {dName}
-                            </h4>
-                            <div className="flex items-center gap-1 shrink-0">
+                            <div className="flex items-center gap-1.5 truncate">
+                              <h4
+                                className={`text-sm truncate transition-colors ${
+                                  isSelected
+                                    ? 'text-emerald-900 dark:text-emerald-200 font-bold'
+                                    : isUnread
+                                    ? 'text-slate-950 dark:text-white font-black tracking-tight'
+                                    : 'text-slate-800 dark:text-slate-200 font-medium'
+                                }`}
+                              >
+                                {dName}
+                              </h4>
+                              {isUnread && (
+                                <span className="px-1.5 py-0.2 rounded text-[10px] font-black uppercase bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 shrink-0">
+                                  {lang === 'bn' ? 'নতুন' : 'NEW'}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
                               {timeStr && (
-                                <span className="text-[11px] text-slate-400 ml-1">{timeStr}</span>
+                                <span
+                                  className={`text-[11px] ml-1 transition-colors ${
+                                    isUnread
+                                      ? 'text-sky-600 dark:text-sky-400 font-bold'
+                                      : 'text-slate-400 dark:text-slate-500'
+                                  }`}
+                                >
+                                  {timeStr}
+                                </span>
                               )}
                               <button
                                 onClick={(e) => handleDeleteConversation(e, conv.conversationId)}
@@ -1678,19 +1798,28 @@ function MessengerChatContent() {
                             </div>
                           </div>
 
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between gap-2">
                             <p
-                              className={`text-xs truncate ${
-                                lastMsg?.messageType === 'PAY_REQUEST'
-                                  ? 'text-emerald-600 dark:text-emerald-400 font-medium'
+                              className={`text-xs truncate transition-colors ${
+                                isUnread
+                                  ? 'text-slate-900 dark:text-slate-100 font-bold'
+                                  : lastMsg?.messageType === 'PAY_REQUEST'
+                                  ? 'text-emerald-600 dark:text-emerald-400 font-semibold'
                                   : 'text-slate-500 dark:text-slate-400'
                               }`}
                             >
                               {lastSnippet}
                             </p>
+
+                            {/* Vibrant Unread Counter Badge */}
+                            {isUnread && (
+                              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[11px] font-black rounded-full bg-sky-600 text-white shadow-sm ring-2 ring-sky-400/25 animate-pulse shrink-0">
+                                {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
+                              </span>
+                            )}
                           </div>
 
-                          <span className="text-[10px] text-slate-400 font-mono">
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                             ID: {other?.uniqueUserId || 'TBD' + (other?.id?.slice(0, 5).toUpperCase() || '')}
                           </span>
                         </div>

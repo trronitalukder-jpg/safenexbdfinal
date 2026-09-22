@@ -226,6 +226,26 @@ export class ChatService {
           })
         : participants;
 
+    // Compute unread message counts per conversation for current user
+    const unreadMap = new Map<string, number>();
+    try {
+      const unreadRows: any[] = await this.prisma.$queryRaw`
+        SELECT cp.conversationId, CAST(COUNT(m.id) AS UNSIGNED) AS unreadCount
+        FROM conversation_participants cp
+        JOIN messages m ON m.conversationId = cp.conversationId 
+          AND m.senderId != ${userId} 
+          AND m.isDeleted = 0 
+          AND (cp.lastReadAt IS NULL OR m.createdAt > cp.lastReadAt)
+        WHERE cp.userId = ${userId}
+        GROUP BY cp.conversationId
+      `;
+      for (const row of unreadRows) {
+        unreadMap.set(row.conversationId, Number(row.unreadCount || 0));
+      }
+    } catch (rawErr) {
+      console.error('Failed to query unread message counts:', rawErr);
+    }
+
     const mapped = filteredParticipants
       .map((p) => {
         const otherParticipant = p.conversation.participants.find(
@@ -233,6 +253,8 @@ export class ChatService {
         );
         const lastMessage = p.conversation.messages[0] || null;
         const activeTransaction = (p.conversation as any).transactions?.[0] || null;
+        const lastMessageAt = lastMessage?.createdAt || p.conversation.updatedAt;
+        const unreadCount = unreadMap.get(p.conversationId) || 0;
 
         return {
           conversationId: p.conversationId,
@@ -240,6 +262,8 @@ export class ChatService {
           lastMessage,
           activeTransaction,
           updatedAt: p.conversation.updatedAt,
+          lastMessageAt,
+          unreadCount,
         };
       })
       .filter((c) => !!c.otherUser && !c.otherUser.deletedAt && c.otherUser.isActive !== false);
@@ -255,11 +279,10 @@ export class ChatService {
         const currentMsgTime = item.lastMessage ? new Date(item.lastMessage.createdAt).getTime() : 0;
         const existingMsgTime = existing.lastMessage ? new Date(existing.lastMessage.createdAt).getTime() : 0;
         if (currentMsgTime > existingMsgTime) {
+          item.unreadCount = (item.unreadCount || 0) + (existing.unreadCount || 0);
           uniqueMap.set(otherId, item);
-        } else if (currentMsgTime === existingMsgTime) {
-          if (new Date(item.updatedAt).getTime() > new Date(existing.updatedAt).getTime()) {
-            uniqueMap.set(otherId, item);
-          }
+        } else {
+          existing.unreadCount = (existing.unreadCount || 0) + (item.unreadCount || 0);
         }
       }
     }
@@ -268,10 +291,12 @@ export class ChatService {
     result.sort((a, b) => {
       const timeA = Math.max(
         a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0,
+        a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0,
         new Date(a.updatedAt).getTime()
       );
       const timeB = Math.max(
         b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0,
+        b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0,
         new Date(b.updatedAt).getTime()
       );
       return timeB - timeA;
@@ -493,6 +518,12 @@ export class ChatService {
       await tx.conversation.update({
         where: { id: params.conversationId },
         data: { updatedAt: new Date() },
+      });
+
+      // Update sender's lastReadAt so own messages are not counted as unread
+      await tx.conversationParticipant.updateMany({
+        where: { conversationId: params.conversationId, userId: params.senderId },
+        data: { lastReadAt: new Date() },
       });
 
       return {
