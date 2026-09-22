@@ -756,6 +756,7 @@ export default function AdminSettingsPage() {
         provider: settings.ai.provider || 'GEMINI',
         apiKey: settings.ai.apiKey,
         modelName: settings.ai.modelName,
+        baseUrl: settings.ai.baseUrl,
       });
       const data = res?.data !== undefined ? res.data : res;
       setAiTestResult(data);
@@ -5416,8 +5417,8 @@ export default function AdminSettingsPage() {
               <span>{lang === 'bn' ? 'এআই প্রোভাইডার ও এপিআই কী' : 'AI Provider & Credentials'}</span>
             </h3>
 
-            {/* Provider Selection (Gemini vs OpenAI) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Provider Selection (Gemini vs OpenAI vs Qwen) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
               <div
                 onClick={() =>
                   setSettings((prev: any) => ({
@@ -5444,13 +5445,13 @@ export default function AdminSettingsPage() {
                     <span>Google Gemini</span>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">
-                    {lang === 'bn' ? 'রেকমেন্ডেড (সাশ্রয়ী)' : 'Recommended (Cost-Effective)'}
+                    {lang === 'bn' ? 'সাশ্রয়ী' : 'Cost-Effective'}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                   {lang === 'bn'
-                    ? 'বাংলা ও বাংলিশ বুঝতে অত্যন্ত দক্ষ, সুপার ফাস্ট রেসপন্স এবং ফ্রি টিয়ার সুবিধা রয়েছে।'
-                    : 'Best for Bengali/Banglish understanding, fast response times, and generous free tier.'}
+                    ? 'বাংলা ও বাংলিশ বুঝতে দক্ষ, সুপার ফাস্ট রেসপন্স এবং ফ্রি টিয়ার সুবিধা রয়েছে।'
+                    : 'Fast Bengali/Banglish understanding with generous free tier.'}
                 </p>
               </div>
 
@@ -5480,21 +5481,113 @@ export default function AdminSettingsPage() {
                     <span>OpenAI (ChatGPT)</span>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                    GPT-4o-mini
+                    GPT-4o
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                   {lang === 'bn'
-                    ? 'বিশ্বস্ত এআই মডেল, স্ট্রাকচার্ড ডাটা ও ডিসপ্যুট কেস বিশ্লেষণে অত্যন্ত নির্ভুল।'
-                    : 'Reliable industry-standard intelligence for dispute arbitration and risk scoring.'}
+                    ? 'বিশ্বস্ত এআই মডেল, স্ট্রাকচার্ড ডাটা ও ডিসপ্যুট কেস বিশ্লেষণে নির্ভুল।'
+                    : 'Reliable industry-standard intelligence for dispute arbitration.'}
+                </p>
+              </div>
+
+              <div
+                onClick={() =>
+                  setSettings((prev: any) => ({
+                    ...prev,
+                    ai: {
+                      ...prev.ai,
+                      provider: 'QWEN',
+                      modelName:
+                        prev.ai?.provider === 'QWEN'
+                          ? prev.ai.modelName
+                          : 'qwen-plus',
+                    },
+                  }))
+                }
+                className={`cursor-pointer p-4 rounded-2xl border-2 transition-all ${
+                  settings.ai?.provider === 'QWEN'
+                    ? 'border-purple-500 bg-purple-500/5 shadow-md shadow-purple-500/10'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 font-bold text-sm text-slate-900 dark:text-white">
+                    <span className="text-xl">🟣</span>
+                    <span>Qwen & OpenRouter</span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-400">
+                    Qwen 2.5/27B
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                  {lang === 'bn'
+                    ? 'Qwen 2.5 / 27B / 72B, Alibaba DashScope, OpenRouter, Groq বা নিজস্ব OpenAI-কম্প্যাটিবল এন্ডপয়েন্ট।'
+                    : 'Qwen 2.5/27B/72B via DashScope, OpenRouter, Groq, or custom endpoints.'}
                 </p>
               </div>
             </div>
 
+            {/* Qwen / Custom Base URL */}
+            {settings.ai?.provider === 'QWEN' && (
+              <div className="p-4 bg-purple-500/5 rounded-2xl border border-purple-500/20 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {lang === 'bn' ? 'এপিআই বেস ইউআরএল (API Base URL)' : 'API Base URL'}
+                    <span className="text-slate-400 font-normal ml-1">(Optional for OpenRouter / DashScope)</span>
+                  </label>
+                  <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold">
+                    OpenAI-Compatible
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  value={settings.ai?.baseUrl || ''}
+                  onChange={(e) =>
+                    setSettings((prev: any) => ({
+                      ...prev,
+                      ai: { ...prev.ai, baseUrl: e.target.value },
+                    }))
+                  }
+                  placeholder="https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+                {/* Presets */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[10px] text-slate-400 font-semibold mr-1">Quick Presets:</span>
+                  {[
+                    { label: 'OpenRouter', url: 'https://openrouter.ai/api/v1' },
+                    { label: 'DashScope (Intl)', url: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1' },
+                    { label: 'DashScope (China)', url: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
+                    { label: 'Groq', url: 'https://api.groq.com/openai/v1' },
+                    { label: 'Ollama (Local)', url: 'http://localhost:11434/v1' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() =>
+                        setSettings((prev: any) => ({
+                          ...prev,
+                          ai: { ...prev.ai, baseUrl: preset.url },
+                        }))
+                      }
+                      className="text-[10px] px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-950 text-slate-600 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-400 border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* API Key Input & Test Connection */}
             <div className="space-y-3">
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                {settings.ai?.provider === 'OPENAI' ? 'OpenAI API Key' : 'Google Gemini API Key'}
+                {settings.ai?.provider === 'QWEN'
+                  ? 'Qwen / OpenRouter API Key'
+                  : settings.ai?.provider === 'OPENAI'
+                  ? 'OpenAI API Key'
+                  : 'Google Gemini API Key'}
                 <span className="text-rose-500 ml-1">*</span>
               </label>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
@@ -5509,7 +5602,9 @@ export default function AdminSettingsPage() {
                       }))
                     }
                     placeholder={
-                      settings.ai?.provider === 'OPENAI'
+                      settings.ai?.provider === 'QWEN'
+                        ? 'sk-... or sk-or-v1-...'
+                        : settings.ai?.provider === 'OPENAI'
                         ? 'sk-proj-...'
                         : 'AIzaSy...'
                     }
@@ -5584,7 +5679,14 @@ export default function AdminSettingsPage() {
                   {lang === 'bn' ? 'এআই মডেল (Model Name)' : 'AI Model Name'}
                 </label>
                 <select
-                  value={settings.ai?.modelName || (settings.ai?.provider === 'OPENAI' ? 'gpt-4o-mini' : 'gemini-2.0-flash')}
+                  value={
+                    settings.ai?.modelName ||
+                    (settings.ai?.provider === 'OPENAI'
+                      ? 'gpt-4o-mini'
+                      : settings.ai?.provider === 'QWEN'
+                      ? 'qwen-plus'
+                      : 'gemini-2.0-flash')
+                  }
                   onChange={(e) =>
                     setSettings((prev: any) => ({
                       ...prev,
@@ -5599,6 +5701,16 @@ export default function AdminSettingsPage() {
                       <option value="gpt-4o">gpt-4o (Maximum Intelligence)</option>
                       <option value="gpt-3.5-turbo">gpt-3.5-turbo (Legacy)</option>
                     </>
+                  ) : settings.ai?.provider === 'QWEN' ? (
+                    <>
+                      <option value="qwen-plus">qwen-plus (Alibaba DashScope - Balanced)</option>
+                      <option value="qwen-max">qwen-max (Alibaba DashScope - Flagship Reasoning)</option>
+                      <option value="qwen-turbo">qwen-turbo (Alibaba DashScope - Ultra Fast)</option>
+                      <option value="qwen/qwen-2.5-72b-instruct">qwen/qwen-2.5-72b-instruct (OpenRouter - 72B)</option>
+                      <option value="qwen/qwen-2.5-32b-instruct">qwen/qwen-2.5-32b-instruct (OpenRouter - 32B)</option>
+                      <option value="qwen-2.5-27b">qwen-2.5-27b (Qwen 2.5 / 3 27B)</option>
+                      <option value="qwen/qwen-2.5-coder-32b-instruct">qwen/qwen-2.5-coder-32b-instruct (Coder)</option>
+                    </>
                   ) : (
                     <>
                       <option value="gemini-2.0-flash">gemini-2.0-flash (Recommended - Next Gen Fast)</option>
@@ -5607,6 +5719,27 @@ export default function AdminSettingsPage() {
                     </>
                   )}
                 </select>
+
+                {/* Custom Model Name Input for Qwen or any custom model */}
+                <div className="mt-2 space-y-1">
+                  <input
+                    type="text"
+                    value={settings.ai?.modelName || ''}
+                    onChange={(e) =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        ai: { ...prev.ai, modelName: e.target.value },
+                      }))
+                    }
+                    placeholder="Or type custom model: e.g. Qwen: Qwen3.8 27B, qwen-2.5-27b..."
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <p className="text-[10px] text-slate-400">
+                    {lang === 'bn'
+                      ? 'আপনার পছন্দের Qwen বা অন্য যেকোনো মডেলের নাম (যেমন: Qwen: Qwen3.8 27B) এখানে সরাসরি লিখতে পারেন।'
+                      : 'You can directly type any custom model identifier (e.g. Qwen: Qwen3.8 27B).'}
+                  </p>
+                </div>
               </div>
 
               <div>

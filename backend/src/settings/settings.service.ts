@@ -125,8 +125,9 @@ export const DEFAULT_SETTINGS = {
   },
   ai: {
     enabled: false,
-    provider: 'GEMINI', // 'GEMINI' | 'OPENAI'
+    provider: 'GEMINI', // 'GEMINI' | 'OPENAI' | 'QWEN'
     apiKey: '',
+    baseUrl: '', // Custom API base URL (e.g. for Qwen, OpenRouter, DashScope, Groq)
     modelName: 'gemini-2.0-flash',
     riskThreshold: 70, // 50 to 95
     scamDetectionEnabled: true,
@@ -300,7 +301,7 @@ export class SettingsService {
   /**
    * Test AI Connection directly for Admin
    */
-  async testAiConnection(provider: string, apiKey: string, modelName?: string) {
+  async testAiConnection(provider: string, apiKey: string, modelName?: string, baseUrl?: string) {
     const prov = (provider || 'GEMINI').toUpperCase();
     const key = (apiKey || '').trim();
     if (!key) {
@@ -373,6 +374,61 @@ export class SettingsService {
         };
       } catch (err: any) {
         return { success: false, latency: Date.now() - startTime, message: err.message || 'OpenAI connection failed' };
+      }
+    } else if (prov === 'QWEN' || prov === 'CUSTOM') {
+      const model = modelName?.trim() || 'qwen-plus';
+      let endpoint = (baseUrl || '').trim();
+      if (!endpoint) {
+        if (key.startsWith('sk-or-')) {
+          endpoint = 'https://openrouter.ai/api/v1';
+        } else if (key.startsWith('gsk_')) {
+          endpoint = 'https://api.groq.com/openai/v1';
+        } else {
+          endpoint = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
+        }
+      }
+      const cleanBase = endpoint.replace(/\/+$/, '');
+      const url = cleanBase.endsWith('/chat/completions')
+        ? cleanBase
+        : `${cleanBase}/chat/completions`;
+
+      try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${key}`,
+        };
+        if (key.startsWith('sk-or-')) {
+          headers['HTTP-Referer'] = 'https://safnexbd.com';
+          headers['X-Title'] = 'SafnexBD';
+        }
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model,
+            messages: [{ role: 'user', content: 'Respond with exactly: SafnexBD AI connection successful' }],
+            max_tokens: 30,
+          }),
+        });
+        const latency = Date.now() - startTime;
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          const errMsg = errData?.error?.message || errData?.message || `HTTP ${res.status}: ${res.statusText}`;
+          return { success: false, latency, message: `Qwen/Custom Error: ${errMsg}` };
+        }
+        const data = await res.json();
+        const reply = data?.choices?.[0]?.message?.content || '';
+        return {
+          success: true,
+          latency,
+          provider: 'QWEN',
+          model,
+          message: 'Qwen / OpenAI-compatible API connection successful!',
+          reply: reply.trim(),
+        };
+      } catch (err: any) {
+        return { success: false, latency: Date.now() - startTime, message: err.message || 'Qwen connection failed' };
       }
     }
 

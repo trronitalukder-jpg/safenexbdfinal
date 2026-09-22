@@ -48,12 +48,13 @@ export class SettingsController {
   @Roles('SUPER_ADMIN', 'ADMIN')
   @Post('ai/test-connection')
   async testAiConnection(
-    @Body() body: { provider: string; apiKey: string; modelName?: string },
+    @Body() body: { provider: string; apiKey: string; modelName?: string; baseUrl?: string },
   ) {
     return this.settingsService.testAiConnection(
       body.provider,
       body.apiKey,
       body.modelName,
+      body.baseUrl,
     );
   }
 

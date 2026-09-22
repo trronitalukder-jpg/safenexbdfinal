@@ -216,6 +216,25 @@ Current message to analyze:
           userPrompt,
         );
         return this.parseAiResponse(response, heuristic);
+      } else if (aiConfig.provider === 'QWEN' || aiConfig.provider === 'CUSTOM') {
+        let endpoint = (aiConfig.baseUrl || '').trim();
+        if (!endpoint) {
+          if (aiConfig.apiKey.startsWith('sk-or-')) {
+            endpoint = 'https://openrouter.ai/api/v1';
+          } else if (aiConfig.apiKey.startsWith('gsk_')) {
+            endpoint = 'https://api.groq.com/openai/v1';
+          } else {
+            endpoint = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
+          }
+        }
+        const response = await this.callOpenAi(
+          aiConfig.apiKey,
+          aiConfig.modelName || 'qwen-plus',
+          systemPrompt,
+          userPrompt,
+          endpoint,
+        );
+        return this.parseAiResponse(response, heuristic);
       } else {
         // Default to GEMINI
         const response = await this.callGemini(
@@ -319,6 +338,24 @@ ${evidenceList.map((e) => `Uploaded by ${e.uploadedBy}: ${e.description || 'Evid
           systemPrompt,
           userPrompt,
         );
+      } else if (aiConfig.provider === 'QWEN' || aiConfig.provider === 'CUSTOM') {
+        let endpoint = (aiConfig.baseUrl || '').trim();
+        if (!endpoint) {
+          if (aiConfig.apiKey.startsWith('sk-or-')) {
+            endpoint = 'https://openrouter.ai/api/v1';
+          } else if (aiConfig.apiKey.startsWith('gsk_')) {
+            endpoint = 'https://api.groq.com/openai/v1';
+          } else {
+            endpoint = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
+          }
+        }
+        rawText = await this.callOpenAi(
+          aiConfig.apiKey,
+          aiConfig.modelName || 'qwen-plus',
+          systemPrompt,
+          userPrompt,
+          endpoint,
+        );
       } else {
         rawText = await this.callGemini(
           aiConfig.apiKey,
@@ -395,14 +432,25 @@ ${evidenceList.map((e) => `Uploaded by ${e.uploadedBy}: ${e.description || 'Evid
     model: string,
     systemPrompt: string,
     userPrompt: string,
+    baseUrl: string = 'https://api.openai.com/v1',
   ): Promise<string> {
-    const url = 'https://api.openai.com/v1/chat/completions';
+    const cleanBase = baseUrl.replace(/\/+$/, '');
+    const url = cleanBase.endsWith('/chat/completions')
+      ? cleanBase
+      : `${cleanBase}/chat/completions`;
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    };
+    if (apiKey.startsWith('sk-or-')) {
+      headers['HTTP-Referer'] = 'https://safnexbd.com';
+      headers['X-Title'] = 'SafnexBD';
+    }
+
     const res = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers,
       body: JSON.stringify({
         model,
         messages: [
@@ -416,7 +464,7 @@ ${evidenceList.map((e) => `Uploaded by ${e.uploadedBy}: ${e.description || 'Evid
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `OpenAI API HTTP ${res.status}`);
+      throw new Error(err?.error?.message || err?.message || `API HTTP ${res.status}`);
     }
 
     const data = await res.json();
