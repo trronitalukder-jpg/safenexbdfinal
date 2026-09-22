@@ -343,11 +343,11 @@ export default function AdminLayout({
           {/* Quick Home Page Link */}
           <Link
             href="/"
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 transition"
+            className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 transition shrink-0"
             title={lang === 'bn' ? 'হোম পেজে যান' : 'Go to Home Page'}
           >
-            <Home className="w-3.5 h-3.5 text-amber-500" />
-            <span>{lang === 'bn' ? 'হোম পেজ' : 'Home'}</span>
+            <Home className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-amber-500" />
+            <span className="hidden sm:inline">{lang === 'bn' ? 'হোম পেজ' : 'Home'}</span>
           </Link>
 
           {/* Guides Button (left of language toggle) */}

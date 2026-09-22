@@ -249,7 +249,7 @@ export default function DashboardLayout({
         {/* Dedicated Clean Dashboard Header Bar */}
         <header className="h-16 flex-shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-3 sm:px-6 lg:px-8 flex items-center justify-between z-10">
           {/* Left: Mobile Menu Toggle & Title */}
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-2">
             <button
               onClick={() => setMobileDrawerOpen(true)}
               className="md:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-sky-600 transition shrink-0"
@@ -258,7 +258,7 @@ export default function DashboardLayout({
               <Menu className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
               <div className="flex flex-col min-w-0 justify-center">
                 <span className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white truncate leading-tight">
                   {user.firstName} {user.lastName}
@@ -278,10 +278,10 @@ export default function DashboardLayout({
             <Link
               href="/"
               title={lang === 'bn' ? 'হোম পেজে যান' : 'Go to Home Page'}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 transition"
+              className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 transition shrink-0"
             >
-              <Home className="w-3.5 h-3.5 text-sky-500" />
-              <span>{lang === 'bn' ? 'হোম' : 'Home'}</span>
+              <Home className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-sky-500" />
+              <span className="hidden sm:inline">{lang === 'bn' ? 'হোম' : 'Home'}</span>
             </Link>
 
             {/* Direct Marketplace Link */}
@@ -308,7 +308,7 @@ export default function DashboardLayout({
               type="button"
               onClick={toggleLang}
               title={lang === 'bn' ? 'Switch to English' : 'বাংলায় পরিবর্তন করুন'}
-              className="flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 transition"
+              className="hidden sm:flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 transition"
             >
               <Globe className="w-3.5 h-3.5 text-sky-500" />
               <span>{lang === 'bn' ? 'বাং' : 'EN'}</span>
@@ -319,7 +319,7 @@ export default function DashboardLayout({
               type="button"
               onClick={toggleTheme}
               title={theme === 'dark' ? (lang === 'bn' ? 'লাইট মোড' : 'Light Mode') : (lang === 'bn' ? 'ডার্ক মোড' : 'Dark Mode')}
-              className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 transition"
+              className="hidden sm:flex p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 transition"
             >
               {theme === 'dark' ? (
                 <Sun className="w-4 h-4 text-amber-400" />
