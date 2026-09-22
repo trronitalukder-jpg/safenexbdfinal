@@ -19,6 +19,7 @@ import {
   ExternalLink,
   ChevronsUpDown,
   Home,
+  LogOut,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -72,7 +73,7 @@ const CATEGORY_DEFINITIONS: CategoryMeta[] = [
 export const AdminSidebar = ({ onClose, isMobile = false }: AdminSidebarProps) => {
   const pathname = usePathname();
   const { lang } = useLanguage();
-  const { user, isSuperAdmin, hasAdminPermission } = useAuthStore();
+  const { user, isSuperAdmin, hasAdminPermission, logout } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Dropdown section collapse state: key -> boolean (true = collapsed, false/undefined = expanded)
@@ -376,6 +377,22 @@ export const AdminSidebar = ({ onClose, isMobile = false }: AdminSidebarProps) =
             </span>
           </div>
         )}
+
+        {/* Logout Button */}
+        <button
+          type="button"
+          onClick={() => {
+            onClose?.();
+            logout();
+          }}
+          className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-bold text-rose-400 hover:text-white bg-rose-500/10 hover:bg-rose-600/80 border border-rose-500/30 transition shadow-xs cursor-pointer group"
+        >
+          <div className="flex items-center gap-2">
+            <LogOut className="w-4 h-4 text-rose-400 transition-transform group-hover:scale-110" />
+            <span>{lang === 'bn' ? 'লগআউট করুন' : 'Logout'}</span>
+          </div>
+          <span className="text-[10px] text-rose-400/70 font-mono">ESC</span>
+        </button>
       </div>
     </aside>
   );

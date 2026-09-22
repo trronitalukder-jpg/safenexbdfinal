@@ -22,6 +22,7 @@ import {
   Coffee,
   Power,
   ChevronDown,
+  LogOut,
 } from 'lucide-react';
 import { AdminSidebar } from '@/components/layout/AdminSidebar';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -40,7 +41,7 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, isLoading, isAdmin, isSuperAdmin, hasAdminPermission, refreshMe } = useAuthStore();
+  const { user, isLoading, isAdmin, isSuperAdmin, hasAdminPermission, refreshMe, logout } = useAuthStore();
   const { lang, toggleLang } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -477,6 +478,17 @@ export default function AdminLayout({
               {user.firstName}
             </span>
           </div>
+
+          {/* Quick Logout Button (Desktop, Tab, Laptop) */}
+          <button
+            type="button"
+            onClick={() => logout()}
+            title={lang === 'bn' ? 'লগআউট করুন' : 'Logout'}
+            className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500 text-rose-400 hover:text-white text-xs font-bold border border-rose-500/30 transition shadow-xs cursor-pointer shrink-0 ml-1"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">{lang === 'bn' ? 'লগআউট' : 'Logout'}</span>
+          </button>
         </div>
       </header>
 

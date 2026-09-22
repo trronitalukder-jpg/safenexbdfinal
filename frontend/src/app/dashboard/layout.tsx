@@ -367,6 +367,17 @@ export default function DashboardLayout({
                 {user.firstName}
               </span>
             </Link>
+
+            {/* Quick Logout Button (Desktop, Tab, Laptop) */}
+            <button
+              type="button"
+              onClick={logout}
+              title={lang === 'bn' ? 'লগআউট করুন' : 'Logout'}
+              className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 text-xs font-bold transition shadow-xs cursor-pointer shrink-0"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">{lang === 'bn' ? 'লগআউট' : 'Logout'}</span>
+            </button>
           </div>
         </header>
 

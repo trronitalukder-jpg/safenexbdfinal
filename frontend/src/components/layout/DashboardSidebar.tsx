@@ -61,8 +61,9 @@ export const DashboardSidebar = () => {
   ];
 
   return (
-    <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between p-4 h-full min-h-screen">
-      <div>
+    <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full overflow-hidden">
+      {/* Scrollable Navigation Body */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
         {/* Brand Logo */}
         <div className="flex items-center justify-between pb-4 mb-3 border-b border-slate-100 dark:border-slate-800">
           <Link href="/dashboard" className="flex items-center gap-2">
@@ -155,39 +156,39 @@ export const DashboardSidebar = () => {
             );
           })}
         </nav>
+
+        {/* App Install Button in Dashboard Sidebar */}
+        <div className="pt-3">
+          <button
+            type="button"
+            onClick={installApp}
+            className="w-full p-2 rounded-2xl bg-gradient-to-r from-sky-500/10 to-indigo-500/10 hover:from-sky-500/20 hover:to-indigo-500/20 border border-sky-500/25 flex items-center justify-between text-left transition group shadow-xs"
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-sky-600 text-white flex items-center justify-center group-hover:scale-105 transition shadow-xs">
+                <Smartphone className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <div className="text-[11px] font-bold text-slate-900 dark:text-white leading-tight">
+                  {isInstalled ? (lang === 'bn' ? '✓ অ্যাপ ইনস্টলড' : '✓ App Installed') : (lang === 'bn' ? 'অ্যাপ ইনস্টল করুন' : 'Install App')}
+                </div>
+                <div className="text-[9px] text-slate-400">
+                  {isInstalled ? (lang === 'bn' ? 'অফিসিয়াল PWA' : 'Official PWA') : (lang === 'bn' ? '১-ট্যাপে ব্যবহারের জন্য' : 'For 1-tap access')}
+                </div>
+              </div>
+            </div>
+            <Download className="w-3.5 h-3.5 text-sky-500 group-hover:translate-y-0.5 transition shrink-0" />
+          </button>
+        </div>
       </div>
 
-      {/* App Install Button in Dashboard Sidebar */}
-      <div className="pt-2">
-        <button
-          type="button"
-          onClick={installApp}
-          className="w-full mb-2 p-2 rounded-2xl bg-gradient-to-r from-sky-500/10 to-indigo-500/10 hover:from-sky-500/20 hover:to-indigo-500/20 border border-sky-500/25 flex items-center justify-between text-left transition group shadow-xs"
-        >
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl bg-sky-600 text-white flex items-center justify-center group-hover:scale-105 transition shadow-xs">
-              <Smartphone className="w-3.5 h-3.5" />
-            </div>
-            <div>
-              <div className="text-[11px] font-bold text-slate-900 dark:text-white leading-tight">
-                {isInstalled ? (lang === 'bn' ? '✓ অ্যাপ ইনস্টলড' : '✓ App Installed') : (lang === 'bn' ? 'অ্যাপ ইনস্টল করুন' : 'Install App')}
-              </div>
-              <div className="text-[9px] text-slate-400">
-                {isInstalled ? (lang === 'bn' ? 'অফিসিয়াল PWA' : 'Official PWA') : (lang === 'bn' ? '১-ট্যাপে ব্যবহারের জন্য' : 'For 1-tap access')}
-              </div>
-            </div>
-          </div>
-          <Download className="w-3.5 h-3.5 text-sky-500 group-hover:translate-y-0.5 transition shrink-0" />
-        </button>
-      </div>
-
-      {/* Footer Controls: Language, Theme & Logout */}
-      <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+      {/* Fixed Bottom Footer Controls: Language, Theme & Logout (ALWAYS VISIBLE) */}
+      <div className="flex-shrink-0 p-3.5 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur space-y-2">
         <div className="flex items-center justify-between px-1">
           {/* Language Switch */}
           <button
             onClick={toggleLang}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition cursor-pointer"
           >
             <Globe className="w-3.5 h-3.5" />
             <span>{lang === 'bn' ? 'বাংলা' : 'EN'}</span>
@@ -196,19 +197,23 @@ export const DashboardSidebar = () => {
           {/* Theme Switch */}
           <button
             onClick={toggleTheme}
-            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition"
+            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition cursor-pointer"
           >
             {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
           </button>
         </div>
 
-        {/* Logout button */}
+        {/* Prominent Logout button */}
         <button
+          type="button"
           onClick={logout}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition text-left"
+          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900/50 transition cursor-pointer group shadow-xs"
         >
-          <LogOut className="w-4 h-4" />
-          <span>{t('logout')}</span>
+          <div className="flex items-center gap-2">
+            <LogOut className="w-4 h-4 text-rose-500 transition-transform group-hover:scale-110" />
+            <span>{lang === 'bn' ? 'লগআউট করুন' : 'Logout'}</span>
+          </div>
+          <span className="text-[10px] text-rose-400 opacity-60">ESC</span>
         </button>
       </div>
     </aside>
