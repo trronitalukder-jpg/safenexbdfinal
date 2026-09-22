@@ -230,11 +230,21 @@ export class SettingsService {
     };
   }
 
+  private publicSettingsCache: { data: any; expiresAt: number } | null = null;
+
+  public clearPublicSettingsCache() {
+    this.publicSettingsCache = null;
+  }
+
   /**
    * Get public settings (for frontend web visitors / public layout)
    * Excludes sensitive tokens like Facebook CAPI token and AI API keys
    */
   async getPublicSettings() {
+    if (this.publicSettingsCache && Date.now() < this.publicSettingsCache.expiresAt) {
+      return this.publicSettingsCache.data;
+    }
+
     const all = await this.getAllSettings();
 
     // Mask or omit server-side secret tokens
@@ -249,7 +259,7 @@ export class SettingsService {
       events: all.tracking.events || DEFAULT_SETTINGS.tracking.events,
     };
 
-    return {
+    const result = {
       general: all.general,
       seo: all.seo,
       tracking: publicTracking,
@@ -279,6 +289,13 @@ export class SettingsService {
         dealProposalEnabled: Boolean(all.ai?.dealProposalEnabled),
       },
     };
+
+    this.publicSettingsCache = {
+      data: result,
+      expiresAt: Date.now() + 60 * 1000, // Cache for 60 seconds
+    };
+
+    return result;
   }
 
   /**
@@ -553,6 +570,7 @@ export class SettingsService {
     }
 
     await Promise.all(updates);
+    this.clearPublicSettingsCache();
 
     // Record immutable audit log
     if (adminId) {

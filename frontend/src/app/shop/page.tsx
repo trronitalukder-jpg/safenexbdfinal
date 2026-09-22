@@ -22,6 +22,7 @@ import {
 import { useLanguage } from '@/context/LanguageContext';
 import { api } from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
+import { fetchWithCache } from '@/lib/cache';
 
 function BidBadge({ position }: { position: number; expiresAt?: string }) {
   return (
@@ -47,7 +48,6 @@ function ShopContent() {
   const [sortBy, setSortBy] = useState('newest');
 
   const fetchProducts = () => {
-    setLoading(true);
     const query = new URLSearchParams();
     query.append('scope', 'SHOP');
     if (search) query.append('search', search);
@@ -55,21 +55,37 @@ function ShopContent() {
     if (selectedType) query.append('type', selectedType);
     if (sortBy) query.append('sortBy', sortBy);
 
-    api.get(`/products?${query.toString()}`)
-      .then((res: any) => {
+    const cacheKey = `shop:products:${query.toString()}`;
+    fetchWithCache(
+      cacheKey,
+      async () => {
+        const res: any = await api.get(`/products?${query.toString()}`);
         const data = res?.data !== undefined ? res.data : res;
-        setProducts(data.items || (Array.isArray(data) ? data : []));
+        return data.items || (Array.isArray(data) ? data : []);
+      },
+      20000,
+    )
+      .then((items) => {
+        setProducts(items);
+        setLoading(false);
       })
-      .catch(() => setProducts([]))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        setProducts([]);
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
-    api.get('/categories')
-      .then((res: any) => {
+    fetchWithCache(
+      'common:categories',
+      async () => {
+        const res: any = await api.get('/categories');
         const data = res?.data !== undefined ? res.data : res;
-        setCategories(Array.isArray(data) ? data : []);
-      })
+        return Array.isArray(data) ? data : [];
+      },
+      60000,
+    )
+      .then((cats) => setCategories(cats))
       .catch(() => {});
   }, []);
 

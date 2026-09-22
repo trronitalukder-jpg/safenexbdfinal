@@ -80,123 +80,35 @@ export default function HomePage() {
     },
   });
 
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    // Load sliders
-    api.get('/cms/sliders')
+    // 1 single aggregated request for the entire home page
+    api.get('/products/home-feed')
       .then((res: any) => {
         const data = unwrap(res);
-        setSliders(Array.isArray(data) ? data : []);
-      })
-      .catch(() => setSliders([]));
-
-    // Load admin settings
-    api.get('/bids/settings')
-      .then((settingsRes: any) => {
-        const settingsData = unwrap(settingsRes);
-        const homeLimits = settingsData?.homePageSettings || {};
-        const mergedSettings = {
-          showShopProducts: homeLimits.showShopProducts !== undefined ? homeLimits.showShopProducts : true,
-          shopProductsCount: homeLimits.shopProductsCount || 12,
-          showDigitalProducts: homeLimits.showDigitalProducts !== undefined ? homeLimits.showDigitalProducts : true,
-          digitalProductsCount: homeLimits.digitalProductsCount || 8,
-          showPhysicalProducts: homeLimits.showPhysicalProducts !== undefined ? homeLimits.showPhysicalProducts : true,
-          physicalProductsCount: homeLimits.physicalProductsCount || 8,
-          showMoneyExchange: homeLimits.showMoneyExchange !== undefined ? homeLimits.showMoneyExchange : true,
-          moneyExchangeCount: homeLimits.moneyExchangeCount || 6,
-          showUsers: homeLimits.showUsers !== undefined ? homeLimits.showUsers : true,
-          usersCount: homeLimits.usersCount || 6,
-          sectionOrder: homeLimits.sectionOrder || [
-            'shopProducts',
-            'digitalProducts',
-            'physicalProducts',
-            'moneyExchange',
-            'users',
-          ],
-          layoutStyles: homeLimits.layoutStyles || {
-            shopProducts: 'grid',
-            digitalProducts: 'grid',
-            physicalProducts: 'grid',
-            moneyExchange: 'grid',
-            users: 'grid',
-          },
-          sectionTitles: homeLimits.sectionTitles || {
-            shopProducts: { bn: 'শপ প্রোডাক্টস', en: 'Shop Products', sub: 'জনপ্রিয় ও শীর্ষস্থানীয় পণ্যসমূহ' },
-            digitalProducts: { bn: 'ডিজিটাল প্রোডাক্টস', en: 'Digital Products', sub: 'সরাসরি ডাউনলোডযোগ্য প্রোডাক্ট' },
-            physicalProducts: { bn: 'ফিজিক্যাল প্রোডাক্টস', en: 'Physical Products', sub: 'হোম ডেলিভারি সহ বাস্তব পণ্য' },
-            moneyExchange: { bn: 'মানি এক্সচেঞ্জ', en: 'Money Exchange', sub: 'নিরাপদ ও বিশ্বস্ত লেনদেন সার্ভিস' },
-            users: { bn: 'টপ ইউজার ও সেলার', en: 'Top Users & Sellers', sub: 'আমাদের শীর্ষ ভেরিফাইড প্রোফাইল' },
-          },
-        };
-        setHomeSettings(mergedSettings);
-
-        // Fetch Shop Products if enabled
-        if (mergedSettings.showShopProducts) {
-          api.get(`/products?scope=HOME_PAGE&limit=${mergedSettings.shopProductsCount}`)
-            .then((res: any) => {
-              const data = unwrap(res);
-              setShopProducts(Array.isArray(data) ? data : data?.items || []);
-            })
-            .catch(() => setShopProducts([]));
-        }
-
-        // Fetch Digital Products if enabled
-        if (mergedSettings.showDigitalProducts) {
-          api.get(`/products?productType=DIGITAL_DOWNLOAD&scope=DIGITAL_PRODUCTS&limit=${mergedSettings.digitalProductsCount}`)
-            .then((res: any) => {
-              const data = unwrap(res);
-              setDigitalProducts(Array.isArray(data) ? data : data?.items || []);
-            })
-            .catch(() => setDigitalProducts([]));
-        }
-
-        // Fetch Physical Products if enabled
-        if (mergedSettings.showPhysicalProducts) {
-          api.get(`/products?productType=PHYSICAL&scope=PHYSICAL_PRODUCTS&limit=${mergedSettings.physicalProductsCount}`)
-            .then((res: any) => {
-              const data = unwrap(res);
-              setPhysicalProducts(Array.isArray(data) ? data : data?.items || []);
-            })
-            .catch(() => setPhysicalProducts([]));
-        }
-
-        // Fetch Money Exchange Products if enabled
-        if (mergedSettings.showMoneyExchange) {
-          api.get(`/products?canonicalUrl=/money-exchange&scope=MONEY_EXCHANGE&limit=${mergedSettings.moneyExchangeCount}`)
-            .then((res: any) => {
-              const data = unwrap(res);
-              setMoneyExchangeProducts(Array.isArray(data) ? data : data?.items || []);
-            })
-            .catch(() => setMoneyExchangeProducts([]));
-        }
-
-        // Fetch Top Users if enabled
-        if (mergedSettings.showUsers) {
-          api.get(`/users/search?limit=${mergedSettings.usersCount}&scope=HOME_PAGE`)
-            .then((res: any) => {
-              const data = unwrap(res);
-              setTopUsers(Array.isArray(data) ? data : []);
-            })
-            .catch(() => setTopUsers([]));
+        if (data) {
+          if (Array.isArray(data.sliders)) setSliders(data.sliders);
+          if (data.settings) setHomeSettings((prev: any) => ({ ...prev, ...data.settings }));
+          if (Array.isArray(data.shopProducts)) setShopProducts(data.shopProducts);
+          if (Array.isArray(data.digitalProducts)) setDigitalProducts(data.digitalProducts);
+          if (Array.isArray(data.physicalProducts)) setPhysicalProducts(data.physicalProducts);
+          if (Array.isArray(data.moneyExchangeProducts)) setMoneyExchangeProducts(data.moneyExchangeProducts);
+          if (Array.isArray(data.topUsers)) setTopUsers(data.topUsers);
         }
       })
       .catch(() => {
-        // Fallback loads
-        api.get('/products?scope=HOME_PAGE&limit=12')
-          .then((res: any) => setShopProducts(unwrap(res)?.items || []))
-          .catch(() => {});
-        api.get('/products?productType=DIGITAL_DOWNLOAD&limit=8')
-          .then((res: any) => setDigitalProducts(unwrap(res)?.items || []))
-          .catch(() => {});
-        api.get('/products?productType=PHYSICAL&limit=8')
-          .then((res: any) => setPhysicalProducts(unwrap(res)?.items || []))
-          .catch(() => {});
-        api.get('/products?canonicalUrl=/money-exchange&limit=6')
-          .then((res: any) => setMoneyExchangeProducts(unwrap(res)?.items || []))
-          .catch(() => {});
-        api.get('/users/search?limit=6&scope=HOME_PAGE')
-          .then((res: any) => setTopUsers(unwrap(res) || []))
-          .catch(() => {});
-      });
+        // Fallback parallel loads if home-feed fails
+        Promise.allSettled([
+          api.get('/cms/sliders').then((r: any) => setSliders(unwrap(r) || [])).catch(() => {}),
+          api.get('/products?scope=HOME_PAGE&limit=12').then((r: any) => setShopProducts(unwrap(r)?.items || [])).catch(() => {}),
+          api.get('/products?productType=DIGITAL_DOWNLOAD&scope=DIGITAL_PRODUCTS&limit=8').then((r: any) => setDigitalProducts(unwrap(r)?.items || [])).catch(() => {}),
+          api.get('/products?productType=PHYSICAL&scope=PHYSICAL_PRODUCTS&limit=8').then((r: any) => setPhysicalProducts(unwrap(r)?.items || [])).catch(() => {}),
+          api.get('/products?canonicalUrl=/money-exchange&scope=MONEY_EXCHANGE&limit=6').then((r: any) => setMoneyExchangeProducts(unwrap(r)?.items || [])).catch(() => {}),
+          api.get('/users/search?limit=6&scope=HOME_PAGE').then((r: any) => setTopUsers(unwrap(r) || [])).catch(() => {}),
+        ]);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   // Slide autoplay
@@ -210,7 +122,8 @@ export default function HomePage() {
 
   // Section Renderers
   const renderShopProductsSection = () => {
-    if (!homeSettings.showShopProducts || shopProducts.length === 0) return null;
+    if (!homeSettings.showShopProducts) return null;
+    if (!loading && shopProducts.length === 0) return null;
     const titles = homeSettings.sectionTitles?.shopProducts || {};
     const titleText = (lang === 'bn' ? titles.bn : titles.en) || (lang === 'bn' ? 'শপ প্রোডাক্টস' : 'Shop Products');
     const subText = titles.sub || (lang === 'bn' ? 'সকল শীর্ষ পণ্য ও মার্কেটপ্লেস আইটেম' : 'All top rated products and marketplace items');
@@ -240,7 +153,18 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className={isCarousel ? 'flex gap-4 overflow-x-auto pb-4 scrollbar-thin' : 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6'}>
+        {loading && shopProducts.length === 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 space-y-3 animate-pulse">
+                <div className="aspect-video bg-slate-200 dark:bg-slate-800 rounded-lg" />
+                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
+                <div className="h-5 bg-slate-200 dark:bg-slate-800 rounded w-1/3" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={isCarousel ? 'flex gap-4 overflow-x-auto pb-4 scrollbar-thin' : 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6'}>
           {shopProducts.map((p) => {
             const mainImg = p.images?.[0]?.imageUrl || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&q=80';
             const hasActiveBid = Boolean(p.activeBid);
@@ -312,12 +236,14 @@ export default function HomePage() {
             );
           })}
         </div>
+        )}
       </section>
     );
   };
 
   const renderDigitalProductsSection = () => {
-    if (!homeSettings.showDigitalProducts || digitalProducts.length === 0) return null;
+    if (!homeSettings.showDigitalProducts) return null;
+    if (!loading && digitalProducts.length === 0) return null;
     const titles = homeSettings.sectionTitles?.digitalProducts || {};
     const titleText = (lang === 'bn' ? titles.bn : titles.en) || (lang === 'bn' ? 'ডিজিটাল প্রোডাক্টস ও সফটওয়্যার' : 'Digital Products & Software');
     const subText = titles.sub || (lang === 'bn' ? 'সফটওয়্যার, স্ক্রিপ্ট, ইবুক ও অ্যাকাউন্ট — সরাসরি নিরাপদ এসক্রোতে কিনুন' : 'Software, scripts, ebooks and accounts delivered instantly with safe escrow');
@@ -347,7 +273,18 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className={isCarousel ? 'flex gap-4 overflow-x-auto pb-4 scrollbar-thin' : 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6'}>
+        {loading && digitalProducts.length === 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 space-y-3 animate-pulse">
+                <div className="aspect-video bg-slate-200 dark:bg-slate-800 rounded-lg" />
+                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
+                <div className="h-5 bg-slate-200 dark:bg-slate-800 rounded w-1/3" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={isCarousel ? 'flex gap-4 overflow-x-auto pb-4 scrollbar-thin' : 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6'}>
           {digitalProducts.map((p) => {
             const mainImg = p.images?.[0]?.imageUrl || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&q=80';
             const hasActiveBid = Boolean(p.activeBid);
@@ -419,12 +356,14 @@ export default function HomePage() {
             );
           })}
         </div>
+        )}
       </section>
     );
   };
 
   const renderPhysicalProductsSection = () => {
-    if (!homeSettings.showPhysicalProducts || physicalProducts.length === 0) return null;
+    if (!homeSettings.showPhysicalProducts) return null;
+    if (!loading && physicalProducts.length === 0) return null;
     const titles = homeSettings.sectionTitles?.physicalProducts || {};
     const titleText = (lang === 'bn' ? titles.bn : titles.en) || (lang === 'bn' ? 'ফিজিক্যাল প্রোডাক্টস ও ইলেকট্রনিক্স' : 'Physical Products & Gadgets');
     const subText = titles.sub || (lang === 'bn' ? 'স্মার্ট গ্যাজেট, ইলেকট্রনিক্স ও পণ্য — পণ্য হাতে পেয়ে সন্তুষ্ট হলে তবেই টাকা ছাড়ুন' : 'Smart gadgets, electronics and hardware with guaranteed escrow delivery');
@@ -454,7 +393,18 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className={isCarousel ? 'flex gap-4 overflow-x-auto pb-4 scrollbar-thin' : 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6'}>
+        {loading && physicalProducts.length === 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 space-y-3 animate-pulse">
+                <div className="aspect-video bg-slate-200 dark:bg-slate-800 rounded-lg" />
+                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
+                <div className="h-5 bg-slate-200 dark:bg-slate-800 rounded w-1/3" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={isCarousel ? 'flex gap-4 overflow-x-auto pb-4 scrollbar-thin' : 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6'}>
           {physicalProducts.map((p) => {
             const mainImg = p.images?.[0]?.imageUrl || 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=600&q=80';
             const hasActiveBid = Boolean(p.activeBid);
@@ -526,12 +476,14 @@ export default function HomePage() {
             );
           })}
         </div>
+        )}
       </section>
     );
   };
 
   const renderMoneyExchangeSection = () => {
-    if (!homeSettings.showMoneyExchange || moneyExchangeProducts.length === 0) return null;
+    if (!homeSettings.showMoneyExchange) return null;
+    if (!loading && moneyExchangeProducts.length === 0) return null;
     const titles = homeSettings.sectionTitles?.moneyExchange || {};
     const titleText = (lang === 'bn' ? titles.bn : titles.en) || (lang === 'bn' ? 'মানি এক্সচেঞ্জ অফারসমূহ' : 'Money Exchange Offers');
     const subText = titles.sub || (lang === 'bn' ? 'ডলার, কারেন্সি ও ওয়ালেট ব্যালেন্স নিরাপদে এক্সচেঞ্জ করুন ১০০% এসক্রো হোল্ডে' : 'Exchange USD, EUR, USDT and e-wallets safely with automated escrow protection');
@@ -561,7 +513,18 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className={isCarousel ? 'flex gap-4 overflow-x-auto pb-4 scrollbar-thin' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6'}>
+        {loading && moneyExchangeProducts.length === 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 space-y-3 animate-pulse">
+                <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-1/3" />
+                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
+                <div className="h-5 bg-slate-200 dark:bg-slate-800 rounded w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={isCarousel ? 'flex gap-4 overflow-x-auto pb-4 scrollbar-thin' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6'}>
           {moneyExchangeProducts.map((p) => {
             const hasActiveBid = Boolean(p.activeBid);
 
@@ -620,12 +583,14 @@ export default function HomePage() {
             );
           })}
         </div>
+        )}
       </section>
     );
   };
 
   const renderUsersSection = () => {
-    if (!homeSettings.showUsers || topUsers.length === 0) return null;
+    if (!homeSettings.showUsers) return null;
+    if (!loading && topUsers.length === 0) return null;
     const titles = homeSettings.sectionTitles?.users || {};
     const titleText = (lang === 'bn' ? titles.bn : titles.en) || (lang === 'bn' ? 'টপ ইউজার ও সেলার আইডি' : 'Top Users & Verified Sellers');
     const subText = titles.sub || (lang === 'bn' ? 'প্ল্যাটফর্মের শীর্ষ সক্রিয় ইউজারদের সাথে সরাসরি চ্যাট বা লেনদেন শুরু করুন' : 'Connect and start verified transactions directly with top platform members');
@@ -655,7 +620,23 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className={isCarousel ? 'flex gap-4 overflow-x-auto pb-4 scrollbar-thin' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6'}>
+        {loading && topUsers.length === 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 space-y-4 animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-200 dark:bg-slate-800" />
+                  <div className="space-y-1.5 flex-1">
+                    <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-24" />
+                    <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-32" />
+                  </div>
+                </div>
+                <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={isCarousel ? 'flex gap-4 overflow-x-auto pb-4 scrollbar-thin' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6'}>
           {topUsers.map((u) => {
             const hasActiveBid = Boolean(u.activeBid);
 
@@ -737,6 +718,7 @@ export default function HomePage() {
           );
         })}
         </div>
+        )}
       </section>
     );
   };

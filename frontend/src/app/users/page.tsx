@@ -6,6 +6,7 @@ import { Search, UserCheck, MessageSquare, ShieldCheck, CheckCircle2, Clock, Map
 import { useLanguage } from '@/context/LanguageContext';
 import { api } from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
+import { fetchWithCache } from '@/lib/cache';
 
 function UserBidBadge({ position }: { position: number; expiresAt?: string }) {
   return (
@@ -23,15 +24,27 @@ export default function UsersSearchPage() {
   const [loading, setLoading] = useState(true);
 
   const searchUsers = () => {
-    setLoading(true);
     const params = new URLSearchParams();
     if (query) params.append('query', query);
     if (isVerified) params.append('isVerified', 'true');
 
-    api.get(`/users/search?${params.toString()}`)
-      .then((res: any) => setUsers(res || []))
-      .catch(() => setUsers([]))
-      .finally(() => setLoading(false));
+    const cacheKey = `users:search:${params.toString()}`;
+    fetchWithCache(
+      cacheKey,
+      async () => {
+        const res: any = await api.get(`/users/search?${params.toString()}`);
+        return res || [];
+      },
+      20000,
+    )
+      .then((data) => {
+        setUsers(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setUsers([]);
+        setLoading(false);
+      });
   };
 
   useEffect(() => {

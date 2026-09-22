@@ -62,6 +62,12 @@ export class ProductsController {
   }
 
   @Public()
+  @Get('home-feed')
+  async getHomeFeed() {
+    return this.productsService.getHomeFeed();
+  }
+
+  @Public()
   @Get(':slug')
   async getProductBySlug(@Param('slug') slug: string) {
     return this.productsService.getProductBySlug(slug);

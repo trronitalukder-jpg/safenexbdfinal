@@ -194,22 +194,54 @@ const SettingsContext = createContext<SettingsContextType>({
 });
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [settings, setSettings] = useState<WebsiteSettings>(DEFAULT_PUBLIC_SETTINGS);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [settings, setSettings] = useState<WebsiteSettings>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('safnexbd_public_settings');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return {
+            general: { ...DEFAULT_PUBLIC_SETTINGS.general, ...(parsed.general || {}) },
+            seo: { ...DEFAULT_PUBLIC_SETTINGS.seo, ...(parsed.seo || {}) },
+            tracking: { ...DEFAULT_PUBLIC_SETTINGS.tracking, ...(parsed.tracking || {}) },
+            localization: { ...DEFAULT_PUBLIC_SETTINGS.localization, ...(parsed.localization || {}) },
+            footer: { ...DEFAULT_PUBLIC_SETTINGS.footer, ...(parsed.footer || {}) },
+            system: { ...DEFAULT_PUBLIC_SETTINGS.system, ...(parsed.system || {}) },
+          };
+        }
+      } catch {}
+    }
+    return DEFAULT_PUBLIC_SETTINGS;
+  });
+
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return !localStorage.getItem('safnexbd_public_settings');
+    }
+    return true;
+  });
 
   const refreshSettings = useCallback(async () => {
     try {
       const res: any = await api.get('/settings/public');
       const data = res?.data !== undefined ? res.data : res;
       if (data && typeof data === 'object') {
-        setSettings((prev) => ({
-          general: { ...prev.general, ...(data.general || {}) },
-          seo: { ...prev.seo, ...(data.seo || {}) },
-          tracking: { ...prev.tracking, ...(data.tracking || {}) },
-          localization: { ...prev.localization, ...(data.localization || {}) },
-          footer: { ...prev.footer, ...(data.footer || {}) },
-          system: { ...prev.system, ...(data.system || {}) },
-        }));
+        setSettings((prev) => {
+          const next = {
+            general: { ...prev.general, ...(data.general || {}) },
+            seo: { ...prev.seo, ...(data.seo || {}) },
+            tracking: { ...prev.tracking, ...(data.tracking || {}) },
+            localization: { ...prev.localization, ...(data.localization || {}) },
+            footer: { ...prev.footer, ...(data.footer || {}) },
+            system: { ...prev.system, ...(data.system || {}) },
+          };
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('safnexbd_public_settings', JSON.stringify(next));
+            } catch {}
+          }
+          return next;
+        });
       }
     } catch (error) {
       console.warn('Failed to load public website settings, using defaults:', error);

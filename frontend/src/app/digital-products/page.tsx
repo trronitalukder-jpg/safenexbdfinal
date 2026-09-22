@@ -6,6 +6,7 @@ import { DownloadCloud, MessageSquare, Plus, Zap, Download, Sparkles, Clock } fr
 import { useLanguage } from '@/context/LanguageContext';
 import { api } from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
+import { fetchWithCache } from '@/lib/cache';
 
 const unwrap = (res: any) => (res && res.data !== undefined ? res.data : res);
 
@@ -24,13 +25,23 @@ export default function DigitalProductsPage() {
   const [filterTab, setFilterTab] = useState<'all' | 'account' | 'downloadable'>('all');
 
   useEffect(() => {
-    api.get('/products?productType=DIGITAL_DOWNLOAD&scope=DIGITAL_PRODUCTS&limit=30')
-      .then((res: any) => {
+    fetchWithCache(
+      'digital:products:all',
+      async () => {
+        const res: any = await api.get('/products?productType=DIGITAL_DOWNLOAD&scope=DIGITAL_PRODUCTS&limit=30');
         const data = unwrap(res);
-        setProducts(data?.items || []);
+        return data?.items || [];
+      },
+      20000,
+    )
+      .then((items) => {
+        setProducts(items);
+        setLoading(false);
       })
-      .catch(() => setProducts([]))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        setProducts([]);
+        setLoading(false);
+      });
   }, []);
 
   const filteredProducts = products.filter((p) => {
