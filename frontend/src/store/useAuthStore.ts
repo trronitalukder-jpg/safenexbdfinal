@@ -81,10 +81,25 @@ interface AuthState {
   hasAdminPermission: (permKey: string) => boolean;
 }
 
+const getInitialUser = (): UserProfile | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('safnexbd_user');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const getInitialToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('safnexbd_token') || null;
+};
+
 export const useAuthStore = create<AuthState>((set, get) => ({
-  user: null,
-  token: null,
-  isLoading: true,
+  user: getInitialUser(),
+  token: getInitialToken(),
+  isLoading: false,
 
   setAuth: (user, token, refreshToken) => {
     if (typeof window !== 'undefined') {
@@ -109,7 +124,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   refreshMe: async () => {
     try {
       const token = typeof window !== 'undefined'
-        ? (localStorage.getItem('safnexbd_token') || localStorage.getItem('safnexbd_token'))
+        ? localStorage.getItem('safnexbd_token')
         : null;
       if (!token) {
         set({ user: null, token: null, isLoading: false });
@@ -117,9 +132,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
       const res: any = await api.get('/auth/me');
       const userData = res?.uniqueUserId ? res : (res?.data?.data || res?.data || null);
-      set({ user: userData, token, isLoading: false });
-    } catch {
-      set({ user: null, token: null, isLoading: false });
+      if (userData) {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('safnexbd_user', JSON.stringify(userData));
+        }
+        set({ user: userData, token, isLoading: false });
+      } else {
+        set({ isLoading: false });
+      }
+    } catch (err: any) {
+      // ONLY clear session if server explicitly returns 401 Unauthorized
+      if (err?.response?.status === 401) {
+        get().logout();
+      } else {
+        set({ isLoading: false });
+      }
     }
   },
 

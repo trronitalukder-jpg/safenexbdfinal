@@ -200,6 +200,7 @@ export class ComplaintsService {
     ]);
 
     return {
+      complaints: items,
       items,
       total,
       pendingCount,

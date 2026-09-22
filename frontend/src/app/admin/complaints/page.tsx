@@ -129,11 +129,8 @@ export default function AdminComplaintsPage() {
 
       const res: any = await api.get('/complaints/admin', { params });
       const data = res?.data !== undefined ? res.data : res;
-      if (data && Array.isArray(data.complaints)) {
-        setComplaints(data.complaints);
-      } else if (Array.isArray(data)) {
-        setComplaints(data);
-      }
+      const list = data?.complaints || data?.items || (Array.isArray(data) ? data : []);
+      setComplaints(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error('Failed to load complaints', err);
     } finally {

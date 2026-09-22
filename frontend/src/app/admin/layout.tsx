@@ -60,7 +60,6 @@ export default function AdminLayout({
   const [unreadComplaintCount, setUnreadComplaintCount] = useState<number>(0);
 
   const fetchUnreadComplaintCount = React.useCallback(async () => {
-    if (!user || !isAdmin()) return;
     try {
       const res: any = await api.get('/complaints/admin/unread-count');
       const data = res?.data !== undefined ? res.data : res;
@@ -70,7 +69,7 @@ export default function AdminLayout({
     } catch {
       // route might not have any yet or soft-ignore
     }
-  }, [user, isAdmin]);
+  }, []);
 
   // Staff Workload & Duty Status
   const [dutyStatus, setDutyStatus] = useState<'ON_DUTY' | 'ON_BREAK' | 'OFF_DUTY'>('OFF_DUTY');
@@ -191,12 +190,11 @@ export default function AdminLayout({
       socket.off('complaint:read', handleComplaintRead);
       socket.off('complaint:update', handleComplaintUpdate);
     };
-  }, [user, isAdmin, notifPermission, playNotificationSound, sendNotification, fetchUnreadComplaintCount]);
+  }, [user?.id, notifPermission, playNotificationSound, sendNotification, fetchUnreadComplaintCount]);
 
   useEffect(() => {
     refreshMe();
-    fetchUnreadComplaintCount();
-  }, [fetchUnreadComplaintCount]);
+  }, []);
 
   useEffect(() => {
     fetchUnreadComplaintCount();
