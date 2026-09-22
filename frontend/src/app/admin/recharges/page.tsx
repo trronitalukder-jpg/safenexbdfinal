@@ -42,6 +42,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { getImageUrl, compressImage } from '@/lib/imageUtils';
+import { RechargeInstructionEditorModal } from '@/components/wallet/RechargeInstructionEditorModal';
 
 interface RechargeRequest {
   id: string;
@@ -114,6 +115,7 @@ export default function AdminRechargesPage() {
 
   // Tab State: 'requests' | 'settings'
   const [activeTab, setActiveTab] = useState<'requests' | 'settings'>('requests');
+  const [showInstructionEditor, setShowInstructionEditor] = useState(false);
 
   // Workload & Operations
   const [claimingTask, setClaimingTask] = useState(false);
@@ -680,6 +682,15 @@ export default function AdminRechargesPage() {
               <span>{lang === 'bn' ? 'পরবর্তী কাজ নিন' : 'Claim Next'}</span>
             </button>
           )}
+
+          <button
+            onClick={() => setShowInstructionEditor(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs transition shadow-md shadow-amber-500/20 cursor-pointer active:scale-95"
+            title={lang === 'bn' ? 'ইউজারদের জন্য রিচার্জ নির্দেশিকা সম্পাদনা করুন' : 'Edit recharge instructions for users'}
+          >
+            <Sparkles className="w-4 h-4 text-slate-950" />
+            <span>{lang === 'bn' ? 'রিচার্জ নির্দেশিকা এডিটর' : 'Recharge Instructions Editor'}</span>
+          </button>
 
           <button
             onClick={() => {
@@ -2544,6 +2555,20 @@ export default function AdminRechargesPage() {
           }}
         />
       )}
+
+      {/* Recharge Instructions Editor Modal */}
+      <RechargeInstructionEditorModal
+        isOpen={showInstructionEditor}
+        onClose={() => setShowInstructionEditor(false)}
+        onSaved={() => {
+          showToast(
+            lang === 'bn'
+              ? 'রিচার্জ নির্দেশিকা সফলভাবে আপডেট হয়েছে!'
+              : 'Recharge instructions updated successfully!',
+            'success',
+          );
+        }}
+      />
     </div>
   );
 }

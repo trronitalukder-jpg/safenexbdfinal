@@ -165,5 +165,27 @@ export class SettingsController {
     const userAgent = req.headers['user-agent'];
     return this.settingsService.sendMetaCapiEvent(body.eventName, body.params, ip, userAgent);
   }
+
+  /**
+   * Public endpoint to get wallet recharge instructions and step guide
+   */
+  @Public()
+  @Get('recharge-instructions')
+  async getRechargeInstructions() {
+    return this.settingsService.getRechargeInstructions();
+  }
+
+  /**
+   * Admin endpoint to update wallet recharge instructions
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  @Post('admin/recharge-instructions')
+  async saveRechargeInstructions(
+    @Body() body: any,
+    @CurrentUser('id') adminId: string,
+  ) {
+    return this.settingsService.saveRechargeInstructions(body, adminId);
+  }
 }
 

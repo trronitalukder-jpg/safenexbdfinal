@@ -2602,8 +2602,9 @@ function MessengerChatContent() {
                                         <button
                                           onClick={() => handleReleasePayRequest(meta.transactionId)}
                                           disabled={actionLoading}
-                                          className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5"
+                                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-md shadow-emerald-600/30 transition flex items-center justify-center gap-1.5 ring-2 ring-emerald-400/30 active:scale-[0.98] cursor-pointer"
                                         >
+                                          <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
                                           <span>💸 রিলিজ করুন</span>
                                         </button>
 
@@ -2635,9 +2636,9 @@ function MessengerChatContent() {
                                         <button
                                           onClick={() => handleRequestRelease(meta.transactionId)}
                                           disabled={actionLoading}
-                                          className="w-full py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 font-semibold text-xs border border-emerald-300/60 dark:border-emerald-700/60 transition flex items-center justify-center gap-1.5"
+                                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 transition flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
                                         >
-                                          <Bell className="w-3.5 h-3.5" />
+                                          <Bell className="w-3.5 h-3.5 text-slate-950 animate-bounce" />
                                           <span>🔔 রিলিজের অনুরোধ</span>
                                         </button>
 
@@ -2848,8 +2849,9 @@ function MessengerChatContent() {
                                         <button
                                           onClick={() => handleReleasePayRequest(meta.transactionId)}
                                           disabled={actionLoading}
-                                          className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5"
+                                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-md shadow-emerald-600/30 transition flex items-center justify-center gap-1.5 ring-2 ring-emerald-400/30 active:scale-[0.98] cursor-pointer"
                                         >
+                                          <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
                                           <span>💸 রিলিজ করুন</span>
                                         </button>
 
@@ -2879,9 +2881,9 @@ function MessengerChatContent() {
                                         <button
                                           onClick={() => handleRequestRelease(meta.transactionId)}
                                           disabled={actionLoading}
-                                          className="w-full py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 font-semibold text-xs border border-emerald-300/60 dark:border-emerald-700/60 transition flex items-center justify-center gap-1.5"
+                                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 transition flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
                                         >
-                                          <Bell className="w-3.5 h-3.5" />
+                                          <Bell className="w-3.5 h-3.5 text-slate-950 animate-bounce" />
                                           <span>🔔 রিলিজের অনুরোধ</span>
                                         </button>
 
@@ -2936,8 +2938,146 @@ function MessengerChatContent() {
                         );
                       }
 
-                      // 3. SYSTEM NOTIFICATION MESSAGE
+                      // 3. SYSTEM NOTIFICATION MESSAGE (WITH SPECIAL HIGH-PRIORITY RELEASE REQUEST CARD)
                       if (msg.messageType === 'SYSTEM') {
+                        const isReleaseRequest =
+                          msg.metadata?.type === 'RELEASE_REQUEST' ||
+                          msg.content?.includes('রিলিজের অনুরোধ') ||
+                          msg.content?.includes('Release Request');
+
+                        if (isReleaseRequest) {
+                          const trxId = msg.metadata?.transactionId;
+                          const trackingNum =
+                            msg.metadata?.trackingNumber ||
+                            msg.content?.match(/TRX:\s*([A-Za-z0-9_-]+)/)?.[1] ||
+                            '';
+                          const amountVal =
+                            msg.metadata?.amount ??
+                            msg.content?.match(/৳\s*([0-9,.]+)/)?.[1];
+                          const isRequester = msg.senderId === user?.id;
+
+                          return (
+                            <div key={msg.id} className="flex justify-center my-3 px-2 sm:px-4">
+                              <div className="w-full max-w-xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-emerald-500/10 dark:from-amber-950/40 dark:via-slate-900 dark:to-emerald-950/30 border-2 border-amber-500/60 dark:border-amber-500/50 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xl shadow-amber-500/10 ring-2 ring-amber-400/20 backdrop-blur-sm relative overflow-hidden">
+                                {/* Ambient decorative glow */}
+                                <div className="absolute -top-12 -right-12 w-32 h-32 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
+                                <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
+
+                                {/* Header Banner */}
+                                <div className="flex items-center justify-between pb-3 border-b border-amber-500/20 mb-3.5">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="relative">
+                                      <span className="flex h-3 w-3 absolute -top-0.5 -right-0.5">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                                      </span>
+                                      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white flex items-center justify-center shadow-md shadow-amber-500/30">
+                                        <Bell className="w-4 h-4 animate-bounce" />
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <h4 className="text-xs sm:text-sm font-black text-amber-700 dark:text-amber-300 tracking-tight flex items-center gap-1.5">
+                                        <span>{lang === 'bn' ? '🔔 জরুরি পেমেন্ট রিলিজের অনুরোধ' : '🔔 Payment Release Request'}</span>
+                                        <span className="hidden xs:inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-800 dark:text-amber-200 border border-amber-500/30">
+                                          ACTION REQUIRED
+                                        </span>
+                                      </h4>
+                                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                                        {lang === 'bn' ? 'সেলার কাজ সম্পন্ন করেছেন এবং ব্যালেন্স রিলিজের আবেদন জানিয়েছেন' : 'Seller marked work complete and requested payment release'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <span className="text-[10px] font-mono text-slate-400 whitespace-nowrap bg-slate-100 dark:bg-slate-800/80 px-2 py-1 rounded-lg">
+                                    {timeStr}
+                                  </span>
+                                </div>
+
+                                {/* Amount & Trx Info */}
+                                <div className="bg-white/80 dark:bg-slate-900/80 rounded-2xl p-3.5 sm:p-4 border border-amber-500/20 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3.5">
+                                  <div>
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                      {lang === 'bn' ? 'অনুরোধকৃত রিলিজের পরিমাণ' : 'Requested Release Amount'}
+                                    </div>
+                                    <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 mt-0.5">
+                                      <span>৳</span>
+                                      <span>{amountVal ? Number(amountVal).toLocaleString() : '---'}</span>
+                                    </div>
+                                  </div>
+
+                                  {trackingNum && (
+                                    <div className="flex items-center gap-2 self-start sm:self-auto bg-slate-100 dark:bg-slate-800/90 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700/60">
+                                      <span className="text-[10px] text-slate-400 font-mono">TRX:</span>
+                                      <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-200">{trackingNum}</span>
+                                      <button
+                                        onClick={() => copyToClipboard(trackingNum)}
+                                        title="Copy Transaction ID"
+                                        className="p-1 text-slate-400 hover:text-emerald-500 transition"
+                                      >
+                                        <Copy className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Instructions & Actions */}
+                                {isRequester ? (
+                                  <div className="p-3 rounded-xl bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-200 flex items-center gap-2 font-medium">
+                                    <Clock className="w-4 h-4 text-amber-500 shrink-0 animate-spin" />
+                                    <span>
+                                      {lang === 'bn'
+                                        ? 'আপনি ক্লায়েন্টের কাছে পেমেন্ট রিলিজের অনুরোধ পাঠিয়েছেন। ক্লায়েন্ট কাজ যাচাই করে টাকা রিলিজ করার সাথে সাথে আপনার মূল ব্যালেন্সে যোগ হবে।'
+                                        : 'You requested payment release. As soon as the client approves, funds will be released to your main wallet balance.'}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-2.5">
+                                    <p className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed">
+                                      {lang === 'bn'
+                                        ? 'অনুগ্রহ করে সেলারের প্রদানকৃত কাজ/পণ্য সঠিকভাবে যাচাই করুন। সব ঠিক থাকলে অবিলম্বে টাকা রিলিজ করুন। কোনো অমিল বা সমস্যা থাকলে ডিসপ্যুট ওপেন করতে পারেন।'
+                                        : 'Please verify the completed work/goods delivered by the seller. If everything is satisfactory, release the payment now or open a dispute if needed.'}
+                                    </p>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                      {trxId ? (
+                                        <button
+                                          onClick={() => handleReleasePayRequest(trxId)}
+                                          disabled={actionLoading}
+                                          className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-lg shadow-emerald-600/30 hover:shadow-emerald-600/40 active:scale-[0.98] transition flex items-center justify-center gap-2 cursor-pointer ring-2 ring-emerald-400/30"
+                                        >
+                                          <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                                          <span>{lang === 'bn' ? '💸 এখনই টাকা রিলিজ করুন' : '💸 Release Payment Now'}</span>
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={() => setActiveHeaderTab('transaction')}
+                                          className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+                                        >
+                                          <span>💸 ট্রানজেকশন থেকে রিলিজ করুন</span>
+                                        </button>
+                                      )}
+
+                                      <button
+                                        onClick={() =>
+                                          setShowDisputeModal({
+                                            transactionId: trxId || '',
+                                            amount: Number(amountVal || 0),
+                                            trackingNumber: trackingNum,
+                                          })
+                                        }
+                                        disabled={actionLoading}
+                                        className="w-full py-3 px-4 rounded-xl bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-slate-700 hover:text-rose-600 dark:text-slate-300 dark:hover:text-rose-400 font-bold text-xs border border-slate-200 dark:border-slate-700 hover:border-rose-300 dark:hover:border-rose-700 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                                      >
+                                        <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                        <span>{lang === 'bn' ? '⚠️ সমস্যা হলে ডিসপ্যুট করুন' : '⚠️ Open Dispute If Issue'}</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        }
+
                         return (
                           <div key={msg.id} className="flex justify-center my-2">
                             <div className="max-w-md px-4 py-2.5 rounded-xl bg-slate-200/80 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 text-xs text-center leading-relaxed font-sans shadow-sm whitespace-pre-line border border-slate-300/40 dark:border-slate-700/50">

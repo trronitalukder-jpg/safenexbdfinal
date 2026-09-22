@@ -29,11 +29,13 @@ import {
   Send,
   Eye,
   EyeOff,
+  HelpCircle,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguage } from '@/context/LanguageContext';
 import { api } from '@/lib/api';
 import { compressImage, getImageUrl } from '@/lib/imageUtils';
+import { RechargeInstructionModal } from '@/components/wallet/RechargeInstructionModal';
 
 const BANGLADESH_BANKS = [
   'Dutch-Bangla Bank PLC (DBBL)',
@@ -95,6 +97,25 @@ function WalletContent() {
   // Modals
   const [showRechargeModal, setShowRechargeModal] = useState(initialAction === 'recharge');
   const [showWithdrawModal, setShowWithdrawModal] = useState(initialAction === 'withdraw');
+  const [showInstructionModal, setShowInstructionModal] = useState(false);
+  const [instructionsData, setInstructionsData] = useState<any>(null);
+
+  // Fetch dynamic recharge instructions
+  useEffect(() => {
+    const fetchInstructions = async () => {
+      try {
+        const res: any = await api.get('/settings/recharge-instructions');
+        if (res?.data) {
+          setInstructionsData(res.data);
+        } else if (res) {
+          setInstructionsData(res);
+        }
+      } catch (err) {
+        console.error('Failed to load recharge instructions:', err);
+      }
+    };
+    fetchInstructions();
+  }, []);
 
   // Immediately respond whenever searchParams action changes (e.g. clicking Recharge or Withdraw from dashboard)
   useEffect(() => {
@@ -811,10 +832,18 @@ function WalletContent() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+          <button
+            onClick={() => setShowInstructionModal(true)}
+            className="px-3.5 sm:px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/15 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 text-amber-800 dark:text-amber-300 font-bold text-xs flex items-center gap-1.5 border border-amber-500/30 shadow-sm transition active:scale-95 cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            <span>{lang === 'bn' ? 'রিচার্জ নির্দেশিকা' : 'Recharge Instruction'}</span>
+          </button>
+
           <button
             onClick={() => setShowRechargeModal(true)}
-            className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-sky-600/20 transition"
+            className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-sky-600/20 transition cursor-pointer"
           >
             <ArrowDownCircle className="w-4 h-4" />
             <span>{t('recharge')}</span>
@@ -1204,6 +1233,21 @@ function WalletContent() {
                   <span>{rechargeSuccess}</span>
                 </div>
               )}
+
+              {/* Quick Recharge Instruction Hint */}
+              <div className="flex items-center justify-between p-2.5 rounded-2xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/25 text-xs">
+                <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-medium">
+                  <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span>{lang === 'bn' ? 'টাকা পাঠাতে সমস্যা হচ্ছে?' : 'Need guidance on recharging?'}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowInstructionModal(true)}
+                  className="text-xs font-bold text-amber-700 dark:text-amber-300 underline hover:text-amber-800 transition cursor-pointer"
+                >
+                  {lang === 'bn' ? 'রিচার্জ নির্দেশিকা দেখুন' : 'View Instructions'}
+                </button>
+              </div>
 
               <form id="recharge-form" onSubmit={handleRechargeSubmit} className="space-y-3.5 text-xs">
                 {/* Method Selection */}
@@ -2581,6 +2625,17 @@ function WalletContent() {
           </div>
         </div>
       )}
+
+      {/* Recharge Instruction Modal */}
+      <RechargeInstructionModal
+        isOpen={showInstructionModal}
+        onClose={() => setShowInstructionModal(false)}
+        data={instructionsData}
+        onProceedRecharge={() => {
+          setShowInstructionModal(false);
+          setShowRechargeModal(true);
+        }}
+      />
     </div>
   );
 }

@@ -171,6 +171,84 @@ export const DEFAULT_NOTIFICATION_SETTINGS = {
   },
 };
 
+export interface RechargeStep {
+  stepNumber: number;
+  titleBn: string;
+  titleEn: string;
+  descriptionBn: string;
+  descriptionEn: string;
+  badgeText?: string;
+}
+
+export interface RechargeInstructions {
+  titleBn: string;
+  titleEn: string;
+  subtitleBn: string;
+  subtitleEn: string;
+  steps: RechargeStep[];
+  importantNotesBn: string[];
+  importantNotesEn: string[];
+  supportPhone?: string;
+  supportWhatsapp?: string;
+  videoUrl?: string;
+  updatedAt?: string;
+}
+
+export const DEFAULT_RECHARGE_INSTRUCTIONS: RechargeInstructions = {
+  titleBn: 'কিভাবে ব্যালেন্স রিচার্জ করবেন?',
+  titleEn: 'How to Recharge Wallet Balance?',
+  subtitleBn: 'নিচের ৪টি সহজ ধাপ অনুসরণ করে যেকোনো সময় আপনার অ্যাকাউন্টে টাকা যোগ করুন।',
+  subtitleEn: 'Follow these 4 simple steps to safely add money to your SafnexBD wallet.',
+  steps: [
+    {
+      stepNumber: 1,
+      titleBn: 'পেমেন্ট মেথড ও নম্বর নির্বাচন করুন',
+      titleEn: 'Select Payment Method & Copy Number',
+      descriptionBn: 'বিকাশ, নগদ, রকেট বা ব্যাংক মেথড সিলেক্ট করুন এবং আমাদের প্রদর্শিত অফিশিয়াল পার্সোনাল বা মার্চেন্ট নম্বরটি কপি করুন।',
+      descriptionEn: 'Choose bKash, Nagad, Rocket or Bank and copy our official payment number.',
+      badgeText: 'Step 1',
+    },
+    {
+      stepNumber: 2,
+      titleBn: 'সঠিক পরিমাণ টাকা সেন্ড মানি করুন',
+      titleEn: 'Send Money from Your App',
+      descriptionBn: 'আপনার বিকাশ/নগদ অ্যাপ থেকে আমাদের নম্বরে কাঙ্ক্ষিত টাকার সমপরিমাণ অর্থ সেন্ড মানি (Send Money) অথবা পেমেন্ট করুন।',
+      descriptionEn: 'Send the exact recharge amount to our number using your mobile banking app.',
+      badgeText: 'Step 2',
+    },
+    {
+      stepNumber: 3,
+      titleBn: 'TrxID ও প্রেরক নম্বর সাবমিট করুন',
+      titleEn: 'Submit TrxID & Sender Number',
+      descriptionBn: 'টাকা পাঠানোর পর প্রাপ্ত ট্রানজেকশন আইডি (TrxID) ও যে নম্বর থেকে টাকা পাঠিয়েছেন তা রিচার্জ ফর্মে লিখে সাবমিট করুন।',
+      descriptionEn: 'Enter the Transaction ID (TrxID) and your sender phone number in the form and submit.',
+      badgeText: 'Step 3',
+    },
+    {
+      stepNumber: 4,
+      titleBn: 'দ্রুত ব্যালেন্স ভেরিফিকেশন ও ক্রেডিট',
+      titleEn: 'Fast Verification & Instant Credit',
+      descriptionBn: 'আমাদের সিস্টেম ও এডমিন দ্রুত আপনার ট্রানজেকশন যাচাই করে ৫ থেকে ১৫ মিনিটের মধ্যে আপনার ওয়ালেটে ব্যালেন্স যুক্ত করে দেবে।',
+      descriptionEn: 'Our staff will verify your transaction details and credit your wallet within 5-15 minutes.',
+      badgeText: 'Step 4',
+    },
+  ],
+  importantNotesBn: [
+    'সর্বদা ওয়ালেট পেজে প্রদর্শিত সর্বশেষ অফিসিয়াল নম্বরেই টাকা পাঠাবেন। পুরনো নম্বরে টাকা পাঠালে তা গ্রহণযোগ্য হবে না।',
+    'ভুল TrxID বা ভুয়া রিকোয়েস্ট দিলে আপনার অ্যাকাউন্ট সাময়িক বা স্থায়ীভাবে ব্যান হতে পারে।',
+    'টাকা পাঠানোর পর ট্রানজেকশনের এসএমএস বা কনফার্মেশন স্ক্রিনশট নিরাপদ রাখুন।',
+    'যেকোনো জরুরি প্রয়োজনে আমাদের লাইভ সাপোর্ট বা হোয়াটসঅ্যাপে সরাসরি যোগাযোগ করুন।',
+  ],
+  importantNotesEn: [
+    'Always send money to the latest official number displayed on the wallet recharge screen.',
+    'Submitting fake TrxID or misleading information will cause instant account suspension.',
+    'Keep your transaction SMS or payment screenshot safe until credited.',
+    'Contact our 24/7 Live Support or WhatsApp if you need immediate assistance.',
+  ],
+  supportPhone: '+880 1700-000000',
+  supportWhatsapp: '+880 1700-000000',
+};
+
 const CATEGORY_KEYS: Record<string, string> = {
   general: 'WEBSITE_GENERAL',
   seo: 'WEBSITE_SEO',
@@ -1036,5 +1114,85 @@ export class SettingsService {
       console.error('Meta CAPI Error:', err);
       return { success: false, message: err.message };
     }
+  }
+
+  private rechargeInstructionsCache: { data: RechargeInstructions; expiresAt: number } | null = null;
+
+  /**
+   * Get recharge instructions (for public wallet users and admin preview)
+   */
+  async getRechargeInstructions(): Promise<RechargeInstructions> {
+    if (this.rechargeInstructionsCache && Date.now() < this.rechargeInstructionsCache.expiresAt) {
+      return this.rechargeInstructionsCache.data;
+    }
+
+    try {
+      const record = await this.prisma.systemSetting.findUnique({
+        where: { key: 'SYSTEM_RECHARGE_INSTRUCTIONS' },
+      });
+
+      let data: RechargeInstructions = DEFAULT_RECHARGE_INSTRUCTIONS;
+      if (record && record.value && typeof record.value === 'object') {
+        data = {
+          ...DEFAULT_RECHARGE_INSTRUCTIONS,
+          ...(record.value as any),
+        };
+      }
+
+      this.rechargeInstructionsCache = {
+        data,
+        expiresAt: Date.now() + 60 * 1000, // 1 min cache
+      };
+      return data;
+    } catch (err) {
+      return DEFAULT_RECHARGE_INSTRUCTIONS;
+    }
+  }
+
+  /**
+   * Save recharge instructions (by Super Admin / Admin)
+   */
+  async saveRechargeInstructions(payload: Partial<RechargeInstructions>, adminId?: string) {
+    const current = await this.getRechargeInstructions();
+    const updated: RechargeInstructions = {
+      ...current,
+      ...payload,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await this.prisma.systemSetting.upsert({
+      where: { key: 'SYSTEM_RECHARGE_INSTRUCTIONS' },
+      create: {
+        key: 'SYSTEM_RECHARGE_INSTRUCTIONS',
+        category: 'WEBSITE_SETTINGS',
+        isPublic: true,
+        value: updated as any,
+        description: 'Customer wallet recharge instructions and step-by-step guidance',
+      },
+      update: {
+        value: updated as any,
+      },
+    });
+
+    this.rechargeInstructionsCache = null;
+
+    if (adminId) {
+      await this.prisma.auditLog
+        .create({
+          data: {
+            actorId: adminId,
+            actorType: 'ADMIN',
+            action: 'RECHARGE_INSTRUCTIONS_UPDATE',
+            targetEntity: 'SystemSetting',
+            targetId: 'SYSTEM_RECHARGE_INSTRUCTIONS',
+            beforeState: current as any,
+            afterState: updated as any,
+            reason: 'Admin updated recharge instructions and guide',
+          },
+        })
+        .catch(() => {});
+    }
+
+    return updated;
   }
 }
