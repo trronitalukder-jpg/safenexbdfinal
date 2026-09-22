@@ -1334,10 +1334,23 @@ export class TransactionsService {
    * Receiver requests payment release for a transaction in HOLD status
    */
   async requestRelease(transactionId: string, actorId: string) {
-    const transaction = await this.prisma.transaction.findUnique({
+    let transaction = await this.prisma.transaction.findUnique({
       where: { id: transactionId },
-      include: { sender: true, receiver: true },
+      include: {
+        sender: true,
+        receiver: true,
+      },
     });
+
+    if (!transaction) {
+      transaction = await this.prisma.transaction.findFirst({
+        where: { trackingNumber: transactionId },
+        include: {
+          sender: true,
+          receiver: true,
+        },
+      });
+    }
 
     if (!transaction) throw new NotFoundException('Transaction not found');
     if (transaction.status !== 'HOLD') {
@@ -1348,10 +1361,30 @@ export class TransactionsService {
       throw new ForbiddenException('Only the receiver can request payment release');
     }
 
-    if (transaction.conversationId) {
+    let convId = transaction.conversationId;
+    if (!convId) {
+      const existingConv = await this.prisma.conversation.findFirst({
+        where: {
+          AND: [
+            { participants: { some: { userId: transaction.senderId } } },
+            { participants: { some: { userId: transaction.receiverId } } },
+          ],
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+      if (existingConv) {
+        convId = existingConv.id;
+        await this.prisma.transaction.update({
+          where: { id: transaction.id },
+          data: { conversationId: convId },
+        });
+      }
+    }
+
+    if (convId) {
       const msg = await this.prisma.message.create({
         data: {
-          conversationId: transaction.conversationId,
+          conversationId: convId,
           senderId: actorId,
           messageType: 'SYSTEM',
           content: `🔔 রিলিজের অনুরোধ:\n\n${transaction.receiver.firstName} ${transaction.receiver.lastName} কাজ সম্পন্ন করেছেন এবং ৳${transaction.amount} (TRX: ${transaction.trackingNumber}) রিলিজ করার অনুরোধ জানিয়েছেন। অনুগ্রহ করে কাজ যাচাই করে রিলিজ করুন অথবা আপত্তি থাকলে ডিসপ্যুট করুন।`,
@@ -1368,15 +1401,15 @@ export class TransactionsService {
       });
 
       await this.prisma.conversation.update({
-        where: { id: transaction.conversationId },
+        where: { id: convId },
         data: { updatedAt: new Date() },
       });
 
       const gw = this.chatGateway;
       if (gw) {
-        gw.broadcastNewMessage(msg, transaction.conversationId, actorId);
+        gw.broadcastNewMessage(msg, convId, actorId);
         gw.notifyUser(transaction.senderId, 'notification:release_request', {
-          conversationId: transaction.conversationId,
+          conversationId: convId,
           transactionId: transaction.id,
           trackingNumber: transaction.trackingNumber,
           amount: Number(transaction.amount),

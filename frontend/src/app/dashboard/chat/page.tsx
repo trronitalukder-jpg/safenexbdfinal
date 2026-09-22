@@ -1276,19 +1276,37 @@ function MessengerChatContent() {
   // REQUEST RELEASE (RECEIVER NOTIFIES SENDER TO RELEASE FUNDS)
   // ---------------------------------------------------------------------------
   const handleRequestRelease = async (transactionId: string) => {
+    if (!transactionId) {
+      alert(lang === 'bn' ? 'ট্রানজেকশন আইডি পাওয়া যায়নি।' : 'Transaction ID not found.');
+      return;
+    }
+
     setActionLoading(true);
     try {
       const res: any = await api.post(`/transactions/${transactionId}/pay-request/request-release`);
       const data = unwrap(res);
 
-      const msgRes: any = await api.get(`/chat/conversations/${activeConversation.conversationId}/messages`);
-      const msgData = unwrap(msgRes);
-      setMessages(Array.isArray(msgData) ? msgData : (msgData?.messages || []));
+      const convId = activeConversation?.conversationId || activeConversation?.id;
+      if (convId) {
+        const msgRes: any = await api.get(`/chat/conversations/${convId}/messages`);
+        const msgData = unwrap(msgRes);
+        setMessages(Array.isArray(msgData) ? msgData : (msgData?.messages || []));
+
+        if (socket) {
+          socket.emit('transaction:update', {
+            conversationId: convId,
+            transaction: data,
+          });
+        }
+      }
+
+      // Switch to chat tab so user immediately sees the highlighted VIP Release Request card
+      setActiveHeaderTab('chat');
 
       alert(
         lang === 'bn'
-          ? 'রিলিজের অনুরোধ প্রেরকের চ্যাটে পাঠানো হয়েছে।'
-          : 'Release request notification sent to the client in chat.',
+          ? '🔔 রিলিজের অনুরোধ ক্লায়েন্টের চ্যাটে পাঠানো হয়েছে!'
+          : '🔔 Release request notification sent to the client in chat!',
       );
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Failed to send release request';
@@ -1476,17 +1494,61 @@ function MessengerChatContent() {
   // ---------------------------------------------------------------------------
   const conversationTransactions = useMemo(() => {
     const map = new Map<string, any>();
+
+    // 1. First pass: Register base transactions from PAY_REQUEST or RECEIVE_REQUEST
     messages.forEach((msg) => {
-      if ((msg.messageType === 'PAY_REQUEST' || msg.messageType === 'RECEIVE_REQUEST') && msg.metadata?.transactionId) {
-        map.set(msg.metadata.transactionId, {
-          ...msg.metadata,
+      const meta = msg.metadata || {};
+      const txnId = meta.transactionId || meta.id || meta.referenceId;
+      if (txnId && (msg.messageType === 'PAY_REQUEST' || msg.messageType === 'RECEIVE_REQUEST')) {
+        map.set(txnId, {
+          ...meta,
+          transactionId: txnId,
+          trackingNumber: meta.trackingNumber,
           messageId: msg.id,
           messageType: msg.messageType,
           createdAt: msg.createdAt,
-          sender: msg.sender,
+          authorSenderId: msg.senderId || msg.sender?.id,
+          senderId: meta.senderId,
+          receiverId: meta.receiverId,
+          status: meta.status || 'REQUESTED',
+          amount: Number(meta.amount || 0),
+          commission: Number(meta.commissionAmount || (Number(meta.amount || 0) * 0.05)),
+          notes: meta.reason || meta.notes || msg.content,
         });
       }
     });
+
+    // 2. Second pass: Apply real-time updates and status changes from SYSTEM messages
+    messages.forEach((msg) => {
+      const meta = msg.metadata || {};
+      const txnId = meta.transactionId || meta.id || meta.referenceId;
+      if (txnId) {
+        const existing = map.get(txnId);
+        if (existing) {
+          if (meta.status) existing.status = meta.status;
+          if (meta.trackingNumber && !existing.trackingNumber) existing.trackingNumber = meta.trackingNumber;
+          if (meta.amount && !existing.amount) existing.amount = Number(meta.amount);
+          if (meta.commissionAmount && !existing.commission) existing.commission = Number(meta.commissionAmount);
+          if (meta.senderId && !existing.senderId) existing.senderId = meta.senderId;
+          if (meta.receiverId && !existing.receiverId) existing.receiverId = meta.receiverId;
+          if (meta.type === 'RELEASE_REQUEST') existing.hasReleaseRequest = true;
+        } else if (meta.status || meta.amount) {
+          // If the initial request message is paginated out, still register from the system message
+          map.set(txnId, {
+            ...meta,
+            transactionId: txnId,
+            trackingNumber: meta.trackingNumber,
+            messageId: msg.id,
+            messageType: msg.messageType,
+            createdAt: msg.createdAt,
+            status: meta.status || 'HOLD',
+            amount: Number(meta.amount || 0),
+            commission: Number(meta.commissionAmount || (Number(meta.amount || 0) * 0.05)),
+          });
+        }
+      }
+    });
+
     return Array.from(map.values()).sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
@@ -3645,16 +3707,43 @@ function MessengerChatContent() {
               ) : (
                 <div className="space-y-4">
                   {conversationTransactions.map((txn: any) => {
-                    const isPayer = txn.senderId === user?.id || txn.sender?.id === user?.id;
-                    const isReceiver = txn.receiverId === user?.id;
+                    const targetTxnId = txn.transactionId || txn.id || txn.trackingNumber || txn.referenceId;
                     const status = txn.status || 'REQUESTED';
                     const amount = Number(txn.amount || 0);
                     const commission = Number(txn.commission || (amount * 0.05));
                     const trackingNumber = txn.trackingNumber || 'TXN-PENDING';
 
+                    // SenderId in Escrow is ALWAYS the Payer/Buyer whose money was placed in Escrow Hold.
+                    // ReceiverId in Escrow is ALWAYS the Receiver/Seller/Freelancer who delivers and gets paid.
+                    let isPayer = false;
+                    let isReceiver = false;
+
+                    if (txn.receiverId && txn.receiverId === user?.id) {
+                      isReceiver = true;
+                      isPayer = false;
+                    } else if (txn.senderId && txn.senderId === user?.id) {
+                      isPayer = true;
+                      isReceiver = false;
+                    } else if (txn.initiatorRole === 'RECEIVER' || txn.messageType === 'RECEIVE_REQUEST') {
+                      // In RECEIVE_REQUEST, the requester/author is the receiver (seller)
+                      const isInitiator = (txn.authorSenderId && txn.authorSenderId === user?.id) || (txn.requesterId && txn.requesterId === user?.id);
+                      isReceiver = isInitiator;
+                      isPayer = !isInitiator;
+                    } else {
+                      // In PAY_REQUEST, the requester/author is the payer (buyer)
+                      const isInitiator = (txn.authorSenderId && txn.authorSenderId === user?.id) || (txn.senderId && txn.senderId === user?.id);
+                      isPayer = isInitiator;
+                      isReceiver = !isInitiator;
+                    }
+
+                    // Who can approve REQUESTED:
+                    // For RECEIVE_REQUEST, the Payer approves & locks funds into escrow.
+                    // For PAY_REQUEST, the Receiver approves & accepts job.
+                    const canApprove = (txn.messageType === 'RECEIVE_REQUEST' && isPayer) || (txn.messageType !== 'RECEIVE_REQUEST' && isReceiver);
+
                     return (
                       <div
-                        key={txn.transactionId || txn.messageId}
+                        key={targetTxnId || txn.messageId}
                         className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-sm space-y-4"
                       >
                         {/* Top Info */}
@@ -3742,10 +3831,10 @@ function MessengerChatContent() {
                         <div className="pt-2">
                           {status === 'REQUESTED' && (
                             <div className="flex flex-wrap items-center gap-2">
-                              {isReceiver && (
+                              {canApprove ? (
                                 <>
                                   <button
-                                    onClick={() => handleApproveRequest(txn.transactionId)}
+                                    onClick={() => handleApproveRequest(targetTxnId)}
                                     disabled={actionLoading}
                                     className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm"
                                   >
@@ -3753,7 +3842,7 @@ function MessengerChatContent() {
                                     <span>অনুমোদন ও এসক্রো হোল্ড করুন (Approve & Hold)</span>
                                   </button>
                                   <button
-                                    onClick={() => handleDeclinePayRequest(txn.transactionId)}
+                                    onClick={() => handleDeclinePayRequest(targetTxnId)}
                                     disabled={actionLoading}
                                     className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 font-semibold text-xs transition flex items-center gap-1.5"
                                   >
@@ -3761,10 +3850,9 @@ function MessengerChatContent() {
                                     <span>প্রত্যাখ্যান (Reject)</span>
                                   </button>
                                 </>
-                              )}
-                              {isPayer && (
+                              ) : (
                                 <button
-                                  onClick={() => handleDeclinePayRequest(txn.transactionId)}
+                                  onClick={() => handleDeclinePayRequest(targetTxnId)}
                                   disabled={actionLoading}
                                   className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs transition flex items-center gap-1.5"
                                 >
@@ -3778,45 +3866,60 @@ function MessengerChatContent() {
                           {status === 'HOLD' && (
                             <div className="space-y-2">
                               <div className="flex flex-wrap items-center gap-2">
-                                {isPayer ? (
+                                {/* Payer / Buyer Action: Release Money to Seller's Main Balance */}
+                                {isPayer && (
+                                  <button
+                                    onClick={() => handleReleasePayRequest(targetTxnId)}
+                                    disabled={actionLoading}
+                                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md shadow-emerald-600/30 transition flex items-center gap-1.5 active:scale-[0.98] cursor-pointer"
+                                  >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    <span>💸 টাকা রিলিজ করুন (Release to Main Balance)</span>
+                                  </button>
+                                )}
+
+                                {/* Receiver / Seller Action: Request Release from Client */}
+                                {isReceiver && (
+                                  <button
+                                    onClick={() => handleRequestRelease(targetTxnId)}
+                                    disabled={actionLoading}
+                                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 transition flex items-center gap-1.5 active:scale-[0.98] cursor-pointer"
+                                  >
+                                    <Bell className="w-4 h-4 text-slate-950 animate-bounce" />
+                                    <span>🔔 রিলিজের অনুরোধ পাঠান (Request Release)</span>
+                                  </button>
+                                )}
+
+                                {/* Fallback if roles somehow ambiguous: Show both so user is never blocked */}
+                                {!isPayer && !isReceiver && (
                                   <>
                                     <button
-                                      onClick={() => handleReleasePayRequest(txn.transactionId)}
+                                      onClick={() => handleRequestRelease(targetTxnId)}
                                       disabled={actionLoading}
-                                      className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm"
-                                    >
-                                      <CheckCircle2 className="w-4 h-4" />
-                                      <span>💸 টাকা রিলিজ করুন (Release to Main Balance)</span>
-                                    </button>
-                                    <button
-                                      onClick={() => setShowDisputeModal(txn)}
-                                      disabled={actionLoading}
-                                      className="px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:hover:bg-amber-900/40 font-semibold text-xs transition flex items-center gap-1.5 border border-amber-200/60 dark:border-amber-800/40"
-                                    >
-                                      <AlertTriangle className="w-4 h-4 text-amber-600" />
-                                      <span>⚠ ডিসপ্যুট (Dispute)</span>
-                                    </button>
-                                  </>
-                                ) : (
-                                  <>
-                                    <button
-                                      onClick={() => handleRequestRelease(txn.transactionId)}
-                                      disabled={actionLoading}
-                                      className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm"
+                                      className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition flex items-center gap-1.5"
                                     >
                                       <Bell className="w-4 h-4" />
                                       <span>🔔 রিলিজের অনুরোধ পাঠান (Request Release)</span>
                                     </button>
                                     <button
-                                      onClick={() => setShowDisputeModal(txn)}
+                                      onClick={() => handleReleasePayRequest(targetTxnId)}
                                       disabled={actionLoading}
-                                      className="px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:hover:bg-amber-900/40 font-semibold text-xs transition flex items-center gap-1.5 border border-amber-200/60 dark:border-amber-800/40"
+                                      className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center gap-1.5"
                                     >
-                                      <AlertTriangle className="w-4 h-4 text-amber-600" />
-                                      <span>⚠ ডিসপ্যুট (Dispute)</span>
+                                      <CheckCircle2 className="w-4 h-4" />
+                                      <span>💸 টাকা রিলিজ করুন</span>
                                     </button>
                                   </>
                                 )}
+
+                                <button
+                                  onClick={() => setShowDisputeModal({ ...txn, transactionId: targetTxnId })}
+                                  disabled={actionLoading}
+                                  className="px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:hover:bg-amber-900/40 font-semibold text-xs transition flex items-center gap-1.5 border border-amber-200/60 dark:border-amber-800/40"
+                                >
+                                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                                  <span>⚠ ডিসপ্যুট (Dispute)</span>
+                                </button>
                               </div>
                               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                                 🔒 টাকা সেফনেক্সবিডি এসক্রো অ্যাকাউন্টে সুরক্ষিত আছে। প্রেরক নিজে সরাসরি ব্যালেন্স ফেরত নিতে পারবে না; রিফান্ডের জন্য অ্যাডমিন ডিসপ্যুট প্রয়োজন।
@@ -3829,7 +3932,7 @@ function MessengerChatContent() {
                               <div className="flex flex-wrap items-center gap-2">
                                 {isPayer && (
                                   <button
-                                    onClick={() => handleWithdrawDispute(txn.transactionId)}
+                                    onClick={() => handleWithdrawDispute(targetTxnId)}
                                     disabled={actionLoading}
                                     className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm"
                                   >
