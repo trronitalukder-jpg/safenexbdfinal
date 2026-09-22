@@ -22,6 +22,7 @@ import { SmsModule } from './sms/sms.module';
 import { PartnerModule } from './partner/partner.module';
 import { OperationsModule } from './operations/operations.module';
 import { TelegramModule } from './telegram/telegram.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { TelegramModule } from './telegram/telegram.module';
     PartnerModule,
     OperationsModule,
     TelegramModule,
+    AiModule,
   ],
   providers: [
     {

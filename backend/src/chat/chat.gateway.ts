@@ -1,3 +1,4 @@
+import { Optional } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -11,6 +12,8 @@ import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AiService } from '../ai/ai.service';
+import { SettingsService } from '../settings/settings.service';
 
 @WebSocketGateway({
   cors: {
@@ -28,6 +31,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private chatService: ChatService,
     private prisma: PrismaService,
     private jwtService: JwtService,
+    @Optional() private aiService?: AiService,
+    @Optional() private settingsService?: SettingsService,
   ) {}
 
   private addConnectedUser(userId: string, socketId: string) {
@@ -326,11 +331,122 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           createdAt: savedMessage.createdAt,
         });
       }
+
+      // 3. Asynchronous AI Chat Analysis & Fraud Detection (Zero Latency for Users)
+      if (this.aiService && savedMessage.content && savedMessage.messageType === 'TEXT') {
+        setImmediate(async () => {
+          try {
+            await this.runAiAnalysis(savedMessage, conversationId, senderId, senderFullName);
+          } catch (aiErr) {
+            console.error('Asynchronous AI analysis error:', aiErr);
+          }
+        });
+      }
     } catch (err) {
       console.error('Failed to broadcast participant notification:', err);
     }
 
     return serialized;
+  }
+
+  /**
+   * Asynchronous AI Analysis: Inspects message, issues in-chat warnings, and alerts admins
+   */
+  private async runAiAnalysis(
+    savedMessage: any,
+    conversationId: string,
+    senderId: string,
+    senderFullName: string,
+  ) {
+    if (!this.aiService || !this.settingsService) return;
+
+    const aiConfig = await this.settingsService.getAiSettings();
+    if (!aiConfig.enabled) return;
+
+    // Fetch last 3 messages for context
+    const recentMessages = await this.prisma.message.findMany({
+      where: { conversationId, isDeleted: false, id: { not: savedMessage.id } },
+      orderBy: { createdAt: 'desc' },
+      take: 3,
+      include: { sender: { select: { firstName: true, lastName: true, uniqueUserId: true } } },
+    });
+
+    const context = recentMessages.reverse().map((m) => ({
+      sender:
+        `${m.sender?.firstName || ''} ${m.sender?.lastName || ''}`.trim() ||
+        m.sender?.uniqueUserId ||
+        'User',
+      text: m.content,
+    }));
+
+    const analysis = await this.aiService.analyzeChatMessage(savedMessage.content, context);
+
+    // 1. Smart Deal Proposal Suggestion
+    if (analysis.dealTerms?.detected && aiConfig.dealProposalEnabled && analysis.dealTerms.amount) {
+      this.server?.to(conversationId).emit('chat:deal_proposal', {
+        conversationId,
+        messageId: savedMessage.id,
+        title: analysis.dealTerms.title || 'Escrow Transaction',
+        amount: analysis.dealTerms.amount,
+        senderId,
+      });
+    }
+
+    const threshold = Number(aiConfig.riskThreshold) || 70;
+    if (analysis.riskScore >= threshold) {
+      // 2. In-Chat Real-Time Warning Banner
+      if (aiConfig.inChatWarningEnabled) {
+        const warningText =
+          analysis.category === 'SCAM_PHISHING'
+            ? '⚠️ নিরাপত্তা সতর্কতা: গোপনীয় ওটিপি, পাসওয়ার্ড বা ব্যক্তিগত তথ্য চ্যাটে শেয়ার করবেন না। SafnexBD কখনোই আপনার ওটিপি চাইবে না।'
+            : '⚠️ নিরাপত্তা সতর্কতা: প্ল্যাটফর্মের বাইরে (বিকাশ/নগদ/হোয়াটসঅ্যাপ) লেনদেন করা নিষিদ্ধ ও ঝুঁকিপূর্ণ। নিরাপদ থাকতে সর্বদা SafnexBD এসক্রো ব্যবহার করুন।';
+
+        this.server?.to(conversationId).emit('chat:safety_warning', {
+          conversationId,
+          messageId: savedMessage.id,
+          category: analysis.category,
+          riskScore: analysis.riskScore,
+          warningText,
+          reason: analysis.reason,
+          detectedKeywords: analysis.detectedKeywords,
+        });
+      }
+
+      // 3. Admin Flagging & Alerting
+      if (aiConfig.adminFlaggingEnabled) {
+        await this.prisma.message
+          .update({
+            where: { id: savedMessage.id },
+            data: {
+              metadata: {
+                ...(savedMessage.metadata || {}),
+                aiFlagged: true,
+                aiRiskScore: analysis.riskScore,
+                aiCategory: analysis.category,
+                aiReason: analysis.reason,
+                aiKeywords: analysis.detectedKeywords,
+              },
+            },
+          })
+          .catch(() => null);
+
+        this.notifyAdmins('notification:admin', {
+          type: 'AI_CHAT_FLAGGED',
+          title: '🚨 ঝুঁকিপূর্ণ চ্যাট শনাক্ত!',
+          message: `${senderFullName} চ্যাটে ঝুঁকিপূর্ণ কন্টেন্ট পাঠিয়েছেন (${analysis.riskScore}% ঝুঁকি): ${analysis.reason}`,
+          targetUrl: `/admin/calling-queue`,
+          data: {
+            conversationId,
+            messageId: savedMessage.id,
+            riskScore: analysis.riskScore,
+            category: analysis.category,
+            reason: analysis.reason,
+            keywords: analysis.detectedKeywords,
+          },
+          createdAt: new Date().toISOString(),
+        });
+      }
+    }
   }
 
   @SubscribeMessage('message:seen')

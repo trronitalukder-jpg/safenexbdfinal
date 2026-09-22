@@ -123,6 +123,19 @@ export const DEFAULT_SETTINGS = {
     autoCleanExpiredOtpDays: 30,
     autoCleanAuditLogsDays: 180,
   },
+  ai: {
+    enabled: false,
+    provider: 'GEMINI', // 'GEMINI' | 'OPENAI'
+    apiKey: '',
+    modelName: 'gemini-2.0-flash',
+    riskThreshold: 70, // 50 to 95
+    scamDetectionEnabled: true,
+    offPlatformDetectionEnabled: true,
+    inChatWarningEnabled: true,
+    adminFlaggingEnabled: true,
+    disputeSummaryEnabled: true,
+    dealProposalEnabled: true,
+  },
 };
 
 export const DEFAULT_NOTIFICATION_SETTINGS = {
@@ -167,6 +180,7 @@ const CATEGORY_KEYS: Record<string, string> = {
   withdrawal: 'WEBSITE_WITHDRAWAL',
   operations: 'WEBSITE_OPERATIONS',
   performance: 'WEBSITE_PERFORMANCE',
+  ai: 'WEBSITE_AI',
 };
 
 @Injectable()
@@ -208,12 +222,16 @@ export class SettingsService {
         ...DEFAULT_SETTINGS.performance,
         ...(settingsMap.get(CATEGORY_KEYS.performance) || {}),
       },
+      ai: {
+        ...DEFAULT_SETTINGS.ai,
+        ...(settingsMap.get(CATEGORY_KEYS.ai) || {}),
+      },
     };
   }
 
   /**
    * Get public settings (for frontend web visitors / public layout)
-   * Excludes sensitive tokens like Facebook CAPI token
+   * Excludes sensitive tokens like Facebook CAPI token and AI API keys
    */
   async getPublicSettings() {
     const all = await this.getAllSettings();
@@ -254,7 +272,111 @@ export class SettingsService {
         otpCooldownSeconds: all.performance.otpCooldownSeconds,
         defaultPageSize: all.performance.defaultPageSize,
       },
+      ai: {
+        enabled: Boolean(all.ai?.enabled),
+        inChatWarningEnabled: Boolean(all.ai?.inChatWarningEnabled),
+        dealProposalEnabled: Boolean(all.ai?.dealProposalEnabled),
+      },
     };
+  }
+
+  /**
+   * Get AI settings (internal & admin use)
+   */
+  async getAiSettings() {
+    try {
+      const record = await this.prisma.systemSetting.findUnique({
+        where: { key: CATEGORY_KEYS.ai },
+      });
+      return {
+        ...DEFAULT_SETTINGS.ai,
+        ...(record && typeof record.value === 'object' ? (record.value as any) : {}),
+      };
+    } catch {
+      return DEFAULT_SETTINGS.ai;
+    }
+  }
+
+  /**
+   * Test AI Connection directly for Admin
+   */
+  async testAiConnection(provider: string, apiKey: string, modelName?: string) {
+    const prov = (provider || 'GEMINI').toUpperCase();
+    const key = (apiKey || '').trim();
+    if (!key) {
+      return { success: false, message: 'API key is required for testing' };
+    }
+
+    const startTime = Date.now();
+
+    if (prov === 'GEMINI') {
+      const model = modelName?.trim() || 'gemini-2.0-flash';
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: 'Respond with exactly: SafnexBD AI connection successful' }] }],
+          }),
+        });
+        const latency = Date.now() - startTime;
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          const errMsg = errData?.error?.message || `HTTP ${res.status}: ${res.statusText}`;
+          return { success: false, latency, message: `Gemini Error: ${errMsg}` };
+        }
+        const data = await res.json();
+        const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        return {
+          success: true,
+          latency,
+          provider: 'GEMINI',
+          model,
+          message: 'Google Gemini API connection successful!',
+          reply: reply.trim(),
+        };
+      } catch (err: any) {
+        return { success: false, latency: Date.now() - startTime, message: err.message || 'Gemini connection failed' };
+      }
+    } else if (prov === 'OPENAI') {
+      const model = modelName?.trim() || 'gpt-4o-mini';
+      try {
+        const url = 'https://api.openai.com/v1/chat/completions';
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${key}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: 'user', content: 'Respond with exactly: SafnexBD AI connection successful' }],
+            max_tokens: 30,
+          }),
+        });
+        const latency = Date.now() - startTime;
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          const errMsg = errData?.error?.message || `HTTP ${res.status}: ${res.statusText}`;
+          return { success: false, latency, message: `OpenAI Error: ${errMsg}` };
+        }
+        const data = await res.json();
+        const reply = data?.choices?.[0]?.message?.content || '';
+        return {
+          success: true,
+          latency,
+          provider: 'OPENAI',
+          model,
+          message: 'OpenAI API connection successful!',
+          reply: reply.trim(),
+        };
+      } catch (err: any) {
+        return { success: false, latency: Date.now() - startTime, message: err.message || 'OpenAI connection failed' };
+      }
+    }
+
+    return { success: false, message: `Unsupported provider: ${provider}` };
   }
 
   /**
@@ -305,6 +427,8 @@ export class SettingsService {
       system?: any;
       withdrawal?: any;
       operations?: any;
+      performance?: any;
+      ai?: any;
     },
     adminId?: string,
   ) {
@@ -326,7 +450,7 @@ export class SettingsService {
             create: {
               key: settingKey,
               category: 'WEBSITE_SETTINGS',
-              isPublic: cat !== 'tracking' && cat !== 'system',
+              isPublic: cat !== 'tracking' && cat !== 'system' && cat !== 'ai',
               value: merged,
               description: `Website ${cat} configuration settings`,
             },
@@ -347,7 +471,7 @@ export class SettingsService {
               create: {
                 key: settingKey,
                 category: 'WEBSITE_SETTINGS',
-                isPublic: cat !== 'tracking' && cat !== 'system',
+                isPublic: cat !== 'tracking' && cat !== 'system' && cat !== 'ai',
                 value: merged,
                 description: `Website ${cat} configuration settings`,
               },

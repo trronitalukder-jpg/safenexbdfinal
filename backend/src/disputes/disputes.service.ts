@@ -15,6 +15,7 @@ import {
   UpdateDisputeStatusDto,
 } from './dto/dispute.dto';
 import { OperationsService } from '../operations/operations.service';
+import { AiService } from '../ai/ai.service';
 
 @Injectable()
 export class DisputesService {
@@ -22,6 +23,7 @@ export class DisputesService {
     private prisma: PrismaService,
     @Optional() private chatGateway?: ChatGateway,
     @Optional() private operationsService?: OperationsService,
+    @Optional() private aiService?: AiService,
   ) {}
 
   /**
@@ -569,6 +571,119 @@ export class DisputesService {
 
       return updatedDispute;
     });
+  }
+
+  /**
+   * Generate AI Case Summary & Verdict Recommendation for Admin
+   */
+  async generateAiSummary(disputeId: string) {
+    const dispute = await this.prisma.dispute.findUnique({
+      where: { id: disputeId },
+      include: {
+        transaction: {
+          include: {
+            sender: { select: { id: true, firstName: true, lastName: true, uniqueUserId: true, phone: true } },
+            receiver: { select: { id: true, firstName: true, lastName: true, uniqueUserId: true, phone: true } },
+            workLogs: { orderBy: { createdAt: 'desc' } },
+          },
+        },
+        evidences: {
+          include: {
+            uploadedBy: { select: { firstName: true, lastName: true, uniqueUserId: true } },
+          },
+        },
+      },
+    });
+
+    if (!dispute) {
+      throw new NotFoundException('Dispute not found');
+    }
+
+    if (!this.aiService) {
+      throw new BadRequestException('AI Service is not initialized');
+    }
+
+    // Fetch conversation messages
+    let conversationId = dispute.transaction.conversationId;
+    if (!conversationId) {
+      const conv = await this.prisma.conversation.findFirst({
+        where: {
+          AND: [
+            { participants: { some: { userId: dispute.transaction.senderId } } },
+            { participants: { some: { userId: dispute.transaction.receiverId } } },
+          ],
+        },
+      });
+      conversationId = conv?.id || null;
+    }
+
+    let chatMessages: Array<{ senderName: string; text: string; time: string }> = [];
+    if (conversationId) {
+      const msgs = await this.prisma.message.findMany({
+        where: { conversationId, isDeleted: false },
+        orderBy: { createdAt: 'desc' },
+        take: 35,
+        include: {
+          sender: { select: { firstName: true, lastName: true, uniqueUserId: true } },
+        },
+      });
+      chatMessages = msgs.reverse().map((m) => ({
+        senderName:
+          `${m.sender?.firstName || ''} ${m.sender?.lastName || ''}`.trim() ||
+          m.sender?.uniqueUserId ||
+          'User',
+        text: m.content,
+        time: m.createdAt.toISOString(),
+      }));
+    }
+
+    const workLogs = (dispute.transaction.workLogs || []).map((w) => ({
+      notes: w.workDescription,
+      proofUrls: (w.proofUrls as string[]) || [],
+      time: w.createdAt.toISOString(),
+    }));
+
+    const evidenceList = (dispute.evidences || []).map((e) => ({
+      description: e.description || undefined,
+      fileType: e.fileType,
+      uploadedBy:
+        `${e.uploadedBy?.firstName || ''} ${e.uploadedBy?.lastName || ''}`.trim() ||
+        e.uploadedBy?.uniqueUserId ||
+        'User',
+    }));
+
+    const senderName =
+      `${dispute.transaction.sender?.firstName || ''} ${dispute.transaction.sender?.lastName || ''}`.trim() ||
+      dispute.transaction.sender?.uniqueUserId ||
+      'Buyer';
+    const receiverName =
+      `${dispute.transaction.receiver?.firstName || ''} ${dispute.transaction.receiver?.lastName || ''}`.trim() ||
+      dispute.transaction.receiver?.uniqueUserId ||
+      'Seller';
+
+    const dossier = await this.aiService.generateDisputeDossier(
+      {
+        id: dispute.id,
+        reason: dispute.reason,
+        transaction: {
+          trackingNumber: dispute.transaction.trackingNumber,
+          amount: dispute.transaction.amount.toString(),
+          senderName,
+          receiverName,
+          status: dispute.transaction.status,
+        },
+      },
+      chatMessages,
+      workLogs,
+      evidenceList,
+    );
+
+    return {
+      success: true,
+      disputeId,
+      transactionId: dispute.transactionId,
+      dossier,
+    };
   }
 }
 

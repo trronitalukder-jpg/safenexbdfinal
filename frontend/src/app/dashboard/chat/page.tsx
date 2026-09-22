@@ -146,6 +146,14 @@ function MessengerChatContent() {
   const [isConvLocked, setIsConvLocked] = useState(false);
   const [convLockReason, setConvLockReason] = useState<string | null>(null);
 
+  // AI Real-Time Safety Warnings & Smart Deal State
+  const [safetyAlerts, setSafetyAlerts] = useState<any[]>([]);
+  const [smartDealProposal, setSmartDealProposal] = useState<{
+    title: string;
+    amount: number;
+    senderId?: string;
+  } | null>(null);
+
   // Chat Safety Rules & Quick Message Templates State
   const [chatRulesConfig, setChatRulesConfig] = useState<any>({
     isEnabled: true,
@@ -568,6 +576,8 @@ function MessengerChatContent() {
     setSearchQuery('');
     setSearchResults([]);
     setShowOptionsDropdown(false);
+    setSafetyAlerts([]);
+    setSmartDealProposal(null);
 
     try {
       setLoadingMessages(true);
@@ -751,12 +761,40 @@ function MessengerChatContent() {
     socket.on('notification:release_approve', handleTransactionRefresh);
     socket.on('notification:dispute', handleTransactionRefresh);
 
+    const handleSafetyWarning = (data: any) => {
+      if (data?.conversationId === activeConversation?.conversationId) {
+        setSafetyAlerts((prev) => [
+          ...prev,
+          {
+            id: data.messageId || String(Date.now()),
+            warningText: data.warningText,
+            category: data.category,
+            riskScore: data.riskScore,
+            reason: data.reason,
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+      }
+    };
+
+    const handleDealProposal = (data: any) => {
+      if (data?.conversationId === activeConversation?.conversationId) {
+        setSmartDealProposal({
+          title: data.title,
+          amount: data.amount,
+          senderId: data.senderId,
+        });
+      }
+    };
+
     socket.on('message:receive', handleMessageReceive);
     socket.on('transaction:update', handleTransactionUpdate);
     socket.on('typing:start', handleTypingStart);
     socket.on('typing:stop', handleTypingStop);
     socket.on('chat:lock_status', handleLockStatus);
     socket.on('chat:admin_visibility_changed', handleAdminVisibilityChanged);
+    socket.on('chat:safety_warning', handleSafetyWarning);
+    socket.on('chat:deal_proposal', handleDealProposal);
 
     return () => {
       socket.off('users:online_list', handleOnlineList);
@@ -774,6 +812,8 @@ function MessengerChatContent() {
       socket.off('typing:stop', handleTypingStop);
       socket.off('chat:lock_status', handleLockStatus);
       socket.off('chat:admin_visibility_changed', handleAdminVisibilityChanged);
+      socket.off('chat:safety_warning', handleSafetyWarning);
+      socket.off('chat:deal_proposal', handleDealProposal);
     };
   }, [socket, activeConversation, user?.id, user?.firstName]);
 
@@ -2163,6 +2203,84 @@ function MessengerChatContent() {
                           </div>
                         </div>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 🚨 AI Real-Time Safety Warning Banner */}
+                {safetyAlerts.length > 0 && (
+                  <div className="px-3 sm:px-4 pt-2 space-y-2">
+                    {safetyAlerts.map((alert, idx) => (
+                      <div
+                        key={alert.id || idx}
+                        className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-amber-500/15 border border-amber-500/30 shadow-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-200"
+                      >
+                        <div className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex-shrink-0">
+                          <ShieldAlert className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 text-xs">
+                          <p className="font-black text-amber-900 dark:text-amber-200">
+                            {alert.warningText}
+                          </p>
+                          <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+                            {lang === 'bn'
+                              ? 'SafnexBD এসক্রো ছাড়া ব্যক্তিগত বিকাশ/নগদে লেনদেন করলে প্ল্যাটফর্ম কোনো সুরক্ষা প্রদান করতে পারবে না।'
+                              : 'Transactions outside SafnexBD Escrow cannot be protected against fraud or scams.'}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSafetyAlerts((prev) => prev.filter((_, i) => i !== idx))}
+                          className="text-amber-600 hover:text-amber-800 dark:text-amber-400 p-1"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 💡 AI Smart Deal Proposal Card */}
+                {smartDealProposal && (
+                  <div className="px-3 sm:px-4 pt-2">
+                    <div className="p-3.5 rounded-2xl bg-indigo-500/10 dark:bg-indigo-950/30 border border-indigo-500/30 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex-shrink-0">
+                          <Sparkles className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-indigo-900 dark:text-indigo-200">
+                            {lang === 'bn' ? '💡 এআই ডিল শনাক্ত করেছে:' : '💡 AI Deal Detected:'}{' '}
+                            <span className="text-indigo-600 dark:text-indigo-400">{smartDealProposal.title}</span> — ৳{smartDealProposal.amount}
+                          </p>
+                          <p className="text-[11px] text-indigo-700/80 dark:text-indigo-300/80">
+                            {lang === 'bn'
+                              ? '১-ক্লিকে এখনই অফিসিয়াল সুরক্ষিত এসক্রো পেমেন্ট তৈরি করুন'
+                              : 'Create official protected escrow payment in 1-click'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPayAmount(String(smartDealProposal.amount));
+                            setPayReason(smartDealProposal.title || '');
+                            setShowPayModal(true);
+                            setSmartDealProposal(null);
+                          }}
+                          className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition"
+                        >
+                          {lang === 'bn' ? 'এসক্রো তৈরি করুন' : 'Create Escrow'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSmartDealProposal(null)}
+                          className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}

@@ -83,5 +83,13 @@ export class DisputesController {
   ) {
     return this.disputesService.resolveDispute(disputeId, adminId, dto);
   }
+
+  @UseGuards(RolesGuard, PermissionsGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'SUPPORT_ADMIN')
+  @Permissions('DISPUTE_MANAGE')
+  @Post('admin/:id/ai-summary')
+  async generateAiSummary(@Param('id') disputeId: string) {
+    return this.disputesService.generateAiSummary(disputeId);
+  }
 }
 

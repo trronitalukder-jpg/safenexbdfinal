@@ -42,6 +42,22 @@ export class SettingsController {
   }
 
   /**
+   * Admin endpoint to test AI provider API key and connection
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  @Post('ai/test-connection')
+  async testAiConnection(
+    @Body() body: { provider: string; apiKey: string; modelName?: string },
+  ) {
+    return this.settingsService.testAiConnection(
+      body.provider,
+      body.apiKey,
+      body.modelName,
+    );
+  }
+
+  /**
    * Admin endpoint to get multi-role notification settings
    */
   @UseGuards(JwtAuthGuard, RolesGuard)

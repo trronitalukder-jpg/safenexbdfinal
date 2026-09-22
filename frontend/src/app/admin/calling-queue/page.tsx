@@ -159,6 +159,27 @@ export default function AdminCallingQueuePage() {
     notes: string;
   } | null>(null);
 
+  // AI Dispute Dossier States
+  const [generatingAiDossier, setGeneratingAiDossier] = useState(false);
+  const [aiDossier, setAiDossier] = useState<any>(null);
+  const [showAiDossierModal, setShowAiDossierModal] = useState(false);
+
+  const handleGenerateAiDossier = async (disputeId: string) => {
+    setGeneratingAiDossier(true);
+    try {
+      const res: any = await api.post(`/disputes/admin/${disputeId}/ai-summary`);
+      const data = unwrap(res);
+      if (data?.dossier) {
+        setAiDossier(data.dossier);
+        setShowAiDossierModal(true);
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Failed to generate AI summary');
+    } finally {
+      setGeneratingAiDossier(false);
+    }
+  };
+
   // Live Chat & Messaging states
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [loadingChat, setLoadingChat] = useState(false);
@@ -940,6 +961,25 @@ export default function AdminCallingQueuePage() {
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleGenerateAiDossier(selectedDispute.id)}
+                  disabled={generatingAiDossier}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:opacity-90 text-white text-xs font-bold transition cursor-pointer shadow-xs disabled:opacity-50"
+                  title="Generate AI Case Dossier"
+                >
+                  {generatingAiDossier ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5" />
+                  )}
+                  <span>
+                    {generatingAiDossier
+                      ? (lang === 'bn' ? 'বিশ্লেষণ...' : 'Analyzing...')
+                      : (lang === 'bn' ? '🤖 এআই ডসিয়ার' : '🤖 AI Dossier')}
+                  </span>
+                </button>
+
                 {(selectedDispute.assignedToId === user?.id || isSuperAdmin()) && (
                   <>
                     <button
@@ -1732,6 +1772,45 @@ export default function AdminCallingQueuePage() {
                   )}
                 </div>
 
+                {/* 🤖 Dispute AI Case Dossier Trigger */}
+                <div className="p-3.5 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent dark:from-indigo-950/40 dark:via-purple-950/20 dark:to-slate-900 rounded-2xl border border-indigo-500/30 shadow-xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'এআই কেস অ্যানালাইজার' : 'AI Case Analyzer'}</span>
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">
+                      GPT/Gemini
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                    {lang === 'bn'
+                      ? 'চ্যাট হিস্ট্রি, এভিডেন্স ও কাজের প্রমাণ বিশ্লেষণ করে ১-ক্লিকে কেস সামারি ও রায় তৈরি করুন।'
+                      : 'Analyze chat history, evidence & work logs for instant case timeline & verdict suggestions.'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateAiDossier(activeFullChatDispute.id)}
+                    disabled={generatingAiDossier}
+                    className="w-full py-2.5 px-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:opacity-90 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {generatingAiDossier ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-3.5 h-3.5" />
+                    )}
+                    <span>
+                      {generatingAiDossier
+                        ? lang === 'bn'
+                          ? 'এআই বিশ্লেষণ চলছে...'
+                          : 'Analyzing Case...'
+                        : lang === 'bn'
+                        ? '🤖 এআই কেস সামারি ও রায় তৈরি'
+                        : '🤖 Generate AI Dossier'}
+                    </span>
+                  </button>
+                </div>
+
                 {/* Quick Actions Panel */}
                 <div className="p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
@@ -2311,6 +2390,176 @@ export default function AdminCallingQueuePage() {
             >
               <X className="w-5 h-5" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 🤖 AI DISPUTE CASE DOSSIER MODAL                                          */}
+      {/* ========================================================================= */}
+      {showAiDossierModal && aiDossier && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-indigo-500/30 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-indigo-500/10 via-purple-500/5 to-transparent flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/30">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>{lang === 'bn' ? 'এআই কেস ডসিয়ার ও রায় সুপারিশ' : 'AI Case Dossier & Arbitration Recommendation'}</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {lang === 'bn' ? 'চ্যাট হিস্ট্রি, এভিডেন্স ও কাজের প্রমাণভিত্তিক নিরপেক্ষ বিশ্লেষণ' : 'Objective arbitration based on chat history, evidence & work logs'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAiDossierModal(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Scrollable Body */}
+            <div className="p-6 overflow-y-auto space-y-5 flex-1">
+              {/* Recommended Verdict Banner */}
+              <div
+                className={`p-4 rounded-2xl border flex items-start gap-3.5 ${
+                  aiDossier.recommendedVerdict === 'REFUND_SENDER'
+                    ? 'bg-blue-500/10 border-blue-500/30 text-blue-900 dark:text-blue-200'
+                    : aiDossier.recommendedVerdict === 'RELEASE_RECEIVER'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-200'
+                    : aiDossier.recommendedVerdict === 'PARTIAL_SPLIT'
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200'
+                    : 'bg-purple-500/10 border-purple-500/30 text-purple-900 dark:text-purple-200'
+                }`}
+              >
+                <Scale className="w-6 h-6 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider">
+                      {lang === 'bn' ? 'প্রস্তাবিত রায়:' : 'Recommended Verdict:'}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider bg-white/70 dark:bg-slate-800/80 shadow-xs">
+                      {aiDossier.recommendedVerdict === 'REFUND_SENDER' && (lang === 'bn' ? 'ক্রেতাকে রিফান্ড' : 'Refund Buyer')}
+                      {aiDossier.recommendedVerdict === 'RELEASE_RECEIVER' && (lang === 'bn' ? 'বিক্রেতাকে রিলিজ' : 'Release to Seller')}
+                      {aiDossier.recommendedVerdict === 'PARTIAL_SPLIT' && (
+                        lang === 'bn'
+                          ? `আংশিক বণ্টন (${aiDossier.recommendedSplit?.senderPercent || 50}% / ${aiDossier.recommendedSplit?.receiverPercent || 50}%)`
+                          : `Split (${aiDossier.recommendedSplit?.senderPercent || 50}% Buyer / ${aiDossier.recommendedSplit?.receiverPercent || 50}% Seller)`
+                      )}
+                      {aiDossier.recommendedVerdict === 'MANUAL_INVESTIGATION' && (lang === 'bn' ? 'ম্যানুয়াল তদন্ত প্রয়োজন' : 'Manual Review')}
+                    </span>
+                  </div>
+                  <p className="text-xs leading-relaxed opacity-90">
+                    {aiDossier.justification}
+                  </p>
+                </div>
+              </div>
+
+              {/* Executive Summary */}
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  {lang === 'bn' ? '📋 সংক্ষেপিত সারসংক্ষেপ' : '📋 Executive Summary'}
+                </h4>
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                  {aiDossier.executiveSummary}
+                </div>
+              </div>
+
+              {/* Two Column: Buyer vs Seller Claims */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div className="p-3.5 bg-blue-500/5 rounded-2xl border border-blue-500/20 space-y-2">
+                  <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5" />
+                    <span>{lang === 'bn' ? 'ক্রেতার মূল দাবি' : 'Buyer Claims'}</span>
+                  </span>
+                  <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 list-disc list-inside">
+                    {aiDossier.buyerArguments?.length > 0 ? (
+                      aiDossier.buyerArguments.map((arg: string, idx: number) => (
+                        <li key={idx} className="leading-relaxed">{arg}</li>
+                      ))
+                    ) : (
+                      <li className="text-slate-400 italic">{lang === 'bn' ? 'কোনো দাবি নেই' : 'None specified'}</li>
+                    )}
+                  </ul>
+                </div>
+
+                <div className="p-3.5 bg-emerald-500/5 rounded-2xl border border-emerald-500/20 space-y-2">
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5" />
+                    <span>{lang === 'bn' ? 'বিক্রেতার মূল দাবি' : 'Seller Claims'}</span>
+                  </span>
+                  <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 list-disc list-inside">
+                    {aiDossier.sellerArguments?.length > 0 ? (
+                      aiDossier.sellerArguments.map((arg: string, idx: number) => (
+                        <li key={idx} className="leading-relaxed">{arg}</li>
+                      ))
+                    ) : (
+                      <li className="text-slate-400 italic">{lang === 'bn' ? 'কোনো দাবি নেই' : 'None specified'}</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+
+              {/* Evidence & Work Log Findings */}
+              {aiDossier.evidenceFindings?.length > 0 && (
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    {lang === 'bn' ? '🔍 প্রমাণের ফলাফল' : '🔍 Evidence & Proof Findings'}
+                  </h4>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 space-y-1.5">
+                    {aiDossier.evidenceFindings.map((finding: string, idx: number) => (
+                      <div key={idx} className="flex items-start gap-2">
+                        <CheckCircle className="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5" />
+                        <span>{finding}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Timeline */}
+              {aiDossier.timeline?.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    {lang === 'bn' ? '⏱️ ঘটনার টাইমলাইন' : '⏱️ Incident Timeline'}
+                  </h4>
+                  <div className="space-y-2 relative pl-4 border-l-2 border-slate-200 dark:border-slate-800">
+                    {aiDossier.timeline.map((step: any, idx: number) => (
+                      <div key={idx} className="relative text-xs">
+                        <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                        <span className="text-[10px] text-slate-400 font-mono">{step.time}</span>
+                        <div className="font-semibold text-slate-800 dark:text-slate-200">{step.event}</div>
+                        {step.actor && (
+                          <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">
+                            {step.actor}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between shrink-0">
+              <span className="text-[11px] text-slate-400">
+                {lang === 'bn' ? 'এআই শুধুমাত্র সিদ্ধান্ত সহায়ক, চূড়ান্ত দায়িত্ব অ্যাডমিনের।' : 'AI serves as decision support; final verdict is arbitrator responsibility.'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowAiDossierModal(false)}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                {lang === 'bn' ? 'বন্ধ করুন' : 'Close Dossier'}
+              </button>
+            </div>
           </div>
         </div>
       )}

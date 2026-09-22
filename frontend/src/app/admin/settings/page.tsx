@@ -82,7 +82,7 @@ export default function AdminSettingsPage() {
   const { lang } = useLanguage();
   const { refreshSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<
-    'general' | 'seo' | 'tracking' | 'localization' | 'footer' | 'system' | 'withdrawal' | 'operations' | 'performance' | 'chat_rules' | 'telegram'
+    'general' | 'seo' | 'tracking' | 'localization' | 'footer' | 'system' | 'withdrawal' | 'operations' | 'performance' | 'chat_rules' | 'telegram' | 'ai'
   >('general');
 
   const [loading, setLoading] = useState(true);
@@ -91,6 +91,18 @@ export default function AdminSettingsPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [showCapiToken, setShowCapiToken] = useState(false);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
+
+  // AI Settings & Testing State
+  const [testingAi, setTestingAi] = useState(false);
+  const [showAiKey, setShowAiKey] = useState(false);
+  const [aiTestResult, setAiTestResult] = useState<{
+    success: boolean;
+    latency?: number;
+    provider?: string;
+    model?: string;
+    message?: string;
+    reply?: string;
+  } | null>(null);
 
   // Maintenance & Database Health state
   const [maintenanceStats, setMaintenanceStats] = useState<any>(null);
@@ -383,6 +395,19 @@ export default function AdminSettingsPage() {
       autoCleanExpiredOtpDays: 30,
       autoCleanAuditLogsDays: 180,
     },
+    ai: {
+      enabled: false,
+      provider: 'GEMINI',
+      apiKey: '',
+      modelName: 'gemini-2.0-flash',
+      riskThreshold: 70,
+      scamDetectionEnabled: true,
+      offPlatformDetectionEnabled: true,
+      inChatWarningEnabled: true,
+      adminFlaggingEnabled: true,
+      disputeSummaryEnabled: true,
+      dealProposalEnabled: true,
+    },
   });
 
   const fetchSettings = async () => {
@@ -402,6 +427,7 @@ export default function AdminSettingsPage() {
           withdrawal: { ...prev.withdrawal, ...(data.withdrawal || {}) },
           operations: { ...prev.operations, ...(data.operations || {}) },
           performance: { ...prev.performance, ...(data.performance || {}) },
+          ai: { ...prev.ai, ...(data.ai || {}) },
         }));
       }
       try {
@@ -700,6 +726,7 @@ export default function AdminSettingsPage() {
           withdrawal: { ...prev.withdrawal, ...(data.withdrawal || {}) },
           operations: { ...prev.operations, ...(data.operations || {}) },
           performance: { ...prev.performance, ...(data.performance || {}) },
+          ai: { ...prev.ai, ...(data.ai || {}) },
         }));
       }
 
@@ -714,6 +741,31 @@ export default function AdminSettingsPage() {
       );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestAi = async () => {
+    if (!settings.ai?.apiKey?.trim()) {
+      alert(lang === 'bn' ? 'অনুগ্রহ করে এআই API কী (API Key) লিখুন!' : 'Please enter an AI API Key!');
+      return;
+    }
+    setTestingAi(true);
+    setAiTestResult(null);
+    try {
+      const res: any = await api.post('/settings/ai/test-connection', {
+        provider: settings.ai.provider || 'GEMINI',
+        apiKey: settings.ai.apiKey,
+        modelName: settings.ai.modelName,
+      });
+      const data = res?.data !== undefined ? res.data : res;
+      setAiTestResult(data);
+    } catch (err: any) {
+      setAiTestResult({
+        success: false,
+        message: err.response?.data?.message || err.message || 'Connection failed',
+      });
+    } finally {
+      setTestingAi(false);
     }
   };
 
@@ -818,6 +870,12 @@ export default function AdminSettingsPage() {
       label: lang === 'bn' ? '🤖 টেলিগ্রাম বট' : '🤖 Telegram Bot',
       icon: Send,
       desc: lang === 'bn' ? 'বট কনফিগ, নোটিফিকেশন, পি২পি চ্যাট ও ব্রডকাস্ট' : 'Bot credentials, alerts, P2P chat & broadcast',
+    },
+    {
+      id: 'ai' as const,
+      label: lang === 'bn' ? '🤖 এআই চ্যাট অ্যানালাইসিস' : '🤖 AI Engine & Chat',
+      icon: Sparkles,
+      desc: lang === 'bn' ? 'প্রতারণা প্রতিরোধ, বাইপাস অ্যালার্ট ও ডিসপ্যুট এআই' : 'Scam prevention, bypass alerts & dispute AI',
     },
   ];
 
@@ -5277,6 +5335,532 @@ export default function AdminSettingsPage() {
                   : lang === 'bn'
                   ? 'সব টেলিগ্রাম সেটিংস সেভ করুন'
                   : 'Save All Telegram Settings'}
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 🤖 AI Engine & Chat Analysis Tab */}
+      {activeTab === 'ai' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Top Master Switch & Overview Card */}
+          <div className="p-6 rounded-3xl bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent dark:from-indigo-950/40 dark:via-purple-950/20 dark:to-slate-900 border border-indigo-500/20 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="p-3 rounded-2xl bg-indigo-500/15 text-indigo-500 dark:text-indigo-400 border border-indigo-500/30">
+                  <Sparkles className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-black text-slate-900 dark:text-white">
+                      {lang === 'bn'
+                        ? 'এআই ইঞ্জিন ও রিয়েল-টাইম চ্যাট অ্যানালাইসিস'
+                        : 'AI Engine & Real-Time Chat Analysis'}
+                    </h2>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        settings.ai?.enabled
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                          : 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border border-slate-500/30'
+                      }`}
+                    >
+                      {settings.ai?.enabled
+                        ? lang === 'bn'
+                          ? 'সক্রিয় (ACTIVE)'
+                          : 'ACTIVE'
+                        : lang === 'bn'
+                        ? 'নিষ্ক্রিয় (DISABLED)'
+                        : 'DISABLED'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
+                    {lang === 'bn'
+                      ? 'SafnexBD-এর ক্রেতা ও বিক্রেতাদের প্ল্যাটফর্মের বাইরে (বিকাশ, নগদ, হোয়াটসঅ্যাপ) লেনদেন থেকে রক্ষা করতে এবং ফিশিং ও ওটিপি প্রতারণা প্রতিরোধে ব্যাকগ্রাউন্ড এআই কাজ করে। এটি চ্যাটে কোন ল্যাগ সৃষ্টি করে না।'
+                      : 'Protects SafnexBD buyers and sellers from off-platform bypass (bKash, Nagad, WhatsApp), scam phishing, and generates automated dispute dossiers with zero chat latency.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Master Switch Toggle */}
+              <div className="flex items-center gap-3 self-end sm:self-center bg-white dark:bg-slate-900 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'মাস্টার এআই সুইচ:' : 'Master AI Switch:'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettings((prev: any) => ({
+                      ...prev,
+                      ai: { ...prev.ai, enabled: !prev.ai?.enabled },
+                    }))
+                  }
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                    settings.ai?.enabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings.ai?.enabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* AI Provider & Credentials Card */}
+          <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-indigo-500" />
+              <span>{lang === 'bn' ? 'এআই প্রোভাইডার ও এপিআই কী' : 'AI Provider & Credentials'}</span>
+            </h3>
+
+            {/* Provider Selection (Gemini vs OpenAI) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div
+                onClick={() =>
+                  setSettings((prev: any) => ({
+                    ...prev,
+                    ai: {
+                      ...prev.ai,
+                      provider: 'GEMINI',
+                      modelName:
+                        prev.ai?.provider === 'GEMINI'
+                          ? prev.ai.modelName
+                          : 'gemini-2.0-flash',
+                    },
+                  }))
+                }
+                className={`cursor-pointer p-4 rounded-2xl border-2 transition-all ${
+                  settings.ai?.provider === 'GEMINI' || !settings.ai?.provider
+                    ? 'border-indigo-500 bg-indigo-500/5 shadow-md shadow-indigo-500/10'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 font-bold text-sm text-slate-900 dark:text-white">
+                    <span className="text-xl">✨</span>
+                    <span>Google Gemini</span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">
+                    {lang === 'bn' ? 'রেকমেন্ডেড (সাশ্রয়ী)' : 'Recommended (Cost-Effective)'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                  {lang === 'bn'
+                    ? 'বাংলা ও বাংলিশ বুঝতে অত্যন্ত দক্ষ, সুপার ফাস্ট রেসপন্স এবং ফ্রি টিয়ার সুবিধা রয়েছে।'
+                    : 'Best for Bengali/Banglish understanding, fast response times, and generous free tier.'}
+                </p>
+              </div>
+
+              <div
+                onClick={() =>
+                  setSettings((prev: any) => ({
+                    ...prev,
+                    ai: {
+                      ...prev.ai,
+                      provider: 'OPENAI',
+                      modelName:
+                        prev.ai?.provider === 'OPENAI'
+                          ? prev.ai.modelName
+                          : 'gpt-4o-mini',
+                    },
+                  }))
+                }
+                className={`cursor-pointer p-4 rounded-2xl border-2 transition-all ${
+                  settings.ai?.provider === 'OPENAI'
+                    ? 'border-emerald-500 bg-emerald-500/5 shadow-md shadow-emerald-500/10'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 font-bold text-sm text-slate-900 dark:text-white">
+                    <span className="text-xl">🟢</span>
+                    <span>OpenAI (ChatGPT)</span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                    GPT-4o-mini
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                  {lang === 'bn'
+                    ? 'বিশ্বস্ত এআই মডেল, স্ট্রাকচার্ড ডাটা ও ডিসপ্যুট কেস বিশ্লেষণে অত্যন্ত নির্ভুল।'
+                    : 'Reliable industry-standard intelligence for dispute arbitration and risk scoring.'}
+                </p>
+              </div>
+            </div>
+
+            {/* API Key Input & Test Connection */}
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                {settings.ai?.provider === 'OPENAI' ? 'OpenAI API Key' : 'Google Gemini API Key'}
+                <span className="text-rose-500 ml-1">*</span>
+              </label>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                <div className="relative flex-1">
+                  <input
+                    type={showAiKey ? 'text' : 'password'}
+                    value={settings.ai?.apiKey || ''}
+                    onChange={(e) =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        ai: { ...prev.ai, apiKey: e.target.value },
+                      }))
+                    }
+                    placeholder={
+                      settings.ai?.provider === 'OPENAI'
+                        ? 'sk-proj-...'
+                        : 'AIzaSy...'
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAiKey(!showAiKey)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                  >
+                    {showAiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleTestAi}
+                  disabled={testingAi || !settings.ai?.apiKey}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 text-xs font-bold transition disabled:opacity-50"
+                >
+                  {testingAi ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Zap className="w-3.5 h-3.5" />
+                  )}
+                  <span>
+                    {testingAi
+                      ? lang === 'bn'
+                        ? 'যাচাই হচ্ছে...'
+                        : 'Testing...'
+                      : lang === 'bn'
+                      ? 'কানেকশন টেস্ট করুন'
+                      : 'Test Connection'}
+                  </span>
+                </button>
+              </div>
+
+              {/* Test Connection Feedback */}
+              {aiTestResult && (
+                <div
+                  className={`flex items-start gap-2.5 p-3 rounded-xl text-xs font-medium ${
+                    aiTestResult.success
+                      ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25'
+                      : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/25'
+                  }`}
+                >
+                  {aiTestResult.success ? (
+                    <CheckCircle2 className="w-4 h-4 mt-0.5 text-emerald-500 flex-shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 mt-0.5 text-rose-500 flex-shrink-0" />
+                  )}
+                  <div className="space-y-0.5">
+                    <p className="font-bold">
+                      {aiTestResult.success
+                        ? `✅ ${aiTestResult.message} (${aiTestResult.latency || 0}ms)`
+                        : `❌ ${aiTestResult.message}`}
+                    </p>
+                    {aiTestResult.reply && (
+                      <p className="text-[11px] opacity-85 italic">
+                        &quot;{aiTestResult.reply}&quot;
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Model Selection & Risk Threshold */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  {lang === 'bn' ? 'এআই মডেল (Model Name)' : 'AI Model Name'}
+                </label>
+                <select
+                  value={settings.ai?.modelName || (settings.ai?.provider === 'OPENAI' ? 'gpt-4o-mini' : 'gemini-2.0-flash')}
+                  onChange={(e) =>
+                    setSettings((prev: any) => ({
+                      ...prev,
+                      ai: { ...prev.ai, modelName: e.target.value },
+                    }))
+                  }
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {settings.ai?.provider === 'OPENAI' ? (
+                    <>
+                      <option value="gpt-4o-mini">gpt-4o-mini (Recommended - Fast & Cheap)</option>
+                      <option value="gpt-4o">gpt-4o (Maximum Intelligence)</option>
+                      <option value="gpt-3.5-turbo">gpt-3.5-turbo (Legacy)</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="gemini-2.0-flash">gemini-2.0-flash (Recommended - Next Gen Fast)</option>
+                      <option value="gemini-1.5-flash">gemini-1.5-flash (Standard Fast)</option>
+                      <option value="gemini-1.5-pro">gemini-1.5-pro (High Reasoning)</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  {lang === 'bn' ? 'ঝুঁকি সংবেদনশীলতা থ্রেশহোল্ড (Risk Threshold)' : 'Risk Threshold (%)'}
+                  <span className="text-indigo-500 ml-2 font-black">{settings.ai?.riskThreshold || 70}%</span>
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min="50"
+                    max="95"
+                    step="5"
+                    value={settings.ai?.riskThreshold || 70}
+                    onChange={(e) =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        ai: { ...prev.ai, riskThreshold: Number(e.target.value) },
+                      }))
+                    }
+                    className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  {lang === 'bn'
+                    ? 'ঝুঁকি স্কোর এই স্কোরের উপরে গেলে স্বয়ংক্রিয়ভাবে চ্যাটে ওয়ার্নিং ও অ্যাডমিন অ্যালার্ট যাবে।'
+                    : 'Warnings and admin flags trigger when the AI risk score meets or exceeds this threshold.'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* AI Feature Toggles Card */}
+          <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-indigo-500" />
+              <span>{lang === 'bn' ? 'এআই ফিচার ও নিরাপত্তা টগল (ON / OFF)' : 'Feature-Level Safety Toggles (ON / OFF)'}</span>
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {/* Scam & Phishing Detection */}
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                <div className="space-y-0.5 pr-2">
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <span>🛡️</span>
+                    <span>{lang === 'bn' ? 'প্রতারণা ও ফিশিং শনাক্তকরণ' : 'Scam & Phishing Detection'}</span>
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {lang === 'bn' ? 'ওটিপি, পাসওয়ার্ড বা সিকিউরিটি পিন চাওয়ার চেষ্টা প্রতিরোধ' : 'Detects OTP, password, or PIN theft attempts'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettings((prev: any) => ({
+                      ...prev,
+                      ai: { ...prev.ai, scamDetectionEnabled: !prev.ai?.scamDetectionEnabled },
+                    }))
+                  }
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    settings.ai?.scamDetectionEnabled !== false ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                      settings.ai?.scamDetectionEnabled !== false ? 'translate-x-4' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Off-Platform Bypass Detection */}
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                <div className="space-y-0.5 pr-2">
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <span>🚫</span>
+                    <span>{lang === 'bn' ? 'প্ল্যাটফর্ম বাইপাস ডিটেকশন' : 'Off-Platform Bypass Detection'}</span>
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {lang === 'bn' ? 'ব্যক্তিগত বিকাশ/নগদ, ফোন নম্বর বা হোয়াটসঅ্যাপ চাওয়া শনাক্ত' : 'Detects direct bKash/Nagad/WhatsApp requests'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettings((prev: any) => ({
+                      ...prev,
+                      ai: { ...prev.ai, offPlatformDetectionEnabled: !prev.ai?.offPlatformDetectionEnabled },
+                    }))
+                  }
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    settings.ai?.offPlatformDetectionEnabled !== false ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                      settings.ai?.offPlatformDetectionEnabled !== false ? 'translate-x-4' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Real-time in-chat warning banner */}
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                <div className="space-y-0.5 pr-2">
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <span>⚠️</span>
+                    <span>{lang === 'bn' ? 'ইন-চ্যাট রিয়েল-টাইম সতর্কতা' : 'In-Chat Real-Time Warnings'}</span>
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {lang === 'bn' ? 'ঝুঁকি শনাক্ত হলে তাৎক্ষণিক চ্যাট রুমে সেফটি ব্যানার প্রদর্শন' : 'Shows security warning banner in active chat'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettings((prev: any) => ({
+                      ...prev,
+                      ai: { ...prev.ai, inChatWarningEnabled: !prev.ai?.inChatWarningEnabled },
+                    }))
+                  }
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    settings.ai?.inChatWarningEnabled !== false ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                      settings.ai?.inChatWarningEnabled !== false ? 'translate-x-4' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Auto-flag high-risk conversations */}
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                <div className="space-y-0.5 pr-2">
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <span>🚩</span>
+                    <span>{lang === 'bn' ? 'অ্যাডমিনের জন্য অটো-ফ্ল্যাগিং' : 'Auto-Flag for Admins'}</span>
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {lang === 'bn' ? 'অ্যাডমিন কিউতে রেড-অ্যালার্ট ও ফ্ল্যাগড কনভারসেশন মার্ক করা' : 'Flags high-risk chats and alerts admin queue'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettings((prev: any) => ({
+                      ...prev,
+                      ai: { ...prev.ai, adminFlaggingEnabled: !prev.ai?.adminFlaggingEnabled },
+                    }))
+                  }
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    settings.ai?.adminFlaggingEnabled !== false ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                      settings.ai?.adminFlaggingEnabled !== false ? 'translate-x-4' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Dispute AI Case Summary */}
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                <div className="space-y-0.5 pr-2">
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <span>⚖️</span>
+                    <span>{lang === 'bn' ? 'ডিসপ্যুট এআই কেস ডজিয়ার' : 'Dispute AI Case Dossier'}</span>
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {lang === 'bn' ? 'ডিসপ্যুট কিউতে ১-ক্লিকে কেস সামারি, টাইমলাইন ও রায় তৈরি' : 'Generates dispute timelines and verdict suggestions'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettings((prev: any) => ({
+                      ...prev,
+                      ai: { ...prev.ai, disputeSummaryEnabled: !prev.ai?.disputeSummaryEnabled },
+                    }))
+                  }
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    settings.ai?.disputeSummaryEnabled !== false ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                      settings.ai?.disputeSummaryEnabled !== false ? 'translate-x-4' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Smart Deal Proposal Extraction */}
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                <div className="space-y-0.5 pr-2">
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <span>💡</span>
+                    <span>{lang === 'bn' ? 'স্মার্ট ডিল প্রস্তাবনা' : 'Smart Deal Proposal'}</span>
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {lang === 'bn' ? 'চ্যাটে দরদাম হলে ১-ক্লিকে "এসক্রো তৈরি করুন" অপশন প্রদর্শন' : 'Offers 1-click escrow creation from chat deals'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettings((prev: any) => ({
+                      ...prev,
+                      ai: { ...prev.ai, dealProposalEnabled: !prev.ai?.dealProposalEnabled },
+                    }))
+                  }
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    settings.ai?.dealProposalEnabled !== false ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                      settings.ai?.dealProposalEnabled !== false ? 'translate-x-4' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Save Button for AI Tab */}
+          <div className="pt-2 flex justify-end">
+            <button
+              onClick={() => handleSave('ai')}
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20 transition disabled:opacity-50"
+            >
+              {saving ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : saveSuccess ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              <span>
+                {saving
+                  ? lang === 'bn'
+                    ? 'সংরক্ষণ হচ্ছে...'
+                    : 'Saving...'
+                  : saveSuccess
+                  ? lang === 'bn'
+                    ? 'সংরক্ষিত হয়েছে!'
+                    : 'Saved Successfully!'
+                  : lang === 'bn'
+                  ? 'সব এআই সেটিংস সেভ করুন'
+                  : 'Save All AI Settings'}
               </span>
             </button>
           </div>
