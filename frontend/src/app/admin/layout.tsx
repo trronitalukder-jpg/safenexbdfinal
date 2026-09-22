@@ -23,6 +23,7 @@ import {
   Power,
   ChevronDown,
   LogOut,
+  ShieldAlert,
 } from 'lucide-react';
 import { AdminSidebar } from '@/components/layout/AdminSidebar';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -54,6 +55,22 @@ export default function AdminLayout({
   const [adminNotifications, setAdminNotifications] = useState<any[]>([]);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Unread complaints counter
+  const [unreadComplaintCount, setUnreadComplaintCount] = useState<number>(0);
+
+  const fetchUnreadComplaintCount = React.useCallback(async () => {
+    if (!user || !isAdmin()) return;
+    try {
+      const res: any = await api.get('/complaints/admin/unread-count');
+      const data = res?.data !== undefined ? res.data : res;
+      if (typeof data?.count === 'number') {
+        setUnreadComplaintCount(data.count);
+      }
+    } catch {
+      // route might not have any yet or soft-ignore
+    }
+  }, [user, isAdmin]);
 
   // Staff Workload & Duty Status
   const [dutyStatus, setDutyStatus] = useState<'ON_DUTY' | 'ON_BREAK' | 'OFF_DUTY'>('OFF_DUTY');
@@ -139,15 +156,51 @@ export default function AdminLayout({
 
     socket.on('notification:admin', handleAdminNotification);
 
+    const handleComplaintNew = (data: any) => {
+      setUnreadComplaintCount((prev) => prev + 1);
+      playNotificationSound();
+      if (notifPermission === 'granted') {
+        sendNotification(
+          data?.title || 'নতুন অভিযোগ দাখিল হয়েছে',
+          {
+            body: data?.message || 'একজন ব্যবহারকারী নতুন অভিযোগ দায়ের করেছেন।',
+            icon: '/icon-192.png',
+            tag: `complaint-${data?.complaintId || Date.now()}`,
+          },
+          '/admin/complaints',
+        );
+      }
+    };
+
+    const handleComplaintRead = () => {
+      fetchUnreadComplaintCount();
+    };
+
+    const handleComplaintUpdate = () => {
+      fetchUnreadComplaintCount();
+    };
+
+    socket.on('complaint:new', handleComplaintNew);
+    socket.on('complaint:read', handleComplaintRead);
+    socket.on('complaint:update', handleComplaintUpdate);
+
     return () => {
       socket.off('connect', handleConnect);
       socket.off('notification:admin', handleAdminNotification);
+      socket.off('complaint:new', handleComplaintNew);
+      socket.off('complaint:read', handleComplaintRead);
+      socket.off('complaint:update', handleComplaintUpdate);
     };
-  }, [user, isAdmin, notifPermission, playNotificationSound, sendNotification]);
+  }, [user, isAdmin, notifPermission, playNotificationSound, sendNotification, fetchUnreadComplaintCount]);
 
   useEffect(() => {
     refreshMe();
-  }, []);
+    fetchUnreadComplaintCount();
+  }, [fetchUnreadComplaintCount]);
+
+  useEffect(() => {
+    fetchUnreadComplaintCount();
+  }, [pathname, fetchUnreadComplaintCount]);
 
   useEffect(() => {
     setMobileDrawerOpen(false);
@@ -351,14 +404,31 @@ export default function AdminLayout({
             <span className="hidden sm:inline">{lang === 'bn' ? 'হোম পেজ' : 'Home'}</span>
           </Link>
 
-          {/* Guides Button (left of language toggle) */}
+          {/* Complaints (অভিযোগ) Button with Live Unread Badge */}
           <Link
-            href="/admin/guides"
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500 text-amber-700 dark:text-amber-400 hover:text-slate-950 dark:hover:text-slate-950 text-xs font-bold border border-amber-500/30 transition shadow-xs"
-            title={lang === 'bn' ? 'গাইডস ও টিউটোরিয়াল' : 'Guides & Tutorials'}
+            href="/admin/complaints"
+            className={`relative flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold border transition shadow-xs shrink-0 ${
+              unreadComplaintCount > 0
+                ? 'bg-rose-500/15 hover:bg-rose-500 text-rose-700 dark:text-rose-300 hover:text-white dark:hover:text-white border-rose-500/40 ring-1 ring-rose-500/30'
+                : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 border-rose-500/25'
+            }`}
+            title={
+              lang === 'bn'
+                ? unreadComplaintCount > 0
+                  ? `${unreadComplaintCount}টি নতুন অভিযোগ অমীমাংসিত`
+                  : 'ব্যবহারকারীদের অভিযোগ ও ডিসপ্যুট'
+                : 'User Complaints & Disputes'
+            }
           >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>{lang === 'bn' ? 'গাইডস' : 'Guides'}</span>
+            <ShieldAlert className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+            <span className="text-xs font-bold">
+              {lang === 'bn' ? 'অভিযোগ' : 'Complaints'}
+            </span>
+            {unreadComplaintCount > 0 && (
+              <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center animate-pulse shadow-xs shrink-0">
+                {unreadComplaintCount > 99 ? '99+' : unreadComplaintCount}
+              </span>
+            )}
           </Link>
 
           {/* Language Switch */}

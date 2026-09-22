@@ -177,12 +177,18 @@ export class TelegramService {
     this.cachedSettings = updated;
     this.lastSettingsFetch = Date.now();
 
-    // If bot token is supplied or updated, automatically register webhook
+    // If bot token is supplied or updated, automatically register webhook, menu button, and commands
     if (updated.botToken && updated.isEnabled) {
-      const siteUrl = updated.miniAppUrl || 'https://safnexbd.com';
-      const webhookUrl = `${siteUrl.replace(/\/$/, '')}/api/v1/telegram/webhook`;
+      const siteUrl = (updated.miniAppUrl || 'https://safnexbd.com').replace(/\/$/, '');
+      const webhookUrl = `${siteUrl}/api/v1/telegram/webhook`;
       this.setWebhook(updated.botToken, webhookUrl).catch((err) =>
         this.logger.warn(`Failed to set Telegram webhook: ${err.message}`),
+      );
+      this.setChatMenuButton(updated.botToken, `${siteUrl}/dashboard`).catch((err) =>
+        this.logger.warn(`Failed to set Telegram chat menu button: ${err.message}`),
+      );
+      this.setMyCommands(updated.botToken).catch((err) =>
+        this.logger.warn(`Failed to set Telegram commands: ${err.message}`),
       );
     }
 
@@ -224,6 +230,62 @@ export class TelegramService {
       this.logger.error(`Telegram API error [${method}]: ${err.message}`);
       return null;
     }
+  }
+
+  /**
+   * Set native WebView Menu Button right next to chat input bar
+   */
+  async setChatMenuButton(botToken: string, webAppUrl: string): Promise<any> {
+    return this.callApi(botToken, 'setChatMenuButton', {
+      menu_button: {
+        type: 'web_app',
+        text: '⚡ SafnexBD App',
+        web_app: { url: webAppUrl },
+      },
+    });
+  }
+
+  /**
+   * Register official Bot Commands list in Telegram
+   */
+  async setMyCommands(botToken: string): Promise<any> {
+    return this.callApi(botToken, 'setMyCommands', {
+      commands: [
+        { command: 'menu', description: '📱 প্রধান মেনু ও শর্টকাট (Main Menu)' },
+        { command: 'balance', description: '💰 ওয়ালেট ব্যালেন্স ও হিসেব (Balance)' },
+        { command: 'orders', description: '📦 চলতি এসক্রো অর্ডার ও অবস্থা (Orders)' },
+        { command: 'search', description: '🔍 ইউজার খুঁজুন ও চ্যাট করুন (Find User)' },
+        { command: 'complaint', description: '📢 অভিযোগ দাখিল করুন (File Complaint)' },
+        { command: 'support', description: '📞 কাস্টমার সাপোর্ট ও হেল্পলাইন (Support)' },
+        { command: 'help', description: '❓ বট ব্যবহারের সহায়িকা (Help Guide)' },
+      ],
+    });
+  }
+
+  /**
+   * Returns rich persistent reply keyboard with native WebApp buttons
+   */
+  getPersistentMenuKeyboard(siteUrl: string) {
+    const base = (siteUrl || 'https://safnexbd.com').replace(/\/$/, '');
+    return {
+      keyboard: [
+        [
+          { text: '⚡ SafnexBD ড্যাশবোর্ড', web_app: { url: `${base}/dashboard` } },
+          { text: '💬 লাইভ চ্যাট ও ডিল', web_app: { url: `${base}/dashboard/chat` } },
+        ],
+        [
+          { text: '💰 ওয়ালেট ও ব্যালেন্স', web_app: { url: `${base}/dashboard/wallet` } },
+          { text: '📢 অভিযোগ দাখিল করুন', web_app: { url: `${base}/dashboard?openComplaint=true` } },
+        ],
+        [
+          { text: '📦 চলতি লেনদেন' },
+          { text: '🔍 ইউজার সার্চ' },
+          { text: '❓ হেল্প' },
+        ],
+      ],
+      resize_keyboard: true,
+      is_persistent: true,
+    };
   }
 
   /**
@@ -568,18 +630,9 @@ export class TelegramService {
 
           await this.callApi(settings.botToken, 'sendMessage', {
             chat_id: chatId,
-            text: `🎉 <b>অভিনন্দন ${user.firstName}!</b>\n\nআপনার SafnexBD অ্যাকাউন্ট (@${user.uniqueUserId}) সফলভাবে টেলিগ্রামের সাথে যুক্ত হয়েছে।\n\nএখন থেকে আপনি নতুন মেসেজ, এসক্রো পেমেন্ট ও লেনদেনের সকল আপডেট সাথে সাথে এখানে পেয়ে যাবেন।\n\n<b>প্রয়োজনীয় কমান্ডসমূহ:</b>\n• /search &lt;নাম&gt; - ইউজার খুঁজুন ও চ্যাট করুন\n• /balance - ওয়ালেট ব্যালেন্স দেখুন\n• /orders - চলতি লেনদেন দেখুন\n• /help - সকল কমান্ড দেখুন`,
+            text: `🎉 <b>অভিনন্দন ${user.firstName}!</b>\n\nআপনার SafnexBD অ্যাকাউন্ট (@${user.uniqueUserId}) সফলভাবে টেলিগ্রামের সাথে যুক্ত হয়েছে।\n\nএখন থেকে আপনি নতুন মেসেজ, এসক্রো পেমেন্ট ও লেনদেনের সকল আপডেট সাথে সাথে এখানে পেয়ে যাবেন।\n\n<b>প্রয়োজনীয় কমান্ডসমূহ:</b>\n• /menu - প্রধান শর্টকাট মেনু\n• /search &lt;নাম&gt; - ইউজার খুঁজুন ও চ্যাট করুন\n• /balance - ওয়ালেট ব্যালেন্স দেখুন\n• /orders - চলতি লেনদেন দেখুন\n• /complaint - অভিযোগ দাখিল করুন\n• /help - সকল সহায়িকা`,
             parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  {
-                    text: '🛍️ Open SafnexBD WebApp',
-                    web_app: { url: settings.miniAppUrl || 'https://safnexbd.com' },
-                  },
-                ],
-              ],
-            },
+            reply_markup: this.getPersistentMenuKeyboard(settings.miniAppUrl),
           });
           return;
         }
@@ -590,6 +643,7 @@ export class TelegramService {
         chat_id: chatId,
         text: `👋 <b>স্বাগতম SafnexBD অফিসিয়াল বটের সাথে!</b>\n\nআপনার SafnexBD অ্যাকাউন্টের সাথে টেলিগ্রাম যুক্ত করতে আপনার SafnexBD ড্যাশবোর্ডের Settings থেকে <b>"Connect Telegram"</b> বাটনে ক্লিক করুন।\n\n🌐 ওয়েবসাইট: ${settings.miniAppUrl || 'https://safnexbd.com'}`,
         parse_mode: 'HTML',
+        reply_markup: this.getPersistentMenuKeyboard(settings.miniAppUrl),
       });
       return;
     }
@@ -608,7 +662,72 @@ export class TelegramService {
       return;
     }
 
-    // 2. Command: /search <query> or /find <query> (P2P User Search)
+    // 2. Command: /menu or 📱 মেনু
+    if (text === '/menu' || text.toLowerCase() === 'menu' || text === '📱 মেনু') {
+      const siteUrl = (settings.miniAppUrl || 'https://safnexbd.com').replace(/\/$/, '');
+      await this.callApi(settings.botToken, 'sendMessage', {
+        chat_id: chatId,
+        text: `📱 <b>SafnexBD প্রধান মেনু (Quick Actions):</b>\n\nনিচের বোতামগুলো ব্যবহার করে এক ক্লিকেই আপনার প্রয়োজনীয় অপশনে যান অথবা ওয়েবভিউ অ্যাপ ওপেন করুন:`,
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '⚡ ড্যাশবোর্ড (WebApp)', web_app: { url: `${siteUrl}/dashboard` } },
+              { text: '💬 লাইভ চ্যাট ও ডিল', web_app: { url: `${siteUrl}/dashboard/chat` } },
+            ],
+            [
+              { text: '💰 ওয়ালেট ও ব্যালেন্স', web_app: { url: `${siteUrl}/dashboard/wallet` } },
+              { text: '📢 অভিযোগ দাখিল করুন', web_app: { url: `${siteUrl}/dashboard?openComplaint=true` } },
+            ],
+          ],
+        },
+      });
+      return;
+    }
+
+    // 3. Command: /complaint or 📢 অভিযোগ দাখিল করুন
+    if (
+      text === '/complaint' ||
+      text.startsWith('/complaint') ||
+      text === '📢 অভিযোগ দাখিল করুন' ||
+      text === '📢 অভিযোগ দাখিল'
+    ) {
+      const siteUrl = (settings.miniAppUrl || 'https://safnexbd.com').replace(/\/$/, '');
+      await this.callApi(settings.botToken, 'sendMessage', {
+        chat_id: chatId,
+        text: `📢 <b>SafnexBD অভিযোগ দাখিল সেবা (Grievance Center):</b>\n\nআপনার যেকোনো এসক্রো লেনদেন, প্রতারণা, অ্যাকাউন্ট বা সার্ভিস সংক্রান্ত সমস্যা প্রমাণাদিসহ জমা দিতে নিচের বাটনে ক্লিক করুন। আমাদের সিনিয়র অ্যাডমিন টিম অগ্রাধিকার ভিত্তিতে তা নিষ্পত্তি করবে।`,
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: '📝 অভিযোগ ফর্ম ওপেন করুন (WebApp)',
+                web_app: { url: `${siteUrl}/dashboard?openComplaint=true` },
+              },
+            ],
+            [
+              {
+                text: '📞 লাইভ অ্যাডমিন সাপোর্ট চ্যাট',
+                web_app: { url: `${siteUrl}/dashboard/chat` },
+              },
+            ],
+          ],
+        },
+      });
+      return;
+    }
+
+    // Keyboard Shortcuts
+    if (text === '🔍 ইউজার সার্চ') {
+      await this.callApi(settings.botToken, 'sendMessage', {
+        chat_id: chatId,
+        text: `🔍 <b>ইউজার সার্চ করতে লিখুন:</b>\n<code>/search রহিম</code> বা <code>/search Rahim2345</code>`,
+        parse_mode: 'HTML',
+      });
+      return;
+    }
+
+    // 4. Command: /search <query> or /find <query> (P2P User Search)
     if (text.startsWith('/search') || text.startsWith('/find')) {
       if (!settings.allowUserSearch) {
         await this.callApi(settings.botToken, 'sendMessage', {
@@ -695,8 +814,8 @@ export class TelegramService {
       return;
     }
 
-    // 3. Command: /balance
-    if (text === '/balance') {
+    // 5. Command: /balance
+    if (text === '/balance' || text === '💰 ওয়ালেট ও ব্যালেন্স') {
       const wallet = await this.prisma.wallet.findUnique({
         where: { userId: linkedUser.id },
       });
@@ -710,8 +829,8 @@ export class TelegramService {
         reply_markup: {
           inline_keyboard: [
             [
-              { text: '💳 রিচার্জ', url: `${settings.miniAppUrl}/dashboard/wallet` },
-              { text: '💸 উত্তোলন', url: `${settings.miniAppUrl}/dashboard/wallet` },
+              { text: '💳 রিচার্জ (WebApp)', web_app: { url: `${settings.miniAppUrl}/dashboard/wallet` } },
+              { text: '💸 উত্তোলন (WebApp)', web_app: { url: `${settings.miniAppUrl}/dashboard/wallet` } },
             ],
           ],
         },
@@ -719,8 +838,8 @@ export class TelegramService {
       return;
     }
 
-    // 4. Command: /orders
-    if (text === '/orders') {
+    // 6. Command: /orders
+    if (text === '/orders' || text === '📦 চলতি লেনদেন') {
       const orders = await this.prisma.transaction.findMany({
         where: {
           OR: [{ senderId: linkedUser.id }, { receiverId: linkedUser.id }],
@@ -755,16 +874,36 @@ export class TelegramService {
         text: msg,
         parse_mode: 'HTML',
         disable_web_page_preview: true,
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: '💬 লাইভ চ্যাট ও ডিল দেখুন (WebApp)',
+                web_app: { url: `${settings.miniAppUrl}/dashboard/chat` },
+              },
+            ],
+          ],
+        },
       });
       return;
     }
 
-    // 5. Command: /help
-    if (text === '/help') {
+    // 7. Command: /help & /support
+    if (text === '/help' || text === '❓ হেল্প' || text === '/support') {
       await this.callApi(settings.botToken, 'sendMessage', {
         chat_id: chatId,
-        text: `🤖 <b>SafnexBD বট সহায়িকা:</b>\n\n• /search &lt;নাম/আইডি&gt; - ইউজার খুঁজুন\n• /balance - ওয়ালেট ব্যালেন্স জানুন\n• /orders - চলতি লেনদেনের অবস্থা\n• /support - হেল্পলাইন ও সাপোর্ট\n• /help - কমান্ড তালিকা`,
+        text: `🤖 <b>SafnexBD বট সহায়িকা:</b>\n\n• /menu - প্রধান অ্যাকশন মেনু\n• /search &lt;নাম/আইডি&gt; - ইউজার খুঁজুন\n• /balance - ওয়ালেট ব্যালেন্স জানুন\n• /orders - চলতি লেনদেনের অবস্থা\n• /complaint - অভিযোগ দাখিল করুন\n• /support - হেল্পলাইন ও সাপোর্ট\n• /help - কমান্ড তালিকা`,
         parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: '⚡ SafnexBD ড্যাশবোর্ড ওপেন করুন',
+                web_app: { url: `${settings.miniAppUrl}/dashboard` },
+              },
+            ],
+          ],
+        },
       });
       return;
     }

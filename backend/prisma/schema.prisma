@@ -122,6 +122,7 @@ model User {
 
   receivedReviews      UserReview[]        @relation("ReceivedReviews")
   givenReviews         UserReview[]        @relation("GivenReviews")
+  complaints           Complaint[]         @relation("UserComplaints")
 
   @@index([uniqueUserId])
   @@index([email])
@@ -972,6 +973,60 @@ model DisputeAction {
 
   @@index([disputeId])
   @@map("dispute_actions")
+}
+
+// -----------------------------------------------------------------------------
+// 6.5. User Grievance & Complaint System (অভিযোগ ব্যবস্থাপনা)
+// -----------------------------------------------------------------------------
+
+enum ComplaintCategory {
+  ESCROW
+  ACCOUNT
+  SCAM
+  DEPOSIT_WITHDRAWAL
+  BUG
+  OTHER
+}
+
+enum ComplaintPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ComplaintStatus {
+  PENDING
+  IN_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+model Complaint {
+  id             String            @id @default(uuid())
+  ticketNumber   String            @unique @db.VarChar(50)
+  userId         String
+  category       ComplaintCategory @default(OTHER)
+  subject        String            @db.VarChar(200)
+  description    String            @db.Text
+  trackingNumber String?           @db.VarChar(100)
+  evidenceUrls   Json?
+  priority       ComplaintPriority @default(MEDIUM)
+  status         ComplaintStatus   @default(PENDING)
+  adminNotes     String?           @db.Text
+  assignedToId   String?           @db.VarChar(50)
+  resolvedById   String?           @db.VarChar(50)
+  resolvedAt     DateTime?
+  isReadByAdmin  Boolean           @default(false)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  user           User              @relation("UserComplaints", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([userId])
+  @@index([isReadByAdmin])
+  @@map("complaints")
 }
 
 // -----------------------------------------------------------------------------

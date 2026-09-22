@@ -23,6 +23,7 @@ import { PartnerModule } from './partner/partner.module';
 import { OperationsModule } from './operations/operations.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { AiModule } from './ai/ai.module';
+import { ComplaintsModule } from './complaints/complaints.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { AiModule } from './ai/ai.module';
     OperationsModule,
     TelegramModule,
     AiModule,
+    ComplaintsModule,
   ],
   providers: [
     {

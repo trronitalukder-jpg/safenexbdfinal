@@ -57,7 +57,7 @@ export const EMPLOYEE_ROLE_PRESETS: RolePreset[] = [
     badgeColor: 'sky',
     descriptionEn: 'Live chat monitoring, keyword search, dispute queue & user help guides',
     descriptionBn: 'লাইভ চ্যাট সহায়তা, চ্যাট সার্চ, কল অ্যাডমিন কিউ ও হেল্প গাইড',
-    permissions: ['cms', 'chat_monitor', 'disputes', 'guides'],
+    permissions: ['cms', 'chat_monitor', 'disputes', 'complaints', 'guides'],
   },
   {
     id: 'finance_officer',
@@ -75,7 +75,7 @@ export const EMPLOYEE_ROLE_PRESETS: RolePreset[] = [
     badgeColor: 'amber',
     descriptionEn: 'Resolve calling disputes, chat lock control, and mediate escrow deals',
     descriptionBn: 'এসক্রো ডিসপ্যুট নিষ্পত্তি, চ্যাট অন/অফ ও লক কন্ট্রোল এবং ইউজার অডিট',
-    permissions: ['disputes', 'cms', 'chat_monitor', 'chat_manage', 'transactions', 'users'],
+    permissions: ['disputes', 'complaints', 'cms', 'chat_monitor', 'chat_manage', 'transactions', 'users'],
   },
   {
     id: 'content_moderator',
@@ -188,6 +188,16 @@ export const adminMenuRegistry: AdminMenuItem[] = [
     descriptionEn: 'Live escrow dispute queue, arbitration and emergency assistance',
     descriptionBn: 'লাইভ এসক্রো ডিসপ্যুট কল কিউ ও মধ্যস্থতা সেবা',
     category: 'chat',
+  },
+  {
+    key: 'complaints',
+    labelEn: 'Complaints & Reports',
+    labelBn: 'অভিযোগ ম্যানেজমেন্ট',
+    href: '/admin/complaints',
+    icon: ShieldAlert,
+    descriptionEn: 'Review user complaint tickets, scam allegations and arbitration',
+    descriptionBn: 'ব্যবহারকারীদের দাখিলকৃত অভিযোগ, প্রতারণা রিপোর্ট ও সমাধান',
+    category: 'moderation',
   },
   {
     key: 'transactions',

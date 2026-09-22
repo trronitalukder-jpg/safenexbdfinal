@@ -36,6 +36,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { usePwa } from '@/context/PwaContext';
 import { useNotification } from '@/context/NotificationContext';
 import { getImageUrl } from '@/lib/imageUtils';
+import { ComplaintModal } from '@/components/complaint/ComplaintModal';
 
 export default function DashboardLayout({
   children,
@@ -50,9 +51,16 @@ export default function DashboardLayout({
   const { installApp, isInstalled } = usePwa();
   const { permission: notifPermission, requestPermission, unreadCount } = useNotification();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [showComplaintModal, setShowComplaintModal] = useState(false);
 
   useEffect(() => {
     refreshMe();
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('openComplaint') === 'true') {
+        setShowComplaintModal(true);
+      }
+    }
   }, []);
 
   const isStaffOrAdmin =
@@ -194,6 +202,26 @@ export default function DashboardLayout({
 
             {/* Bottom Controls */}
             <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+              {/* Complaint Button in Mobile Drawer */}
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileDrawerOpen(false);
+                  setShowComplaintModal(true);
+                }}
+                className="w-full p-2.5 rounded-xl bg-gradient-to-r from-rose-500/10 via-amber-500/10 to-rose-500/10 border border-rose-500/25 flex items-center justify-between text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-500/15 transition shadow-xs"
+              >
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0" />
+                  <span>
+                    {lang === 'bn' ? '📢 অভিযোগ দাখিল করুন' : '📢 File a Complaint'}
+                  </span>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold">
+                  {lang === 'bn' ? 'সাপোর্ট' : 'Support'}
+                </span>
+              </button>
+
               {/* App Install in Mobile Drawer */}
               <button
                 type="button"
@@ -404,7 +432,20 @@ export default function DashboardLayout({
                   </span>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {/* File Complaint Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowComplaintModal(true)}
+                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-rose-500/15 via-amber-500/15 to-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 font-bold hover:bg-rose-500 hover:text-white dark:hover:bg-rose-500 dark:hover:text-white transition flex items-center gap-1.5 shadow-xs text-xs active:scale-95 cursor-pointer"
+                    title={lang === 'bn' ? 'এডমিনের কাছে অভিযোগ দাখিল করুন' : 'File a Complaint to Admin'}
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+                    <span>
+                      {lang === 'bn' ? '📢 অভিযোগ দাখিল করুন' : '📢 File a Complaint'}
+                    </span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={installApp}
@@ -427,6 +468,12 @@ export default function DashboardLayout({
           </main>
         )}
       </div>
+
+      {/* Complaint Submission Modal */}
+      <ComplaintModal
+        isOpen={showComplaintModal}
+        onClose={() => setShowComplaintModal(false)}
+      />
     </div>
   );
 }
