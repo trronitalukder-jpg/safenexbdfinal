@@ -329,6 +329,11 @@ export const Footer = () => {
                 </Link>
               </li>
               <li>
+                <Link href="/guides" className="hover:text-sky-600 dark:hover:text-white transition font-medium text-sky-600 dark:text-sky-400">
+                  {lang === 'bn' ? '📚 সেফ ট্রেডিং গাইড (Guides)' : '📚 Safe Trading Guides'}
+                </Link>
+              </li>
+              <li>
                 <Link href="/contact-us" className="hover:text-sky-600 dark:hover:text-white transition">
                   {lang === 'bn' ? 'যোগাযোগ ও সহায়তা (Contact)' : 'Contact & Support'}
                 </Link>

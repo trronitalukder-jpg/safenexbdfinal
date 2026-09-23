@@ -61,13 +61,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://safnexbd.com/api';
-    const res = await fetch(`${backendUrl}/guides/public`, {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://safnexbd.com/api/v1';
+    const res = await fetch(`${backendUrl}/guides`, {
       next: { revalidate: 3600 },
     });
     if (res.ok) {
-      const data = await res.json();
-      const guides = Array.isArray(data) ? data : data?.data || [];
+      const raw = await res.json();
+      const guides = Array.isArray(raw) ? raw : raw?.data?.data || raw?.data || [];
       const guideRoutes: MetadataRoute.Sitemap = guides
         .filter((g: any) => g.slug)
         .map((g: any) => ({
