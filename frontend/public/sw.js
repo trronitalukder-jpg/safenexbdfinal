@@ -9,10 +9,6 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-self.addEventListener('fetch', (event) => {
-  // Let browser handle requests normally
-});
-
 // Handle notification click to navigate to chat or wallet
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();

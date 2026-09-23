@@ -33,6 +33,7 @@ export const metadata: Metadata = {
   },
   other: {
     'google-site-verification': '5FtxkWfKzTBUBHtmdabdUk7bdAEIhGoVnl_zLMw2EQk',
+    'mobile-web-app-capable': 'yes',
   },
   appleWebApp: {
     capable: true,
@@ -58,6 +59,7 @@ export default function RootLayout({
     >
       <head>
         <meta name="google-site-verification" content="5FtxkWfKzTBUBHtmdabdUk7bdAEIhGoVnl_zLMw2EQk" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <script
           dangerouslySetInnerHTML={{
             __html: `

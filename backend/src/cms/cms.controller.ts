@@ -30,6 +30,12 @@ export class CmsController {
   }
 
   @Public()
+  @Get('pages')
+  async getPublicPages() {
+    return this.cmsService.getAllPages();
+  }
+
+  @Public()
   @Get('pages/:slug')
   async getPage(@Param('slug') slug: string) {
     return this.cmsService.getPageBySlug(slug);

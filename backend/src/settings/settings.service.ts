@@ -1102,6 +1102,7 @@ export class SettingsService {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(capiBody),
+          signal: AbortSignal.timeout(5000),
         },
       );
 

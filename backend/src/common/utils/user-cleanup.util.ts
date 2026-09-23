@@ -110,9 +110,11 @@ export async function purgeOrScrubUser(
     ? user.email
     : `${user.email.slice(0, 150)}_deleted_${timestamp}`;
 
-  const scrubbedPhone = user.phone.startsWith('del_')
-    ? user.phone
-    : `del_${idShort}_${timeShort}`; // Exactly 23 chars (<= 30)
+  const scrubbedPhone = (
+    user.phone && user.phone.startsWith('del_')
+      ? user.phone
+      : `del_${idShort}_${timeShort}`
+  ).slice(0, 30);
 
   const scrubbedUniqueId = user.uniqueUserId.startsWith('del_')
     ? user.uniqueUserId
