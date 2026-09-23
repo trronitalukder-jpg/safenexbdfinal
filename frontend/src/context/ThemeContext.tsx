@@ -28,10 +28,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (typeof document !== 'undefined') {
       if (newTheme === 'dark') {
         document.documentElement.classList.add('dark');
-        document.documentElement.style.colorScheme = 'dark';
       } else {
         document.documentElement.classList.remove('dark');
-        document.documentElement.style.colorScheme = 'light';
       }
     }
   }, []);

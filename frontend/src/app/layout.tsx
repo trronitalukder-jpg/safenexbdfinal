@@ -41,7 +41,8 @@ export const metadata: Metadata = {
     title: 'SafnexBD',
   },
   icons: {
-    icon: '/icon-192.png',
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
     apple: '/icon-192.png',
   },
 };
@@ -68,10 +69,8 @@ export default function RootLayout({
                 var supportDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
                 if (theme === 'dark' || (!theme && supportDark)) {
                   document.documentElement.classList.add('dark');
-                  document.documentElement.style.colorScheme = 'dark';
                 } else {
                   document.documentElement.classList.remove('dark');
-                  document.documentElement.style.colorScheme = 'light';
                 }
               } catch (_) {}
             `,
