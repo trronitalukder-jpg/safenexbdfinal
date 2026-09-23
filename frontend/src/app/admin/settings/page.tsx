@@ -1582,12 +1582,17 @@ export default function AdminSettingsPage() {
                   type="text"
                   placeholder="google-site-verification=..."
                   value={settings.seo.googleSiteVerification || ''}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    let val = e.target.value.trim();
+                    const match = val.match(/content=["']([^"']+)["']/i);
+                    if (match && match[1]) {
+                      val = match[1];
+                    }
                     setSettings((p: any) => ({
                       ...p,
-                      seo: { ...p.seo, googleSiteVerification: e.target.value },
-                    }))
-                  }
+                      seo: { ...p.seo, googleSiteVerification: val },
+                    }));
+                  }}
                   className="w-full px-3 py-2 font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
                 />
               </div>

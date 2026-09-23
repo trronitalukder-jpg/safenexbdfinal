@@ -27,4 +27,20 @@ export const reconnectSocket = (): Socket => {
   return getSocket();
 };
 
+if (typeof window !== 'undefined') {
+  // Gracefully disconnect when page enters Back-Forward Cache (bfcache)
+  window.addEventListener('pagehide', () => {
+    if (socket && socket.connected) {
+      socket.disconnect();
+    }
+  });
+
+  // Reconnect when restored from Back-Forward Cache
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted && socket && !socket.connected) {
+      socket.connect();
+    }
+  });
+}
+
 

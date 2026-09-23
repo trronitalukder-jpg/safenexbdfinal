@@ -28,6 +28,12 @@ export const metadata: Metadata = {
   title: 'SafnexBD — Safe Transaction Marketplace & Escrow Platform',
   description: 'Buy and sell digital products, physical gadgets, and conduct escrow protected peer-to-peer safe transactions in Bangladesh.',
   manifest: '/manifest.json',
+  verification: {
+    google: '5FtxkWfKzTBUBHtmdabdUk7bdAEIhGoVnl_zLMw2EQk',
+  },
+  other: {
+    'google-site-verification': '5FtxkWfKzTBUBHtmdabdUk7bdAEIhGoVnl_zLMw2EQk',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -51,12 +57,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
       <head>
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#0284c7" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="SafnexBD" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <meta name="google-site-verification" content="5FtxkWfKzTBUBHtmdabdUk7bdAEIhGoVnl_zLMw2EQk" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
