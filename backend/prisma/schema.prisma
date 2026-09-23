@@ -327,6 +327,7 @@ enum LedgerEntryType {
   TRANSFER_IN
   TRANSFER_OUT
   ADMIN_ADJUSTMENT
+  AFFILIATE_COMMISSION
 }
 
 model WalletLedger {

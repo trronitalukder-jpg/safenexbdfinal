@@ -1,6 +1,7 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { ChatGateway } from '../chat/chat.gateway';
 
 export interface AffiliateSettings {
   isEnabled: boolean;
@@ -24,7 +25,10 @@ export const DEFAULT_AFFILIATE_SETTINGS: AffiliateSettings = {
 export class AffiliateService {
   private readonly logger = new Logger(AffiliateService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Optional() private chatGateway?: ChatGateway,
+  ) {}
 
   /**
    * Get affiliate settings from SystemSetting or fallback to defaults
@@ -167,23 +171,67 @@ export class AffiliateService {
           },
         });
 
-        // 2. Increment referrer wallet availableBalance
-        await tx.wallet.upsert({
+        // 2. Fetch referrer wallet to record balanceBefore and balanceAfter
+        let refWallet = await tx.wallet.findUnique({
           where: { userId: referrerId },
-          create: {
-            userId: referrerId,
-            availableBalance: new Prisma.Decimal(rewardAmount),
-            holdBalance: 0,
-          },
-          update: {
-            availableBalance: {
-              increment: new Prisma.Decimal(rewardAmount),
+        });
+
+        if (!refWallet) {
+          refWallet = await tx.wallet.create({
+            data: {
+              userId: referrerId,
+              availableBalance: new Prisma.Decimal(0),
+              holdBalance: 0,
             },
+          });
+        }
+
+        const balanceBefore = refWallet.availableBalance;
+        const balanceAfter = balanceBefore.add(new Prisma.Decimal(rewardAmount));
+
+        // 3. Increment referrer wallet availableBalance
+        await tx.wallet.update({
+          where: { id: refWallet.id },
+          data: {
+            availableBalance: balanceAfter,
+            version: { increment: 1 },
+          },
+        });
+
+        // 4. Create WalletLedger record so it appears on /dashboard/wallet ledger!
+        await tx.walletLedger.create({
+          data: {
+            walletId: refWallet.id,
+            userId: referrerId,
+            transactionId: sourceId || `AFF-${Date.now()}`,
+            type: 'AFFILIATE_COMMISSION' as any,
+            amount: new Prisma.Decimal(rewardAmount),
+            commission: new Prisma.Decimal(0),
+            balanceBefore,
+            balanceAfter,
+            holdBefore: refWallet.holdBalance,
+            holdAfter: refWallet.holdBalance,
+            referenceId: rewardLog.id,
+            referenceType: 'AFFILIATE_REWARD',
+            notes: `রেফারেল ইনকাম: ব্যবহারকারী @${user.uniqueUserId || user.firstName} এর ${sourceType === 'RECHARGE' ? 'রিচার্জ' : 'লেনদেন'} থেকে কমিশন`,
+            status: 'COMPLETED',
+            createdBy: 'SYSTEM',
           },
         });
 
         return rewardLog;
       });
+
+      // 5. Notify referrer in real-time
+      if (this.chatGateway && result) {
+        this.chatGateway.notifyUser(referrerId, 'notification:affiliate_reward', {
+          amount: rewardAmount,
+          fromUser: user.uniqueUserId || user.firstName,
+          sourceType,
+          title: '🎉 রেফারেল কমিশন জমা হয়েছে!',
+          message: `আপনার রেফারেল @${user.uniqueUserId || user.firstName} এর সফল কার্যক্রম থেকে ৳${rewardAmount} কমিশন আপনার ওয়ালেটে জমা হয়েছে।`,
+        });
+      }
 
       this.logger.log(`Affiliate reward credited: ৳${rewardAmount} to referrer ${referrerId} from user ${userId}`);
       return result;
@@ -236,10 +284,22 @@ export class AffiliateService {
     }
 
     const totalReferrals = user.referrals.length;
-    const totalEarned = user.referrerRewards.reduce(
-      (sum, r) => sum + Number(r.amount),
-      0,
-    );
+
+    // Aggregate from both referralReward and walletLedger to guarantee exact match
+    const [rewardsAggregate, ledgerAggregate] = await Promise.all([
+      this.prisma.referralReward.aggregate({
+        where: { referrerId: userId },
+        _sum: { amount: true },
+      }),
+      this.prisma.walletLedger.aggregate({
+        where: { userId, type: 'AFFILIATE_COMMISSION' as any },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const sumRewards = Number(rewardsAggregate._sum.amount || 0);
+    const sumLedger = Number(ledgerAggregate._sum.amount || 0);
+    const totalEarned = Math.max(sumRewards, sumLedger);
 
     // Format referral link (e.g. https://safnexbd.com/register?ref=UNIQUE_ID)
     const referralCode = user.uniqueUserId || user.id;
