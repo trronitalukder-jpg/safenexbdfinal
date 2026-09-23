@@ -124,11 +124,40 @@ model User {
   givenReviews         UserReview[]        @relation("GivenReviews")
   complaints           Complaint[]         @relation("UserComplaints")
 
+  referredById         String?
+  referredBy           User?               @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals            User[]              @relation("UserReferrals")
+  referrerRewards      ReferralReward[]    @relation("ReferrerRewards")
+  referredRewards      ReferralReward[]    @relation("ReferredRewards")
+
   @@index([uniqueUserId])
   @@index([email])
   @@index([phone])
   @@index([telegramChatId])
+  @@index([referredById])
   @@map("users")
+}
+
+model ReferralReward {
+  id           String   @id @default(uuid())
+  referrerId   String
+  referredId   String
+  sourceType   String   // TRANSACTION, RECHARGE
+  sourceId     String?  // transactionId or rechargeId
+  amount       Decimal  @db.Decimal(18, 4)
+  adminFee     Decimal? @db.Decimal(18, 4)
+  rateType     String   // PERCENTAGE, FLAT
+  rateValue    Decimal  @db.Decimal(18, 4)
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  referrer     User     @relation("ReferrerRewards", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred     User     @relation("ReferredRewards", fields: [referredId], references: [id], onDelete: Cascade)
+
+  @@index([referrerId])
+  @@index([referredId])
+  @@index([sourceType])
+  @@map("referral_rewards")
 }
 
 model UserReview {

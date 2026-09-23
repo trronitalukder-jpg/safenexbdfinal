@@ -13,6 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CommissionService } from '../commission/commission.service';
 import { ChatGateway } from '../chat/chat.gateway';
 import { TelegramService } from '../telegram/telegram.service';
+import { AffiliateService } from '../affiliate/affiliate.service';
 import {
   CreateTransactionDto,
   RejectTransactionDto,
@@ -30,6 +31,9 @@ export class TransactionsService {
     @Optional()
     @Inject(forwardRef(() => TelegramService))
     private telegramService?: TelegramService,
+    @Optional()
+    @Inject(forwardRef(() => AffiliateService))
+    private affiliateService?: AffiliateService,
   ) {}
 
   /**
@@ -1330,6 +1334,28 @@ export class TransactionsService {
             },
           ],
         )
+        .catch(() => null);
+    }
+    // Process Affiliate Referral Reward from platform commission
+    if (this.affiliateService && Number(transaction.commissionAmount) > 0) {
+      // Reward based on buyer/sender referral
+      this.affiliateService
+        .processReferralReward({
+          userId: transaction.senderId,
+          sourceType: 'TRANSACTION',
+          sourceId: transaction.id,
+          adminFee: Number(transaction.commissionAmount),
+        })
+        .catch(() => null);
+
+      // Also check receiver referral
+      this.affiliateService
+        .processReferralReward({
+          userId: transaction.receiverId,
+          sourceType: 'TRANSACTION',
+          sourceId: transaction.id,
+          adminFee: Number(transaction.commissionAmount),
+        })
         .catch(() => null);
     }
 

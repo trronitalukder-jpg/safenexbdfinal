@@ -23,6 +23,8 @@ import {
   Layers,
   Tag,
   Zap,
+  Gift,
+  Users,
 } from 'lucide-react';
 
 interface CoreFeeSetting {
@@ -119,13 +121,24 @@ export default function AdminCommissionsPage() {
     }, 4000);
   };
 
+  // Affiliate Settings state
+  const [affiliateSettings, setAffiliateSettings] = useState({
+    isEnabled: true,
+    commissionSource: 'BOTH' as 'TRANSACTION' | 'RECHARGE' | 'BOTH',
+    rewardType: 'PERCENTAGE' as 'PERCENTAGE' | 'FLAT',
+    rewardValue: 20,
+    triggerCondition: 'LIFETIME' as 'LIFETIME' | 'FIRST_ONLY',
+  });
+  const [savingAffiliate, setSavingAffiliate] = useState(false);
+
   // Load core settings & rules
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [settingsRes, rulesRes] = await Promise.all([
+      const [settingsRes, rulesRes, affiliateRes] = await Promise.all([
         api.get('/commission/admin/settings').catch(() => api.get('/commission/settings')),
         api.get('/commission/admin/rules').catch(() => null),
+        api.get('/affiliate/admin/settings').catch(() => null),
       ]);
 
       const raw = unwrap(settingsRes);
@@ -159,6 +172,17 @@ export default function AdminCommissionsPage() {
       const rulesData = unwrap(rulesRes);
       if (Array.isArray(rulesData)) {
         setRules(rulesData);
+      }
+
+      const affData = unwrap(affiliateRes);
+      if (affData) {
+        setAffiliateSettings({
+          isEnabled: affData.isEnabled !== false,
+          commissionSource: affData.commissionSource || 'BOTH',
+          rewardType: affData.rewardType || 'PERCENTAGE',
+          rewardValue: Number(affData.rewardValue ?? 20),
+          triggerCondition: affData.triggerCondition || 'LIFETIME',
+        });
       }
     } catch (err: any) {
       console.error('Failed to load commission data:', err);
@@ -212,6 +236,32 @@ export default function AdminCommissionsPage() {
       );
     } finally {
       setSavingCore(null);
+    }
+  };
+
+  // Save Affiliate Settings
+  const handleSaveAffiliateSettings = async () => {
+    setSavingAffiliate(true);
+    try {
+      const res = await api.patch('/affiliate/admin/settings', affiliateSettings);
+      const data = unwrap(res);
+      if (data) {
+        showToast(
+          'success',
+          lang === 'bn'
+            ? 'অ্যাফিলিয়েট ও রেফারেল সেটিংস সফলভাবে সংরক্ষিত হয়েছে!'
+            : 'Affiliate settings saved successfully!',
+        );
+      }
+    } catch (err: any) {
+      console.error('Save affiliate settings failed:', err);
+      showToast(
+        'error',
+        err?.response?.data?.message ||
+          (lang === 'bn' ? 'সংরক্ষণ ব্যর্থ হয়েছে' : 'Failed to save affiliate settings'),
+      );
+    } finally {
+      setSavingAffiliate(false);
     }
   };
 
@@ -1012,6 +1062,197 @@ export default function AdminCommissionsPage() {
                   <Save className="w-3.5 h-3.5" />
                 )}
                 <span>{lang === 'bn' ? 'ট্রানজ্যাকশন চার্জ সংরক্ষণ' : 'Save Transaction Setting'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* AFFILIATE & REFERRAL SYSTEM CONTROL PANEL */}
+      {/* ========================================================================= */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-amber-500/30 p-6 md:p-8 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <Gift className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <span>{lang === 'bn' ? '🎁 অ্যাফিলিয়েট ও রেফারেল কমিশন কন্ট্রোল' : '🎁 Affiliate & Referral Commission Control'}</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  affiliateSettings.isEnabled
+                    ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                    : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+                }`}>
+                  {affiliateSettings.isEnabled ? (lang === 'bn' ? 'সিস্টেম সক্রিয়' : 'ACTIVE') : (lang === 'bn' ? 'নিষ্ক্রিয়' : 'DISABLED')}
+                </span>
+              </h2>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                {lang === 'bn'
+                  ? 'রেফারেল কমিশন কোন খাত থেকে যাবে (ট্রানজ্যাকশন নাকি রিচার্জ), ফিক্সড টাকা নাকি কোম্পানির লাভের শতাংশ—সব নিয়ন্ত্রণ করুন।'
+                  : 'Configure whether referral commission is granted from transactions or recharges, flat BDT or percentage of admin fee.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() =>
+                setAffiliateSettings((prev) => ({ ...prev, isEnabled: !prev.isEnabled }))
+              }
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 border cursor-pointer ${
+                affiliateSettings.isEnabled
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800'
+                  : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800'
+              }`}
+            >
+              <span>{affiliateSettings.isEnabled ? '✅ ' + (lang === 'bn' ? 'সিস্টেম চালু' : 'System ON') : '⏸️ ' + (lang === 'bn' ? 'সিস্টেম বন্ধ' : 'System OFF')}</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={savingAffiliate}
+              onClick={handleSaveAffiliateSettings}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-slate-950 font-black text-xs transition flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
+            >
+              {savingAffiliate ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Save className="w-3.5 h-3.5" />
+              )}
+              <span>{lang === 'bn' ? 'অ্যাফিলিয়েট সেটিংস সংরক্ষণ' : 'Save Affiliate Settings'}</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+          {/* Setting 1: Commission Source */}
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+              {lang === 'bn' ? '১. কমিশন দেওয়ার খাত (Commission Source)' : '1. Commission Source'}
+            </label>
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => setAffiliateSettings((p) => ({ ...p, commissionSource: 'TRANSACTION' }))}
+                className={`py-2 px-2 rounded-xl text-[11px] font-bold transition text-center ${
+                  affiliateSettings.commissionSource === 'TRANSACTION'
+                    ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                {lang === 'bn' ? 'ট্রানজ্যাকশন' : 'Transaction'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAffiliateSettings((p) => ({ ...p, commissionSource: 'RECHARGE' }))}
+                className={`py-2 px-2 rounded-xl text-[11px] font-bold transition text-center ${
+                  affiliateSettings.commissionSource === 'RECHARGE'
+                    ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                {lang === 'bn' ? 'রিচার্জ' : 'Recharge'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAffiliateSettings((p) => ({ ...p, commissionSource: 'BOTH' }))}
+                className={`py-2 px-2 rounded-xl text-[11px] font-bold transition text-center ${
+                  affiliateSettings.commissionSource === 'BOTH'
+                    ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                {lang === 'bn' ? 'উভয়টি' : 'Both'}
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              {lang === 'bn'
+                ? 'রেফার করা ব্যক্তি যখন লেনদেন বা রিচার্জ করবে তখন কমিশন পাবে।'
+                : 'Triggers when user makes escrow deal or wallet recharge.'}
+            </p>
+          </div>
+
+          {/* Setting 2: Reward Type (Percentage of Admin Fee vs Flat BDT) */}
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+              {lang === 'bn' ? '২. কমিশনের ধরন (Reward Format)' : '2. Reward Format'}
+            </label>
+            <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => setAffiliateSettings((p) => ({ ...p, rewardType: 'PERCENTAGE' }))}
+                className={`py-2 px-3 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1.5 ${
+                  affiliateSettings.rewardType === 'PERCENTAGE'
+                    ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                <Percent className="w-3.5 h-3.5" />
+                <span>{lang === 'bn' ? 'কোম্পানি ফির %' : '% of Admin Fee'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAffiliateSettings((p) => ({ ...p, rewardType: 'FLAT' }))}
+                className={`py-2 px-3 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1.5 ${
+                  affiliateSettings.rewardType === 'FLAT'
+                    ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                <span>৳</span>
+                <span>{lang === 'bn' ? 'ফিক্সড টাকা' : 'Flat BDT'}</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              {affiliateSettings.rewardType === 'PERCENTAGE'
+                ? lang === 'bn' ? 'নিরাপদ: কোম্পানির অর্জিত ফি থেকে নির্দিষ্ট শতাংশ দেওয়া হবে।' : 'Safe: Derived from platform fee profit.'
+                : lang === 'bn' ? 'প্রতি সফল লেনদেনে নির্দিষ্ট ফিক্সড টাকা রেফারারের ওয়ালেটে যাবে।' : 'Fixed amount per successful action.'}
+            </p>
+          </div>
+
+          {/* Setting 3: Rate Value & Lifetime Toggle */}
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+              {lang === 'bn'
+                ? affiliateSettings.rewardType === 'PERCENTAGE'
+                  ? '৩. কমিশনের পরিমাণ (কোম্পানি ফির %)'
+                  : '৩. কমিশনের পরিমাণ (ফিক্সড ৳)'
+                : '3. Reward Value'}
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                value={affiliateSettings.rewardValue}
+                onChange={(e) =>
+                  setAffiliateSettings((p) => ({ ...p, rewardValue: parseFloat(e.target.value) || 0 }))
+                }
+                className="w-full pl-4 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-black text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                placeholder="20"
+              />
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                {affiliateSettings.rewardType === 'PERCENTAGE' ? '%' : '৳'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-[11px] text-slate-500 font-semibold">{lang === 'bn' ? 'মেয়াদ:' : 'Duration:'}</span>
+              <button
+                type="button"
+                onClick={() =>
+                  setAffiliateSettings((p) => ({
+                    ...p,
+                    triggerCondition: p.triggerCondition === 'LIFETIME' ? 'FIRST_ONLY' : 'LIFETIME',
+                  }))
+                }
+                className="text-[11px] font-bold text-amber-600 dark:text-amber-400 underline cursor-pointer"
+              >
+                {affiliateSettings.triggerCondition === 'LIFETIME'
+                  ? (lang === 'bn' ? '🔁 লাইফটাইম (প্রতি লেনদেনে)' : '🔁 Lifetime (Every Deal)')
+                  : (lang === 'bn' ? '🎯 শুধুমাত্র ১ম সফল লেনদেনে' : '🎯 First Deal Only')}
               </button>
             </div>
           </div>

@@ -24,6 +24,7 @@ import {
 import { CommissionService } from '../commission/commission.service';
 import { ChatGateway } from '../chat/chat.gateway';
 import { TelegramService } from '../telegram/telegram.service';
+import { AffiliateService } from '../affiliate/affiliate.service';
 import { OtpService } from '../sms/otp.service';
 import { SmsService } from '../sms/sms.service';
 import { SettingsService } from '../settings/settings.service';
@@ -47,6 +48,9 @@ export class WalletService {
     @Optional()
     @Inject(forwardRef(() => TelegramService))
     private telegramService?: TelegramService,
+    @Optional()
+    @Inject(forwardRef(() => AffiliateService))
+    private affiliateService?: AffiliateService,
   ) {}
 
   /**
@@ -653,6 +657,22 @@ export class WalletService {
           lang: 'bn',
         })
         .catch(() => {});
+    }
+
+    // Process Affiliate Referral Reward for approved recharge
+    if (this.affiliateService && updatedRecharge.status === 'APPROVED') {
+      const rechargeFee = Number(
+        (updatedRecharge as any).adminFee || 
+        (updatedRecharge.amount ? Number(updatedRecharge.amount) * 0.02 : 10) // fallback base
+      );
+      this.affiliateService
+        .processReferralReward({
+          userId: updatedRecharge.userId,
+          sourceType: 'RECHARGE',
+          sourceId: updatedRecharge.id,
+          adminFee: rechargeFee,
+        })
+        .catch(() => null);
     }
 
     return updatedRecharge;

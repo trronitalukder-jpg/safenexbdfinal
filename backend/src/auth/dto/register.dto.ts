@@ -41,5 +41,9 @@ export class RegisterDto {
   @IsString()
   @IsOptional()
   businessType?: string;
+
+  @IsString()
+  @IsOptional()
+  referralCode?: string;
 }
 

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ShieldCheck,
   ArrowRight,
@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
+  Gift,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -22,11 +23,14 @@ import { api } from '@/lib/api';
 import { compressImage } from '@/lib/imageUtils';
 import { trackEvent } from '@/lib/tracking';
 
-export default function RegisterPage() {
+function RegisterContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { lang, t } = useLanguage();
   const { setAuth } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const refParam = searchParams.get('ref') || '';
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -37,7 +41,14 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
     businessName: '',
+    referralCode: refParam,
   });
+
+  useEffect(() => {
+    if (refParam) {
+      setFormData((prev) => ({ ...prev, referralCode: refParam }));
+    }
+  }, [refParam]);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -422,6 +433,28 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          {/* Optional Referral Code Box */}
+          <div className="p-3 rounded-2xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                <Gift className="w-3.5 h-3.5 text-amber-500" />
+                <span>{lang === 'bn' ? 'রেফারেল কোড (ঐচ্ছিক)' : 'Referral Code (Optional)'}</span>
+              </label>
+              {formData.referralCode && (
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                  {lang === 'bn' ? '✓ রেফারেল কোড যুক্ত হয়েছে' : '✓ Referral code applied'}
+                </span>
+              )}
+            </div>
+            <input
+              type="text"
+              value={formData.referralCode}
+              onChange={(e) => setFormData({ ...formData, referralCode: e.target.value })}
+              placeholder={lang === 'bn' ? 'যেমন: Rahim2345 (যদি কেউ রেফার করে থাকে)' : 'e.g. Rahim2345'}
+              className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/30 text-xs font-mono text-slate-900 dark:text-white uppercase placeholder:normal-case placeholder-slate-400 focus:outline-none focus:border-amber-500"
+            />
+          </div>
+
           <button
             type="submit"
             disabled={loading || uploadingAvatar}
@@ -451,5 +484,19 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[calc(100vh-12rem)] flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <RegisterContent />
+    </Suspense>
   );
 }

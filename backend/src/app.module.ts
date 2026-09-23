@@ -24,6 +24,7 @@ import { OperationsModule } from './operations/operations.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { AiModule } from './ai/ai.module';
 import { ComplaintsModule } from './complaints/complaints.module';
+import { AffiliateModule } from './affiliate/affiliate.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { ComplaintsModule } from './complaints/complaints.module';
     TelegramModule,
     AiModule,
     ComplaintsModule,
+    AffiliateModule,
   ],
   providers: [
     {

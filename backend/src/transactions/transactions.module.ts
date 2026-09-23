@@ -4,9 +4,10 @@ import { TransactionsController } from './transactions.controller';
 import { CommissionModule } from '../commission/commission.module';
 import { ChatModule } from '../chat/chat.module';
 import { TelegramModule } from '../telegram/telegram.module';
+import { AffiliateModule } from '../affiliate/affiliate.module';
 
 @Module({
-  imports: [CommissionModule, ChatModule, forwardRef(() => TelegramModule)],
+  imports: [CommissionModule, ChatModule, forwardRef(() => TelegramModule), forwardRef(() => AffiliateModule)],
   controllers: [TransactionsController],
   providers: [TransactionsService],
   exports: [TransactionsService],

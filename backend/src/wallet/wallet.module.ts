@@ -6,9 +6,10 @@ import { ChatModule } from '../chat/chat.module';
 import { SettingsModule } from '../settings/settings.module';
 import { OperationsModule } from '../operations/operations.module';
 import { TelegramModule } from '../telegram/telegram.module';
+import { AffiliateModule } from '../affiliate/affiliate.module';
 
 @Module({
-  imports: [ChatModule, SettingsModule, OperationsModule, forwardRef(() => TelegramModule)],
+  imports: [ChatModule, SettingsModule, OperationsModule, forwardRef(() => TelegramModule), forwardRef(() => AffiliateModule)],
   controllers: [WalletController],
   providers: [WalletService, GatewayService],
   exports: [WalletService, GatewayService],

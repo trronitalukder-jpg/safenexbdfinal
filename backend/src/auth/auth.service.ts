@@ -103,6 +103,26 @@ export class AuthService {
     const uniqueUserId = await this.generateUniqueUserId(dto.firstName, dto.phone);
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
+    // Look up referrer if referralCode provided
+    let referredById: string | null = null;
+    if (dto.referralCode && dto.referralCode.trim()) {
+      const cleanRef = dto.referralCode.trim();
+      const referrer = await this.prisma.user.findFirst({
+        where: {
+          OR: [
+            { uniqueUserId: cleanRef },
+            { phone: cleanRef },
+            { id: cleanRef },
+          ],
+          isActive: true,
+          deletedAt: null,
+        },
+      });
+      if (referrer) {
+        referredById = referrer.id;
+      }
+    }
+
     // Get default USER role
     const userRole = await this.prisma.role.findUnique({ where: { name: 'USER' } });
 
@@ -120,6 +140,7 @@ export class AuthService {
           avatarUrl: dto.avatarUrl,
           businessName: dto.businessName,
           businessType: dto.businessType,
+          referredById: referredById || undefined,
           isActive: true,
           wallet: {
             create: {
