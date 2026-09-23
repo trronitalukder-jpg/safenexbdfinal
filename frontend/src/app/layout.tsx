@@ -58,9 +58,10 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
-      <head>
-        <meta name="google-site-verification" content="5FtxkWfKzTBUBHtmdabdUk7bdAEIhGoVnl_zLMw2EQk" />
-        <meta name="mobile-web-app-capable" content="yes" />
+      <body
+        suppressHydrationWarning
+        className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased selection:bg-sky-500 selection:text-white"
+      >
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -76,11 +77,6 @@ export default function RootLayout({
             `,
           }}
         />
-      </head>
-      <body
-        suppressHydrationWarning
-        className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased selection:bg-sky-500 selection:text-white"
-      >
         <Providers>
           <Navbar />
           <main className="flex-1">
