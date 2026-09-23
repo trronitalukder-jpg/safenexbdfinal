@@ -48,6 +48,7 @@ function NewProductForm() {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [price, setPrice] = useState<number>(1000);
+  const [pricingType, setPricingType] = useState<'FIXED' | 'NEGOTIABLE'>('FIXED');
   const [descriptionHtml, setDescriptionHtml] = useState('');
 
   // Primary Destination Selection (All Products is ALWAYS auto-selected)
@@ -311,7 +312,8 @@ function NewProductForm() {
         title: title.trim(),
         categoryId,
         productType,
-        price: Number(price),
+        pricingType,
+        price: pricingType === 'NEGOTIABLE' ? 0 : Number(price),
         descriptionHtml: descriptionHtml || `<p>${title}</p>`,
         images: images.map((url, idx) => ({
           imageUrl: url,
@@ -813,17 +815,61 @@ function NewProductForm() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    {lang === 'bn' ? 'মূল্য বা রেট (Price ৳) *' : 'Price / Exchange Rate (৳) *'}
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    {lang === 'bn' ? 'মূল্য নির্ধারণ পদ্ধতি *' : 'Pricing Type *'}
                   </label>
-                  <input
-                    type="number"
-                    min={0}
-                    required
-                    value={price}
-                    onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
-                    className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
-                  />
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setPricingType('FIXED')}
+                      className={`p-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border cursor-pointer ${
+                        pricingType === 'FIXED'
+                          ? 'bg-sky-500 text-white border-sky-600 shadow-xs'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                      }`}
+                    >
+                      <span>🏷️</span>
+                      <span>{lang === 'bn' ? 'নির্দিষ্ট মূল্য' : 'Fixed Price'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPricingType('NEGOTIABLE')}
+                      className={`p-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border cursor-pointer ${
+                        pricingType === 'NEGOTIABLE'
+                          ? 'bg-emerald-500 text-white border-emerald-600 shadow-xs'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                      }`}
+                    >
+                      <span>🤝</span>
+                      <span>{lang === 'bn' ? 'আলোচনাসাপেক্ষ' : 'Negotiable'}</span>
+                    </button>
+                  </div>
+
+                  {pricingType === 'FIXED' ? (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                        {lang === 'bn' ? 'মূল্য বা রেট (Price ৳) *' : 'Price / Exchange Rate (৳) *'}
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        required
+                        value={price}
+                        onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+                        placeholder="0"
+                        className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 text-xs text-emerald-800 dark:text-emerald-300 font-medium flex items-center gap-2">
+                      <span className="text-base">💬</span>
+                      <span>
+                        {lang === 'bn'
+                          ? 'দাম নির্ধারিত থাকবে না। ক্রেতা চ্যাটে আলোচনা করে দাম ঠিক করবে।'
+                          : 'Price is not fixed. Buyer will discuss and agree on price via chat.'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 

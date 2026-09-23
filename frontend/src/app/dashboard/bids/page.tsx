@@ -701,7 +701,7 @@ export default function MyBidsPage() {
                       </Link>
 
                       <div className="text-sm font-black text-sky-600 dark:text-sky-400">
-                        ৳ {p.price.toLocaleString()}
+                        {(p as any).pricingType === 'NEGOTIABLE' ? 'আলোচনাসাপেক্ষ' : `৳ ${p.price.toLocaleString()}`}
                       </div>
                     </div>
                   </div>

@@ -659,7 +659,7 @@ export default function AdminProductsPage() {
                       <td className="py-3.5 px-4">
                         <div className="space-y-0.5">
                           <div className="font-extrabold text-amber-400">
-                            ৳{Number(product.price).toLocaleString()}
+                            {(product as any).pricingType === 'NEGOTIABLE' ? 'আলোচনাসাপেক্ষ' : `৳${Number(product.price).toLocaleString()}`}
                           </div>
                           <div className="text-[11px] text-slate-400">
                             {product.category?.name || 'General'}

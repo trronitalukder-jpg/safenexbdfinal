@@ -177,7 +177,7 @@ export class ComplaintsService {
     const [items, total, pendingCount] = await Promise.all([
       this.prisma.complaint.findMany({
         where,
-        orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
+        orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
         include: {
@@ -303,11 +303,13 @@ export class ComplaintsService {
 
     // Notify user via Socket
     if (this.chatGateway) {
+      const noteText = dto.adminNotes ? `\nঅ্যাডমিন নোট: ${dto.adminNotes}` : '';
       this.chatGateway.notifyUser(existing.userId, 'notification:complaint_update', {
         complaintId: updated.id,
         ticketNumber: updated.ticketNumber,
         status: updated.status,
-        message: `আপনার অভিযোগ #${updated.ticketNumber}-এর স্ট্যাটাস আপডেট হয়েছে: ${updated.status}`,
+        adminNotes: updated.adminNotes || '',
+        message: `আপনার অভিযোগ #${updated.ticketNumber}-এর স্ট্যাটাস আপডেট হয়েছে: ${updated.status}${noteText}`,
       });
 
       this.chatGateway.server?.emit('complaint:update', updated);
@@ -365,6 +367,24 @@ export class ComplaintsService {
     }
 
     return updated;
+  }
+
+  /**
+   * Admin: Delete a complaint permanently
+   */
+  async deleteComplaint(id: string) {
+    const existing = await this.prisma.complaint.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Complaint not found');
+    }
+
+    await this.prisma.complaint.delete({ where: { id } });
+
+    if (this.chatGateway) {
+      this.chatGateway.server?.emit('complaint:deleted', { id });
+    }
+
+    return { success: true, message: 'Complaint deleted successfully' };
   }
 }
 

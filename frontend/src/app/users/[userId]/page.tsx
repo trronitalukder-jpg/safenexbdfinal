@@ -746,7 +746,7 @@ export default function UserPublicProfilePage() {
                           </h3>
                         </Link>
                         <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">
-                          ৳ {Number(p.price).toLocaleString()}
+                          {(p as any).pricingType === 'NEGOTIABLE' ? 'আলোচনাসাপেক্ষ' : `৳ ${Number(p.price).toLocaleString()}`}
                         </div>
                       </div>
                     </div>

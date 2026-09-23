@@ -414,7 +414,7 @@ function ShopContent() {
                         </Link>
 
                         <div className="text-sm sm:text-base font-extrabold text-sky-600 dark:text-sky-400">
-                          ৳ {Number(p.price).toLocaleString()}
+                          {(p as any).pricingType === 'NEGOTIABLE' ? 'আলোচনাসাপেক্ষ' : `৳ ${Number(p.price).toLocaleString()}`}
                         </div>
                       </div>
                     </div>

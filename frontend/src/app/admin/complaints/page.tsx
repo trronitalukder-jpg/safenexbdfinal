@@ -27,6 +27,7 @@ import {
   Sparkles,
   ArrowRight,
   ShieldCheck,
+  Trash2,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
@@ -215,6 +216,30 @@ export default function AdminComplaintsPage() {
       );
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  const handleDeleteComplaint = async (id: string, ticketNumber: string) => {
+    const confirmMsg =
+      lang === 'bn'
+        ? `আপনি কি নিশ্চিত যে অভিযোগ #${ticketNumber} স্থায়ীভাবে ডিলিট করতে চান? ডাটাবেস থেকে এটি সম্পূর্ণ মুছে যাবে।`
+        : `Are you sure you want to permanently delete complaint #${ticketNumber}? It will be removed from the database completely.`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await api.delete(`/complaints/admin/${id}`);
+      setComplaints((prev) => prev.filter((c) => c.id !== id));
+      if (selectedComplaint?.id === id) {
+        setSelectedComplaint(null);
+      }
+      fetchUnreadCount();
+      alert(lang === 'bn' ? 'অভিযোগ সফলভাবে ডিলিট করা হয়েছে' : 'Complaint deleted successfully');
+    } catch (err: any) {
+      alert(
+        err?.response?.data?.message ||
+          (lang === 'bn' ? 'ডিলিট করতে ব্যর্থ হয়েছে' : 'Failed to delete complaint'),
+      );
     }
   };
 
@@ -559,6 +584,15 @@ export default function AdminComplaintsPage() {
                       >
                         <MessageSquare className="w-4 h-4" />
                       </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteComplaint(item.id, item.ticketNumber)}
+                        className="p-2 rounded-xl bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white transition border border-red-200 dark:border-red-800 cursor-pointer active:scale-95"
+                        title={lang === 'bn' ? 'স্থায়ীভাবে ডিলিট করুন' : 'Delete permanently'}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -805,7 +839,16 @@ export default function AdminComplaintsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-end gap-3 pt-2">
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteComplaint(selectedComplaint.id, selectedComplaint.ticketNumber)}
+                    className="px-4 py-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white transition font-bold text-xs flex items-center gap-1.5 border border-red-200 dark:border-red-800 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{lang === 'bn' ? 'স্থায়ীভাবে ডিলিট' : 'Delete'}</span>
+                  </button>
+
                   <button
                     type="button"
                     disabled={updatingStatus}

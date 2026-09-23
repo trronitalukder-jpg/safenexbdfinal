@@ -501,7 +501,11 @@ export default function MyProductsPage() {
 
                       {/* Price */}
                       <td className="p-3.5 font-extrabold text-slate-900 dark:text-white whitespace-nowrap text-sm">
-                        ৳ {Number(p.price).toLocaleString()}
+                        {(p as any).pricingType === 'NEGOTIABLE' ? (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">আলোচনাসাপেক্ষ</span>
+                        ) : (
+                          `৳ ${Number(p.price).toLocaleString()}`
+                        )}
                       </td>
 
                       {/* 1-Click Interactive Status Toggle (Active / Inactive) */}
@@ -619,7 +623,7 @@ export default function MyProductsPage() {
                           {p.title}
                         </Link>
                         <span className="font-extrabold text-sm text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                          ৳ {Number(p.price).toLocaleString()}
+                          {(p as any).pricingType === 'NEGOTIABLE' ? 'আলোচনাসাপেক্ষ' : `৳ ${Number(p.price).toLocaleString()}`}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">

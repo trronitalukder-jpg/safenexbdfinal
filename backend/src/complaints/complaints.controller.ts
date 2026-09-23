@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -93,5 +94,11 @@ export class ComplaintsController {
   async markAsRead(@Param('id') id: string) {
     return this.complaintsService.markAsRead(id);
   }
-}
 
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  @Delete('admin/:id')
+  async deleteComplaint(@Param('id') id: string) {
+    return this.complaintsService.deleteComplaint(id);
+  }
+}

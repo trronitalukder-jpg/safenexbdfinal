@@ -314,7 +314,7 @@ export default function PublicCustomPage() {
                         </h3>
                       </Link>
                       <div className="text-base font-black text-sky-600 dark:text-sky-400">
-                        ৳ {Number(p.price).toLocaleString()}
+                        {(p as any).pricingType === 'NEGOTIABLE' ? 'আলোচনাসাপেক্ষ' : `৳ ${Number(p.price).toLocaleString()}`}
                       </div>
                     </div>
                   </div>

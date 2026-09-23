@@ -12,7 +12,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PartialType } from '@nestjs/swagger';
-import { ProductType } from '@prisma/client';
+import { ProductType, PricingType } from '@prisma/client';
 
 export class ProductImageDto {
   @IsString()
@@ -89,8 +89,11 @@ export class CreateProductDto {
   @IsNotEmpty()
   productType: ProductType;
 
+  @IsEnum(PricingType)
+  @IsOptional()
+  pricingType?: PricingType;
+
   @IsNumber()
-  @IsPositive()
   @Min(0)
   price: number;
 

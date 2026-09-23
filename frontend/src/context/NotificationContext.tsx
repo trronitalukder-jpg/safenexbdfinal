@@ -519,7 +519,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       const title = 'অভিযোগ আপডেট';
       const statusText = statusLabels[data.status] || data.status;
-      const message = data.message || `আপনার অভিযোগ #${data.ticketNumber || ''}-এর স্ট্যাটাস: ${statusText}`;
+      const notePart = data.adminNotes ? `\n📝 অ্যাডমিন নোট: ${data.adminNotes}` : '';
+      const message = data.message || `আপনার অভিযোগ #${data.ticketNumber || ''}-এর স্ট্যাটাস: ${statusText}${notePart}`;
       const notifUrl = '/dashboard';
 
       sendNotification(

@@ -184,12 +184,20 @@ export default function MoneyExchangePage() {
                     </div>
 
                     <div className="flex items-baseline gap-1">
-                      <span className="text-lg font-extrabold text-amber-600 dark:text-amber-400">
-                        ৳ {Number(p.price).toLocaleString()}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-medium">
-                        {lang === 'bn' ? '(এসক্রো রেট/মূল্য)' : '(Escrow Rate/Amount)'}
-                      </span>
+                      {(p as any).pricingType === 'NEGOTIABLE' ? (
+                        <span className="text-sm font-extrabold text-amber-600 dark:text-amber-400">
+                          {lang === 'bn' ? 'আলোচনাসাপেক্ষ' : 'Negotiable'}
+                        </span>
+                      ) : (
+                        <>
+                          <span className="text-lg font-extrabold text-amber-600 dark:text-amber-400">
+                            ৳ {Number(p.price).toLocaleString()}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {lang === 'bn' ? '(এসক্রো রেট/মূল্য)' : '(Escrow Rate/Amount)'}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
 

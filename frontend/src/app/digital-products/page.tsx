@@ -200,7 +200,9 @@ export default function DigitalProductsPage() {
                         {p.title}
                       </h2>
                     </Link>
-                    <div className="text-xs sm:text-sm font-extrabold text-sky-600 dark:text-sky-400">৳ {Number(p.price).toLocaleString()}</div>
+                    <div className="text-xs sm:text-sm font-extrabold text-sky-600 dark:text-sky-400">
+                      {(p as any).pricingType === 'NEGOTIABLE' ? 'আলোচনাসাপেক্ষ' : `৳ ${Number(p.price).toLocaleString()}`}
+                    </div>
                   </div>
                 </div>
                 <div className="p-2.5 sm:p-4 pt-0">

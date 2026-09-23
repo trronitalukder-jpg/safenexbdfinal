@@ -263,9 +263,16 @@ export default function ProductDetailPage() {
               {product.title}
             </h1>
 
-            <div className="text-2xl font-extrabold text-sky-600 dark:text-sky-400">
-              ৳ {Number(product.price).toLocaleString()}
-            </div>
+            {product.pricingType === 'NEGOTIABLE' ? (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-extrabold text-lg">
+                <span>🤝</span>
+                <span>{lang === 'bn' ? 'আলোচনাসাপেক্ষ' : 'Negotiable'}</span>
+              </div>
+            ) : (
+              <div className="text-2xl font-extrabold text-sky-600 dark:text-sky-400">
+                ৳ {Number(product.price).toLocaleString()}
+              </div>
+            )}
           </div>
 
           {/* Safe Escrow Assurance Box */}

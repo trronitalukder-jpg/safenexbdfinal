@@ -94,7 +94,8 @@ export class ProductsService {
         title: dto.title.trim(),
         slug,
         productType: dto.productType,
-        price: new Prisma.Decimal(dto.price),
+        pricingType: dto.pricingType || 'FIXED',
+        price: dto.pricingType === 'NEGOTIABLE' ? new Prisma.Decimal(0) : new Prisma.Decimal(dto.price),
         descriptionHtml: this.sanitizeDescription(dto.descriptionHtml) || '',
         status: initialStatus,
         metaTitle: dto.metaTitle || dto.title,
@@ -229,7 +230,10 @@ export class ProductsService {
       data: {
         ...(dto.title && { title: dto.title.trim() }),
         ...(dto.categoryId && { categoryId: dto.categoryId }),
-        ...(dto.price !== undefined && { price: new Prisma.Decimal(dto.price) }),
+        ...(dto.pricingType !== undefined && { pricingType: dto.pricingType }),
+        ...(dto.pricingType === 'NEGOTIABLE'
+          ? { price: new Prisma.Decimal(0) }
+          : dto.price !== undefined ? { price: new Prisma.Decimal(dto.price) } : {}),
         ...(dto.descriptionHtml && { descriptionHtml: this.sanitizeDescription(dto.descriptionHtml) }),
         ...(dto.status && (isAdmin || ['ACTIVE', 'INACTIVE'].includes(dto.status))
           ? { status: dto.status }

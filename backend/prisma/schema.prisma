@@ -531,6 +531,11 @@ enum ProductStatus {
   REJECTED
 }
 
+enum PricingType {
+  FIXED
+  NEGOTIABLE
+}
+
 model Product {
   id              String              @id @default(uuid())
   sellerId        String
@@ -538,6 +543,7 @@ model Product {
   title           String              @db.VarChar(255)
   slug            String              @unique @db.VarChar(255)
   productType     ProductType         @default(PHYSICAL)
+  pricingType     PricingType         @default(FIXED)
   price           Decimal             @default(0.0000) @db.Decimal(18, 4)
   descriptionHtml String              @db.LongText
   status          ProductStatus       @default(ACTIVE)
