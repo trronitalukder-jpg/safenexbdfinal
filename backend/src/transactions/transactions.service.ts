@@ -895,6 +895,32 @@ export class TransactionsService {
           ],
         )
         .catch(() => null);
+
+      // Send Pay Request Alert to Admin Telegram Group
+      try {
+        const settings = await this.telegramService.getSettings();
+        if (settings.isEnabled && settings.botToken && settings.adminGroupId) {
+          const text = `💸 <b>[Admin Alert] নতুন পে-রিকোয়েস্ট!</b>\n\n👤 প্রেরক: <b>${senderFullName}</b> (@${result.senderUser?.uniqueUserId || 'N/A'})\n💰 পরিমাণ: <b>৳${dto.amount}</b>\n📦 TRX: <code>${trackingNumber}</code>\n⏰ সময়: ${new Date().toLocaleString('bn-BD', { timeZone: 'Asia/Dhaka' })}`;
+
+          await this.telegramService.callApi(settings.botToken, 'sendMessage', {
+            chat_id: settings.adminGroupId,
+            text,
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: '👁️ অ্যাডমিন প্যানেলে দেখুন',
+                    url: `${settings.miniAppUrl || 'https://safnexbd.com'}/admin/cms`,
+                  },
+                ],
+              ],
+            },
+          });
+        }
+      } catch (err: any) {
+        // silently ignore admin group alert failures
+      }
     }
 
     return {
@@ -2217,6 +2243,32 @@ export class TransactionsService {
           ],
         )
         .catch(() => null);
+
+      // Send Receive Request Alert to Admin Telegram Group
+      try {
+        const settings = await this.telegramService.getSettings();
+        if (settings.isEnabled && settings.botToken && settings.adminGroupId) {
+          const text = `💰 <b>[Admin Alert] নতুন রিসিভ রিকোয়েস্ট!</b>\n\n👤 রিকোয়েস্টকারী: <b>${requesterFullName}</b> (@${requester?.uniqueUserId || 'N/A'})\n💰 পরিমাণ: <b>৳${dto.amount}</b>\n📦 TRX: <code>${trackingNumber}</code>\n⏰ সময়: ${new Date().toLocaleString('bn-BD', { timeZone: 'Asia/Dhaka' })}`;
+
+          await this.telegramService.callApi(settings.botToken, 'sendMessage', {
+            chat_id: settings.adminGroupId,
+            text,
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: '👁️ অ্যাডমিন প্যানেলে দেখুন',
+                    url: `${settings.miniAppUrl || 'https://safnexbd.com'}/admin/cms`,
+                  },
+                ],
+              ],
+            },
+          });
+        }
+      } catch (err: any) {
+        // silently ignore admin group alert failures
+      }
     }
 
     return result;

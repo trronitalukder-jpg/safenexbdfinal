@@ -4,11 +4,15 @@ import {
   NotFoundException,
   UnauthorizedException,
   Optional,
+  Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChatGateway } from '../chat/chat.gateway';
+import { TelegramService } from '../telegram/telegram.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -19,12 +23,17 @@ import { purgeOrScrubUser } from '../common/utils/user-cleanup.util';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
     @Optional() private chatGateway?: ChatGateway,
     @Optional() private otpService?: OtpService,
     @Optional() private smsService?: SmsService,
+    @Optional()
+    @Inject(forwardRef(() => TelegramService))
+    private telegramService?: TelegramService,
   ) {}
 
   /**
@@ -151,6 +160,34 @@ export class AuthService {
         },
         createdAt: new Date().toISOString(),
       });
+    }
+
+    // Send Alert to Admin Telegram Group
+    try {
+      if (this.telegramService) {
+        const settings = await this.telegramService.getSettings();
+        if (settings.isEnabled && settings.botToken && settings.adminGroupId) {
+          const text = `👤 <b>[Admin Alert] নতুন ইউজার রেজিস্ট্রেশন!</b>\n\n🆔 ইউজার আইডি: <b>${newUser.uniqueUserId}</b>\n👤 নাম: <b>${newUser.firstName} ${newUser.lastName}</b>\n📱 ফোন: <code>${newUser.phone}</code>\n📧 ইমেইল: ${newUser.email}\n⏰ সময়: ${new Date().toLocaleString('bn-BD', { timeZone: 'Asia/Dhaka' })}`;
+
+          await this.telegramService.callApi(settings.botToken, 'sendMessage', {
+            chat_id: settings.adminGroupId,
+            text,
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: '👁️ অ্যাডমিন প্যানেলে দেখুন',
+                    url: `${settings.miniAppUrl || 'https://safnexbd.com'}/admin/users`,
+                  },
+                ],
+              ],
+            },
+          });
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`Failed to send telegram registration alert: ${err.message}`);
     }
 
     const tokens = await this.generateTokens(newUser.id, newUser.email);

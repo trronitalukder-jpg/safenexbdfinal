@@ -4,10 +4,14 @@ import {
   Injectable,
   NotFoundException,
   Optional,
+  Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { DisputeStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChatGateway } from '../chat/chat.gateway';
+import { TelegramService } from '../telegram/telegram.service';
 import {
   AddEvidenceDto,
   CreateDisputeDto,
@@ -19,11 +23,16 @@ import { AiService } from '../ai/ai.service';
 
 @Injectable()
 export class DisputesService {
+  private readonly logger = new Logger(DisputesService.name);
+
   constructor(
     private prisma: PrismaService,
     @Optional() private chatGateway?: ChatGateway,
     @Optional() private operationsService?: OperationsService,
     @Optional() private aiService?: AiService,
+    @Optional()
+    @Inject(forwardRef(() => TelegramService))
+    private telegramService?: TelegramService,
   ) {}
 
   /**
@@ -74,6 +83,38 @@ export class DisputesService {
           },
           createdAt: new Date().toISOString(),
         });
+      }
+
+      // Send re-opened Dispute Alert to Admin Telegram Group
+      try {
+        if (this.telegramService) {
+          const settings = await this.telegramService.getSettings();
+          if (settings.isEnabled && settings.botToken && settings.adminGroupId) {
+            const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true, uniqueUserId: true } });
+            const userName = user ? `${user.firstName} ${user.lastName}` : 'Unknown';
+            const uniqueId = user?.uniqueUserId || 'N/A';
+
+            const text = `⚠️ <b>[Admin Alert] ডিসপ্যুট পুনরায় ওপেন!</b>\n\n👤 ইউজার: <b>${userName}</b> (@${uniqueId})\n📦 ট্রানজেকশন: <code>${dto.transactionId}</code>\n📝 কারণ: ${dto.reason}\n⏰ সময়: ${new Date().toLocaleString('bn-BD', { timeZone: 'Asia/Dhaka' })}`;
+
+            await this.telegramService.callApi(settings.botToken, 'sendMessage', {
+              chat_id: settings.adminGroupId,
+              text,
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: '👁️ কলিং কিউতে দেখুন',
+                      url: `${settings.miniAppUrl || 'https://safnexbd.com'}/admin/calling-queue`,
+                    },
+                  ],
+                ],
+              },
+            });
+          }
+        }
+      } catch (err: any) {
+        this.logger.warn(`Failed to send telegram dispute reopen alert: ${err.message}`);
       }
 
       return updated;
@@ -142,6 +183,38 @@ export class DisputesService {
 
     if (this.operationsService && dispute?.id) {
       await this.operationsService.autoAssignTaskOnCreate('DISPUTE', dispute.id, 'DISPUTE');
+    }
+
+    // Send Dispute Alert to Admin Telegram Group
+    try {
+      if (this.telegramService && dispute) {
+        const settings = await this.telegramService.getSettings();
+        if (settings.isEnabled && settings.botToken && settings.adminGroupId) {
+          const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true, uniqueUserId: true } });
+          const userName = user ? `${user.firstName} ${user.lastName}` : 'Unknown';
+          const uniqueId = user?.uniqueUserId || 'N/A';
+
+          const text = `⚠️ <b>[Admin Alert] নতুন ডিসপ্যুট / কল অ্যাডমিন!</b>\n\n👤 ইউজার: <b>${userName}</b> (@${uniqueId})\n📦 ট্রানজেকশন: <code>${dto.transactionId}</code>\n📝 কারণ: ${dto.reason}\n⏰ সময়: ${new Date().toLocaleString('bn-BD', { timeZone: 'Asia/Dhaka' })}`;
+
+          await this.telegramService.callApi(settings.botToken, 'sendMessage', {
+            chat_id: settings.adminGroupId,
+            text,
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: '👁️ কলিং কিউতে দেখুন',
+                    url: `${settings.miniAppUrl || 'https://safnexbd.com'}/admin/calling-queue`,
+                  },
+                ],
+              ],
+            },
+          });
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`Failed to send telegram dispute alert: ${err.message}`);
     }
 
     return dispute;

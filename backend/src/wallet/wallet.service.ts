@@ -5,6 +5,9 @@ import {
   Injectable,
   NotFoundException,
   Optional,
+  Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -20,6 +23,7 @@ import {
 } from './dto/wallet.dto';
 import { CommissionService } from '../commission/commission.service';
 import { ChatGateway } from '../chat/chat.gateway';
+import { TelegramService } from '../telegram/telegram.service';
 import { OtpService } from '../sms/otp.service';
 import { SmsService } from '../sms/sms.service';
 import { SettingsService } from '../settings/settings.service';
@@ -28,6 +32,7 @@ import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class WalletService {
+  private readonly logger = new Logger(WalletService.name);
   private activeRechargeLocks = new Set<string>();
   private activeWithdrawLocks = new Set<string>();
 
@@ -39,6 +44,9 @@ export class WalletService {
     @Optional() private smsService?: SmsService,
     @Optional() private settingsService?: SettingsService,
     @Optional() private operationsService?: OperationsService,
+    @Optional()
+    @Inject(forwardRef(() => TelegramService))
+    private telegramService?: TelegramService,
   ) {}
 
   /**
@@ -327,18 +335,51 @@ export class WalletService {
           id: recharge.id,
           status: 'PENDING',
           amount: amountNum,
-          title: 'রিচার্জ আবেদন জমা হয়েছে',
-          message: `আপনার ৳${amountNum.toLocaleString()} টাকার রিচার্জ আবেদন পর্যালোচনার জন্য জমা রয়েছে।`,
+          title: 'রিচার্জ আবেদন জমা হয়েছে',
+          message: `আপনার ৳${amountNum.toLocaleString()} টাকার রিচার্জ আবেদন পর্যালোচনার জন্য জমা রয়েছে।`,
           createdAt: new Date().toISOString(),
         });
 
         this.chatGateway.notifyAdminsAndStaff('notification:admin', {
           type: 'NEW_RECHARGE_REQUEST',
           title: 'নতুন রিচার্জ রিকোয়েস্ট',
-          message: `ব্যবহারকারী ৳${amountNum.toLocaleString()} টাকার রিচার্জ রিকোয়েস্ট পাঠিয়েছেন (${method.name})।`,
+          message: `ব্যবহারকারী ৳${amountNum.toLocaleString()} টাকার রিচার্জ রিকোয়েস্ট পাঠিয়েছেন (${method.name})।`,
           targetUrl: '/admin/recharges',
           createdAt: new Date().toISOString(),
         });
+      }
+
+      // Send Recharge Alert to Admin Telegram Group
+      try {
+        if (this.telegramService && recharge) {
+          const settings = await this.telegramService.getSettings();
+          if (settings.isEnabled && settings.botToken && settings.adminGroupId) {
+            const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true, uniqueUserId: true } });
+            const userName = user ? `${user.firstName} ${user.lastName}` : 'Unknown';
+            const uniqueId = user?.uniqueUserId || 'N/A';
+            const amountNum = recharge.amount ? Number(recharge.amount) : Number(dto.amount);
+
+            const text = `🚨 <b>[Admin Alert] নতুন রিচার্জ রিকোয়েস্ট!</b>\n\n👤 ইউজার: <b>${userName}</b> (@${uniqueId})\n💰 পরিমাণ: <b>৳${amountNum.toLocaleString()}</b>\n💳 মেথড: ${method.name}\n📱 প্রেরক নম্বর: <code>${dto.senderAccount}</code>\n🔢 TrxID: <code>${dto.transactionNumber}</code>\n⏰ সময়: ${new Date().toLocaleString('bn-BD', { timeZone: 'Asia/Dhaka' })}`;
+
+            await this.telegramService.callApi(settings.botToken, 'sendMessage', {
+              chat_id: settings.adminGroupId,
+              text,
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: '👁️ অ্যাডমিন প্যানেলে দেখুন',
+                      url: `${settings.miniAppUrl || 'https://safnexbd.com'}/admin/recharges`,
+                    },
+                  ],
+                ],
+              },
+            });
+          }
+        }
+      } catch (err: any) {
+        this.logger.warn(`Failed to send telegram recharge alert: ${err.message}`);
       }
 
       if (this.operationsService && recharge?.id) {
@@ -1044,6 +1085,38 @@ export class WalletService {
         targetUrl: '/admin/withdrawals',
         createdAt: new Date().toISOString(),
       });
+    }
+
+    // Send Withdraw Alert to Admin Telegram Group
+    try {
+      if (this.telegramService && withdrawal) {
+        const settings = await this.telegramService.getSettings();
+        if (settings.isEnabled && settings.botToken && settings.adminGroupId) {
+          const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true, uniqueUserId: true } });
+          const userName = user ? `${user.firstName} ${user.lastName}` : 'Unknown';
+          const uniqueId = user?.uniqueUserId || 'N/A';
+
+          const text = `🚨 <b>[Admin Alert] নতুন উইথড্র রিকোয়েস্ট!</b>\n\n👤 ইউজার: <b>${userName}</b> (@${uniqueId})\n💰 পরিমাণ: <b>৳${requestedAmount.toNumber().toLocaleString()}</b>\n🏦 অ্যাকাউন্ট: <code>${destinationSummary}</code>\n⏰ সময়: ${new Date().toLocaleString('bn-BD', { timeZone: 'Asia/Dhaka' })}`;
+
+          await this.telegramService.callApi(settings.botToken, 'sendMessage', {
+            chat_id: settings.adminGroupId,
+            text,
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: '👁️ অ্যাডমিন প্যানেলে দেখুন',
+                    url: `${settings.miniAppUrl || 'https://safnexbd.com'}/admin/withdrawals`,
+                  },
+                ],
+              ],
+            },
+          });
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`Failed to send telegram withdraw alert: ${err.message}`);
     }
 
       if (this.operationsService && withdrawal?.id) {

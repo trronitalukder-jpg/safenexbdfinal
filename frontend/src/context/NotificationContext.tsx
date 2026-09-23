@@ -9,7 +9,7 @@ export type NotificationPermissionState = 'default' | 'granted' | 'denied' | 'un
 
 export interface UserNotificationItem {
   id: string;
-  type: 'message' | 'pay_request' | 'receive_request' | 'hold_approved' | 'release_request' | 'release_approve' | 'dispute' | 'withdraw' | 'general';
+  type: 'message' | 'pay_request' | 'receive_request' | 'hold_approved' | 'release_request' | 'release_approve' | 'dispute' | 'withdraw' | 'complaint_update' | 'general';
   title: string;
   message: string;
   url?: string;
@@ -507,6 +507,34 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       );
     };
 
+    const handleComplaintUpdateNotification = (data: any) => {
+      if (!data) return;
+
+      const statusLabels: Record<string, string> = {
+        IN_REVIEW: '🔍 পর্যালোচনাধীন',
+        RESOLVED: '✅ সমাধান সম্পন্ন',
+        REJECTED: '❌ বাতিল',
+        PENDING: '⏳ অপেক্ষমাণ',
+      };
+
+      const title = 'অভিযোগ আপডেট';
+      const statusText = statusLabels[data.status] || data.status;
+      const message = data.message || `আপনার অভিযোগ #${data.ticketNumber || ''}-এর স্ট্যাটাস: ${statusText}`;
+      const notifUrl = '/dashboard';
+
+      sendNotification(
+        title,
+        {
+          body: message,
+          icon: '/icon-192.png',
+          tag: `complaint-${data.complaintId || Date.now()}`,
+        },
+        notifUrl,
+        'complaint_update',
+        data,
+      );
+    };
+
     socket.on('notification:message', handleChatMessage);
     socket.on('notification:pay_request', handlePayRequestNotification);
     socket.on('notification:receive_request', handleReceiveRequestNotification);
@@ -515,6 +543,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     socket.on('notification:release_approve', handleReleaseApproveNotification);
     socket.on('notification:dispute', handleDisputeNotification);
     socket.on('notification:withdraw', handleWithdrawNotification);
+    socket.on('notification:complaint_update', handleComplaintUpdateNotification);
 
     return () => {
       socket.off('connect', handleConnect);
@@ -526,6 +555,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       socket.off('notification:release_approve', handleReleaseApproveNotification);
       socket.off('notification:dispute', handleDisputeNotification);
       socket.off('notification:withdraw', handleWithdrawNotification);
+      socket.off('notification:complaint_update', handleComplaintUpdateNotification);
     };
   }, [user?.id, sendNotification]);
 
