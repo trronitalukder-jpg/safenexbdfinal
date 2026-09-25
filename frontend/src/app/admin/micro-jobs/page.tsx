@@ -31,6 +31,9 @@ import {
   Tag,
   ToggleLeft,
   ToggleRight,
+  Pause,
+  Play,
+  Trash2,
 } from 'lucide-react';
 
 const unwrap = (res: any) => (res && res.data !== undefined ? res.data : res);
@@ -293,6 +296,51 @@ export default function AdminMicroJobsPage() {
       alert(err?.response?.data?.message || 'কাজ বাতিল করা যায়নি');
     } finally {
       setCancellingJobId(null);
+    }
+  };
+
+  const [togglingJobId, setTogglingJobId] = useState<string | null>(null);
+  const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
+
+  // Admin Toggle Active / Paused
+  const handleAdminToggleStatus = async (jobId: string) => {
+    setTogglingJobId(jobId);
+    try {
+      const res = await api.patch(`/admin/micro-jobs/${jobId}/toggle-status`, {});
+      const data = unwrap(res);
+      alert(data?.message || 'জবের স্ট্যাটাস পরিবর্তন করা হয়েছে');
+      fetchJobs();
+      fetchStats();
+    } catch (err: any) {
+      console.error('Toggle status failed:', err);
+      alert(err?.response?.data?.message || 'স্ট্যাটাস পরিবর্তন করা সম্ভব হয়নি');
+    } finally {
+      setTogglingJobId(null);
+    }
+  };
+
+  // Admin Delete Job Permanently
+  const handleAdminDeleteJob = async (jobId: string) => {
+    if (
+      !confirm(
+        'আপনি কি নিশ্চিত যে এই কাজটি স্থায়ীভাবে ডিলিট করতে চান? যদি কাজটি অ্যাক্টিভ বা পজ থাকে, তবে অবশিষ্ট বাজেট স্বয়ংক্রিয়ভাবে নিয়োগকর্তার ওয়ালেটে রিফান্ড করা হবে।',
+      )
+    ) {
+      return;
+    }
+
+    setDeletingJobId(jobId);
+    try {
+      const res = await api.delete(`/admin/micro-jobs/${jobId}`);
+      const data = unwrap(res);
+      alert(data?.message || 'কাজটি সফলভাবে ডিলিট করা হয়েছে');
+      fetchJobs();
+      fetchStats();
+    } catch (err: any) {
+      console.error('Delete job failed:', err);
+      alert(err?.response?.data?.message || 'কাজটি ডিলিট করা সম্ভব হয়নি');
+    } finally {
+      setDeletingJobId(null);
     }
   };
 
@@ -584,7 +632,7 @@ export default function AdminMicroJobsPage() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             {/* Status Filter Pills */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              {['ALL', 'ACTIVE', 'COMPLETED', 'CANCELLED'].map((st) => (
+              {['ALL', 'ACTIVE', 'PAUSED', 'COMPLETED', 'CANCELLED'].map((st) => (
                 <button
                   key={st}
                   type="button"
@@ -598,7 +646,15 @@ export default function AdminMicroJobsPage() {
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
                   }`}
                 >
-                  {st === 'ALL' ? 'সব জব' : st === 'ACTIVE' ? 'চলমান' : st === 'COMPLETED' ? 'সম্পন্ন' : 'বাতিল'}
+                  {st === 'ALL'
+                    ? 'সব জব'
+                    : st === 'ACTIVE'
+                    ? 'চলমান (Active)'
+                    : st === 'PAUSED'
+                    ? 'নিষ্ক্রিয় (Paused)'
+                    : st === 'COMPLETED'
+                    ? 'সম্পন্ন'
+                    : 'বাতিল'}
                 </button>
               ))}
             </div>
@@ -725,12 +781,20 @@ export default function AdminMicroJobsPage() {
                             className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
                               job.status === 'ACTIVE'
                                 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                : job.status === 'PAUSED'
+                                ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
                                 : job.status === 'COMPLETED'
                                 ? 'bg-sky-500/10 text-sky-500 border-sky-500/20'
                                 : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
                             }`}
                           >
-                            {job.status}
+                            {job.status === 'ACTIVE'
+                              ? 'চলমান'
+                              : job.status === 'PAUSED'
+                              ? 'নিষ্ক্রিয়'
+                              : job.status === 'COMPLETED'
+                              ? 'সম্পন্ন'
+                              : 'বাতিল'}
                           </span>
                         </td>
 
@@ -761,6 +825,27 @@ export default function AdminMicroJobsPage() {
                               <ExternalLink className="w-3.5 h-3.5" />
                             </Link>
 
+                            {/* Admin Pause / Resume Toggle */}
+                            {(job.status === 'ACTIVE' || job.status === 'PAUSED') && (
+                              <button
+                                type="button"
+                                onClick={() => handleAdminToggleStatus(job.id)}
+                                disabled={togglingJobId === job.id}
+                                title={job.status === 'ACTIVE' ? 'পজ / নিষ্ক্রিয় করুন' : 'সক্রিয় / চালু করুন'}
+                                className={`p-1.5 rounded-lg border transition ${
+                                  job.status === 'ACTIVE'
+                                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 hover:bg-amber-100 border-amber-200 dark:border-amber-900/50'
+                                    : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 border-emerald-200 dark:border-emerald-900/50'
+                                }`}
+                              >
+                                {job.status === 'ACTIVE' ? (
+                                  <Pause className="w-3.5 h-3.5" />
+                                ) : (
+                                  <Play className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            )}
+
                             {/* Admin Force Cancel & Refund */}
                             {job.status === 'ACTIVE' && (
                               <button
@@ -773,6 +858,17 @@ export default function AdminMicroJobsPage() {
                                 <Ban className="w-3.5 h-3.5" />
                               </button>
                             )}
+
+                            {/* Admin Permanent Delete */}
+                            <button
+                              type="button"
+                              onClick={() => handleAdminDeleteJob(job.id)}
+                              disabled={deletingJobId === job.id}
+                              title="স্থায়ীভাবে ডিলিট করুন (বাকি থাকলে রিফান্ড হবে)"
+                              className="p-1.5 rounded-lg bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 hover:bg-red-200 border border-red-200 dark:border-red-900/50 transition"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </td>
                       </tr>

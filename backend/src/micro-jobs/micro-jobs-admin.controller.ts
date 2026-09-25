@@ -171,6 +171,40 @@ export class MicroJobsAdminController {
   }
 
   /**
+   * Admin: Toggle job status between ACTIVE and PAUSED
+   */
+  @Patch(':id/toggle-status')
+  async adminToggleJobStatus(
+    @Param('id') id: string,
+    @CurrentUser('id') adminId: string,
+  ) {
+    return this.microJobsService.toggleJobStatus(id, adminId || 'admin', true);
+  }
+
+  /**
+   * Admin: Update job status explicitly (ACTIVE, PAUSED, CANCELLED, COMPLETED)
+   */
+  @Patch(':id/status')
+  async adminUpdateJobStatus(
+    @Param('id') id: string,
+    @Body() body: { status: any },
+    @CurrentUser('id') adminId: string,
+  ) {
+    return this.microJobsService.adminUpdateJobStatus(id, body.status, adminId || 'admin');
+  }
+
+  /**
+   * Admin: Permanently delete a job and refund employer if active/paused
+   */
+  @Delete(':id')
+  async adminDeleteJob(
+    @Param('id') id: string,
+    @CurrentUser('id') adminId: string,
+  ) {
+    return this.microJobsService.adminDeleteJob(id, adminId || 'admin');
+  }
+
+  /**
    * Admin: Trigger auto-approval cron manually
    */
   @Post('trigger-auto-approve')

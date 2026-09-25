@@ -623,6 +623,211 @@ export class MicroJobsService {
   }
 
   /**
+   * Employer or Admin pauses / resumes a job (toggles between ACTIVE and PAUSED)
+   */
+  async toggleJobStatus(jobId: string, userId: string, isAdmin = false) {
+    const job = await this.prisma.microJob.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      throw new NotFoundException('কাজটি খুঁজে পাওয়া যায়নি');
+    }
+
+    if (!isAdmin && job.employerId !== userId) {
+      throw new ForbiddenException('এই কাজটি পরিবর্তন করার অনুমতি আপনার নেই');
+    }
+
+    if (job.status === 'COMPLETED' || job.status === 'CANCELLED') {
+      throw new BadRequestException('সম্পন্ন বা বাতিল কাজ পুনরায় পরিবর্তন করা যাবে না');
+    }
+
+    const nextStatus = job.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+
+    const updated = await this.prisma.microJob.update({
+      where: { id: jobId },
+      data: { status: nextStatus },
+      include: { category: true },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Employer permanently deletes a job (refunds remaining slots if active/paused)
+   */
+  async deleteJob(jobId: string, employerId: string) {
+    const job = await this.prisma.microJob.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      throw new NotFoundException('কাজটি খুঁজে পাওয়া যায়নি');
+    }
+
+    if (job.employerId !== employerId) {
+      throw new ForbiddenException('এই কাজটি মুছে ফেলার অনুমতি আপনার নেই');
+    }
+
+    const remainingSlots = Math.max(0, job.totalWorkersNeeded - job.approvedCount - job.pendingCount);
+
+    return this.prisma.$transaction(async (tx) => {
+      let refundAmount = 0;
+      if ((job.status === 'ACTIVE' || job.status === 'PAUSED') && remainingSlots > 0) {
+        const unitReward = Number(job.rewardPerWorker);
+        const workerBudgetRefund = remainingSlots * unitReward;
+        const totalBudget = Number(job.totalBudget);
+        const feeRatio = totalBudget > 0 ? Number(job.platformFee) / totalBudget : 0;
+        const feeRefund = workerBudgetRefund * feeRatio;
+        refundAmount = workerBudgetRefund + feeRefund;
+
+        const wallet = await tx.wallet.findUnique({
+          where: { userId: employerId },
+        });
+
+        if (wallet && refundAmount > 0) {
+          const balanceBefore = Number(wallet.availableBalance);
+          const balanceAfter = balanceBefore + refundAmount;
+
+          await tx.wallet.update({
+            where: { id: wallet.id },
+            data: {
+              availableBalance: balanceAfter,
+              version: { increment: 1 },
+            },
+          });
+
+          await tx.walletLedger.create({
+            data: {
+              walletId: wallet.id,
+              userId: employerId,
+              type: 'MICROJOB_REFUND',
+              amount: refundAmount,
+              balanceBefore,
+              balanceAfter,
+              holdBefore: Number(wallet.holdBalance),
+              holdAfter: Number(wallet.holdBalance),
+              referenceId: job.id,
+              referenceType: 'MICRO_JOB',
+              notes: `Refund for deleted micro job (${remainingSlots} unfulfilled slots): ${job.title}`,
+              status: 'COMPLETED',
+            },
+          });
+        }
+      }
+
+      await tx.microJob.delete({
+        where: { id: jobId },
+      });
+
+      return {
+        success: true,
+        deletedJobId: jobId,
+        refundAmount,
+      };
+    });
+  }
+
+  /**
+   * Admin permanently deletes any job (refunds remaining slots if active/paused)
+   */
+  async adminDeleteJob(jobId: string, adminId: string) {
+    const job = await this.prisma.microJob.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      throw new NotFoundException('কাজটি খুঁজে পাওয়া যায়নি');
+    }
+
+    const remainingSlots = Math.max(0, job.totalWorkersNeeded - job.approvedCount - job.pendingCount);
+
+    return this.prisma.$transaction(async (tx) => {
+      let refundAmount = 0;
+      if ((job.status === 'ACTIVE' || job.status === 'PAUSED') && remainingSlots > 0) {
+        const unitReward = Number(job.rewardPerWorker);
+        const workerBudgetRefund = remainingSlots * unitReward;
+        const totalBudget = Number(job.totalBudget);
+        const feeRatio = totalBudget > 0 ? Number(job.platformFee) / totalBudget : 0;
+        const feeRefund = workerBudgetRefund * feeRatio;
+        refundAmount = workerBudgetRefund + feeRefund;
+
+        const wallet = await tx.wallet.findUnique({
+          where: { userId: job.employerId },
+        });
+
+        if (wallet && refundAmount > 0) {
+          const balanceBefore = Number(wallet.availableBalance);
+          const balanceAfter = balanceBefore + refundAmount;
+
+          await tx.wallet.update({
+            where: { id: wallet.id },
+            data: {
+              availableBalance: balanceAfter,
+              version: { increment: 1 },
+            },
+          });
+
+          await tx.walletLedger.create({
+            data: {
+              walletId: wallet.id,
+              userId: job.employerId,
+              type: 'MICROJOB_REFUND',
+              amount: refundAmount,
+              balanceBefore,
+              balanceAfter,
+              holdBefore: Number(wallet.holdBalance),
+              holdAfter: Number(wallet.holdBalance),
+              referenceId: job.id,
+              referenceType: 'MICRO_JOB',
+              notes: `Refund for micro job deleted by admin (${adminId}): ${job.title}`,
+              status: 'COMPLETED',
+            },
+          });
+        }
+      }
+
+      await tx.microJob.delete({
+        where: { id: jobId },
+      });
+
+      return {
+        success: true,
+        deletedJobId: jobId,
+        refundAmount,
+      };
+    });
+  }
+
+  /**
+   * Admin updates job status (ACTIVE, PAUSED, CANCELLED, COMPLETED)
+   */
+  async adminUpdateJobStatus(jobId: string, status: any, adminId: string) {
+    const job = await this.prisma.microJob.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      throw new NotFoundException('কাজটি খুঁজে পাওয়া যায়নি');
+    }
+
+    if (status === 'CANCELLED') {
+      return this.adminCancelJob(jobId, adminId);
+    }
+
+    return this.prisma.microJob.update({
+      where: { id: jobId },
+      data: { status },
+      include: {
+        category: true,
+        employer: {
+          select: { id: true, firstName: true, lastName: true, uniqueUserId: true },
+        },
+      },
+    });
+  }
+
+  /**
    * Worker's task history and earnings
    */
   async getWorkerTasks(workerId: string) {

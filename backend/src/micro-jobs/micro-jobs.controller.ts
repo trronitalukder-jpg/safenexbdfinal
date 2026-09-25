@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -136,5 +137,29 @@ export class MicroJobsController {
     @CurrentUser('id') employerId: string,
   ) {
     return this.microJobsService.cancelJob(jobId, employerId);
+  }
+
+  /**
+   * Employer: Toggle job status between ACTIVE and PAUSED
+   */
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/toggle-status')
+  async toggleJobStatus(
+    @Param('id') jobId: string,
+    @CurrentUser('id') employerId: string,
+  ) {
+    return this.microJobsService.toggleJobStatus(jobId, employerId, false);
+  }
+
+  /**
+   * Employer: Permanently delete job (refunds remaining slots if active/paused)
+   */
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  async deleteJob(
+    @Param('id') jobId: string,
+    @CurrentUser('id') employerId: string,
+  ) {
+    return this.microJobsService.deleteJob(jobId, employerId);
   }
 }

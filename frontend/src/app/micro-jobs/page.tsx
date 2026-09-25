@@ -198,9 +198,9 @@ export default function MicroJobsPublicPage() {
         </div>
       </div>
 
-      {/* Categories Horizontal Pills */}
+      {/* Mobile Categories Horizontal Pills */}
       {categories.length > 0 && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <div className="lg:hidden flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
           <button
             type="button"
             onClick={() => setSelectedCat('')}
@@ -229,111 +229,217 @@ export default function MicroJobsPublicPage() {
         </div>
       )}
 
-      {/* Jobs Grid */}
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <div
-              key={i}
-              className="h-56 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse border border-slate-200 dark:border-slate-700"
-            />
-          ))}
-        </div>
-      ) : jobs.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-12 text-center space-y-4">
-          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto">
-            <Briefcase className="w-7 h-7" />
-          </div>
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
-            {lang === 'bn' ? 'বর্তমানে কোনো কাজ পাওয়া যায়নি' : 'No micro jobs found right now'}
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-            {lang === 'bn'
-              ? 'আপনি কি নিজের ইউটিউব, ফেসবুক বা অ্যাপের জন্য কাজ করাতে চান? এখনই কাজ পোস্ট করুন!'
-              : 'Looking to get tasks completed? Post your micro job now and reach thousands of workers!'}
-          </p>
-          <Link
-            href="/dashboard/micro-jobs?tab=create"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition shadow-sm"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>{lang === 'bn' ? 'প্রথম কাজটি পোস্ট করুন' : 'Post the First Task'}</span>
-          </Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {jobs.map((job) => {
-            const completed = Number(job.approvedCount || 0);
-            const total = Number(job.totalWorkersNeeded || 1);
-            const percent = Math.min(100, Math.round((completed / total) * 100));
+      {/* Main Content Layout: Desktop Sidebar + Jobs Area */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        {/* Left Sticky Sidebar (Desktop only) */}
+        <aside className="hidden lg:block w-72 flex-shrink-0 sticky top-24 space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs space-y-3">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Filter className="w-4 h-4 text-amber-500" />
+                <span>{lang === 'bn' ? 'ক্যাটাগরি সমূহ' : 'Categories'}</span>
+              </h2>
+              {selectedCat && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedCat('')}
+                  className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 hover:underline"
+                >
+                  {lang === 'bn' ? 'সব দেখুন' : 'View All'}
+                </button>
+              )}
+            </div>
 
-            return (
-              <div
-                key={job.id}
-                className="group flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-500/60 p-4 transition-all duration-200 shadow-xs hover:shadow-md"
+            <div className="space-y-1 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
+              <button
+                type="button"
+                onClick={() => setSelectedCat('')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition text-left ${
+                  selectedCat === ''
+                    ? 'bg-amber-500 text-slate-950 shadow-sm'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
               >
-                <div className="space-y-3">
-                  {/* Category & Status */}
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 truncate">
-                      {job.category?.name || 'General'}
-                    </span>
-                    <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20 flex-shrink-0">
-                      ৳ {Number(job.rewardPerWorker).toFixed(2)}
-                    </span>
-                  </div>
-
-                  {/* Job Title */}
-                  <Link href={`/micro-jobs/${job.id}`}>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white line-clamp-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition">
-                      {job.title}
-                    </h3>
-                  </Link>
-
-                  {/* Employer */}
-                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                    <div className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-[10px] text-slate-700 dark:text-slate-300">
-                      {job.employer?.firstName?.[0] || 'U'}
-                    </div>
-                    <span className="truncate">{job.employer?.firstName} {job.employer?.lastName}</span>
-                    {job.employer?.isVerified && (
-                      <ShieldCheck className="w-3.5 h-3.5 text-sky-500 flex-shrink-0" />
-                    )}
-                  </div>
+                <div className="flex items-center gap-2.5">
+                  <Briefcase className="w-4 h-4" />
+                  <span>{lang === 'bn' ? 'সব ক্যাটাগরি' : 'All Categories'}</span>
                 </div>
+                {selectedCat === '' && <Check className="w-4 h-4" />}
+              </button>
 
-                {/* Progress & Action */}
-                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-3 space-y-2.5">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 dark:text-slate-400">
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3 h-3 text-slate-400" />
-                        <span>{completed} / {total} জন সম্পন্ন</span>
-                      </span>
-                      <span>{percent}%</span>
-                    </div>
-                    {/* Progress Bar */}
-                    <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-amber-500 to-emerald-500 rounded-full transition-all duration-300"
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <Link
-                    href={`/micro-jobs/${job.id}`}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-500 hover:text-slate-950 dark:hover:bg-amber-500 dark:hover:text-slate-950 text-slate-700 dark:text-slate-200 font-bold text-xs transition shadow-2xs group-hover:bg-amber-500 group-hover:text-slate-950"
+              {categories.map((c) => {
+                const isSelected = selectedCat === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setSelectedCat(isSelected ? '' : c.id)}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition text-left ${
+                      isSelected
+                        ? 'bg-amber-500 text-slate-950 shadow-sm'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
                   >
-                    <span>{lang === 'bn' ? 'কাজটি দেখুন' : 'View Task'}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
+                    <div className="flex items-center gap-2.5 truncate">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+                      <span className="truncate">{c.name}</span>
+                    </div>
+                    {isSelected && <Check className="w-4 h-4 flex-shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Quick Info / Post Job Card in Sidebar */}
+          <div className="rounded-3xl bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-amber-500/5 border border-amber-500/20 p-5 space-y-3">
+            <h3 className="text-xs font-black text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4" />
+              <span>{lang === 'bn' ? 'নিজে কাজ দিতে চান?' : 'Need Work Done?'}</span>
+            </h3>
+            <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+              {lang === 'bn'
+                ? 'ইউটিউব সাবস্ক্রাইব, ফেসবুক ফলো, অ্যাপ ইনস্টল বা রিভিউ পেতে এখনই বাজেট নির্ধারণ করে কাজ পোস্ট করুন।'
+                : 'Post your micro job and get thousands of real workers to fulfill your requirements quickly.'}
+            </p>
+            <Link
+              href="/dashboard/micro-jobs?tab=create"
+              className="inline-flex items-center gap-1.5 w-full justify-center px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition shadow-sm"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>{lang === 'bn' ? 'কাজ পোস্ট করুন' : 'Post Job'}</span>
+            </Link>
+          </div>
+        </aside>
+
+        {/* Right Main Column: Jobs Grid */}
+        <div className="flex-1 w-full space-y-4">
+          {/* Active Filter Header */}
+          {selectedCat && (
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                {lang === 'bn' ? 'ফিল্টার করা ক্যাটাগরি:' : 'Filtered Category:'}{' '}
+                <span className="text-amber-600 dark:text-amber-400">
+                  {categories.find((c) => c.id === selectedCat)?.name || ''}
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedCat('')}
+                className="text-xs text-slate-400 hover:text-rose-500 transition"
+              >
+                {lang === 'bn' ? 'ফিল্টার মুছুন ✕' : 'Clear Filter ✕'}
+              </button>
+            </div>
+          )}
+
+          {/* Jobs Grid */}
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div
+                  key={i}
+                  className="h-56 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse border border-slate-200 dark:border-slate-700"
+                />
+              ))}
+            </div>
+          ) : jobs.length === 0 ? (
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-12 text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto">
+                <Briefcase className="w-7 h-7" />
               </div>
-            );
-          })}
+              <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
+                {lang === 'bn' ? 'বর্তমানে কোনো কাজ পাওয়া যায়নি' : 'No micro jobs found right now'}
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                {lang === 'bn'
+                  ? 'আপনি কি নিজের ইউটিউব, ফেসবুক বা অ্যাপের জন্য কাজ করাতে চান? এখনই কাজ পোস্ট করুন!'
+                  : 'Looking to get tasks completed? Post your micro job now and reach thousands of workers!'}
+              </p>
+              <Link
+                href="/dashboard/micro-jobs?tab=create"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition shadow-sm"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>{lang === 'bn' ? 'প্রথম কাজটি পোস্ট করুন' : 'Post the First Task'}</span>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {jobs.map((job) => {
+                const completed = Number(job.approvedCount || 0);
+                const total = Number(job.totalWorkersNeeded || 1);
+                const percent = Math.min(100, Math.round((completed / total) * 100));
+
+                return (
+                  <div
+                    key={job.id}
+                    className="group flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-500/60 p-4 transition-all duration-200 shadow-xs hover:shadow-md"
+                  >
+                    <div className="space-y-3">
+                      {/* Category & Status */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 truncate">
+                          {job.category?.name || 'General'}
+                        </span>
+                        <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20 flex-shrink-0">
+                          ৳ {Number(job.rewardPerWorker).toFixed(2)}
+                        </span>
+                      </div>
+
+                      {/* Job Title */}
+                      <Link href={`/micro-jobs/${job.id}`}>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white line-clamp-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition">
+                          {job.title}
+                        </h3>
+                      </Link>
+
+                      {/* Employer */}
+                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        <div className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-[10px] text-slate-700 dark:text-slate-300">
+                          {job.employer?.firstName?.[0] || 'U'}
+                        </div>
+                        <span className="truncate">{job.employer?.firstName} {job.employer?.lastName}</span>
+                        {job.employer?.isVerified && (
+                          <ShieldCheck className="w-3.5 h-3.5 text-sky-500 flex-shrink-0" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Progress & Action */}
+                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-3 space-y-2.5">
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                          <span className="flex items-center gap-1">
+                            <Users className="w-3 h-3 text-slate-400" />
+                            <span>{completed} / {total} জন সম্পন্ন</span>
+                          </span>
+                          <span>{percent}%</span>
+                        </div>
+                        {/* Progress Bar */}
+                        <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-amber-500 to-emerald-500 rounded-full transition-all duration-300"
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <Link
+                        href={`/micro-jobs/${job.id}`}
+                        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-500 hover:text-slate-950 dark:hover:bg-amber-500 dark:hover:text-slate-950 text-slate-700 dark:text-slate-200 font-bold text-xs transition shadow-2xs group-hover:bg-amber-500 group-hover:text-slate-950"
+                      >
+                        <span>{lang === 'bn' ? 'কাজটি দেখুন' : 'View Task'}</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
