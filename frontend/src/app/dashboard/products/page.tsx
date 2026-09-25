@@ -46,6 +46,7 @@ export default function MyProductsPage() {
   const [editTitle, setEditTitle] = useState('');
   const [editCategoryId, setEditCategoryId] = useState('');
   const [editPrice, setEditPrice] = useState<number>(0);
+  const [editPricingType, setEditPricingType] = useState<'FIXED' | 'NEGOTIABLE'>('FIXED');
   const [editStatus, setEditStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
   const [editCanonicalUrl, setEditCanonicalUrl] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -136,6 +137,7 @@ export default function MyProductsPage() {
     setEditTitle(p.title || '');
     setEditCategoryId(p.categoryId || (categories[0]?.id || ''));
     setEditPrice(Number(p.price) || 0);
+    setEditPricingType(p.pricingType === 'NEGOTIABLE' || Number(p.price) === 0 ? 'NEGOTIABLE' : 'FIXED');
     setEditStatus(p.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE');
     setEditCanonicalUrl(p.canonicalUrl || (p.productType === 'PHYSICAL' ? '/physical-products' : '/digital-products'));
     setEditDescription(p.descriptionHtml || '');
@@ -223,7 +225,8 @@ export default function MyProductsPage() {
       const payload: any = {
         title: editTitle.trim(),
         categoryId: editCategoryId,
-        price: Number(editPrice),
+        pricingType: editPricingType,
+        price: editPricingType === 'NEGOTIABLE' ? 0 : Number(editPrice),
         status: editStatus,
         canonicalUrl: editCanonicalUrl,
         descriptionHtml: editDescription,
@@ -501,8 +504,10 @@ export default function MyProductsPage() {
 
                       {/* Price */}
                       <td className="p-3.5 font-extrabold text-slate-900 dark:text-white whitespace-nowrap text-sm">
-                        {(p as any).pricingType === 'NEGOTIABLE' ? (
-                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">আলোচনাসাপেক্ষ</span>
+                        {(p as any).pricingType === 'NEGOTIABLE' || Number(p.price) === 0 ? (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                            {lang === 'bn' ? 'আলোচনাসাপেক্ষ' : 'Negotiable'}
+                          </span>
                         ) : (
                           `৳ ${Number(p.price).toLocaleString()}`
                         )}
@@ -623,7 +628,7 @@ export default function MyProductsPage() {
                           {p.title}
                         </Link>
                         <span className="font-extrabold text-sm text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                          {(p as any).pricingType === 'NEGOTIABLE' ? 'আলোচনাসাপেক্ষ' : `৳ ${Number(p.price).toLocaleString()}`}
+                          {(p as any).pricingType === 'NEGOTIABLE' || Number(p.price) === 0 ? (lang === 'bn' ? 'আলোচনাসাপেক্ষ' : 'Negotiable') : `৳ ${Number(p.price).toLocaleString()}`}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
@@ -791,19 +796,56 @@ export default function MyProductsPage() {
                   </select>
                 </div>
 
-                {/* Price */}
+                {/* Price & Pricing Type */}
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    {lang === 'bn' ? 'মূল্য (৳)' : 'Price (৳) *'}
+                    {lang === 'bn' ? 'মূল্য নির্ধারণ (Pricing Type)' : 'Pricing Model'}
                   </label>
-                  <input
-                    type="number"
-                    min={0}
-                    required
-                    value={editPrice ?? 0}
-                    onChange={(e) => setEditPrice(parseFloat(e.target.value) || 0)}
-                    className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold"
-                  />
+                  <div className="grid grid-cols-2 gap-1.5 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditPricingType('FIXED')}
+                      className={`p-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 border cursor-pointer ${
+                        editPricingType === 'FIXED'
+                          ? 'bg-sky-500 text-white border-sky-600 shadow-xs'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                      }`}
+                    >
+                      <span>🏷️</span>
+                      <span>{lang === 'bn' ? 'নির্দিষ্ট মূল্য' : 'Fixed'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditPricingType('NEGOTIABLE')}
+                      className={`p-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 border cursor-pointer ${
+                        editPricingType === 'NEGOTIABLE'
+                          ? 'bg-emerald-500 text-white border-emerald-600 shadow-xs'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                      }`}
+                    >
+                      <span>🤝</span>
+                      <span>{lang === 'bn' ? 'আলোচনাসাপেক্ষ' : 'Negotiable'}</span>
+                    </button>
+                  </div>
+
+                  {editPricingType === 'FIXED' ? (
+                    <div>
+                      <input
+                        type="number"
+                        min={0}
+                        required
+                        value={editPrice ?? 0}
+                        onChange={(e) => setEditPrice(parseFloat(e.target.value) || 0)}
+                        placeholder="0"
+                        className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold"
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-[11px] text-emerald-800 dark:text-emerald-300 font-medium flex items-center gap-1.5">
+                      <span>💬</span>
+                      <span>{lang === 'bn' ? 'চ্যাটে ক্রেতার সাথে আলোচনা করে দাম নির্ধারণ হবে' : 'Negotiated via chat'}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Status Toggle */}

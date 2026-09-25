@@ -832,30 +832,37 @@ function WalletContent() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          {/* Mobile Line 1: Recharge Instruction full width */}
           <button
+            type="button"
             onClick={() => setShowInstructionModal(true)}
-            className="px-3.5 sm:px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/15 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 text-amber-800 dark:text-amber-300 font-bold text-xs flex items-center gap-1.5 border border-amber-500/30 shadow-sm transition active:scale-95 cursor-pointer"
+            className="w-full sm:w-auto justify-center px-3.5 sm:px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/15 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 text-amber-800 dark:text-amber-300 font-bold text-xs flex items-center gap-1.5 border border-amber-500/30 shadow-xs transition active:scale-95 cursor-pointer"
           >
-            <Sparkles className="w-4 h-4 text-amber-500" />
+            <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
             <span>{lang === 'bn' ? 'রিচার্জ নির্দেশিকা' : 'Recharge Instruction'}</span>
           </button>
 
-          <button
-            onClick={() => setShowRechargeModal(true)}
-            className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-sky-600/20 transition cursor-pointer"
-          >
-            <ArrowDownCircle className="w-4 h-4" />
-            <span>{t('recharge')}</span>
-          </button>
+          {/* Mobile Line 2: Recharge and Withdraw side-by-side in one line */}
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => setShowRechargeModal(true)}
+              className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-sky-600/20 transition active:scale-95 cursor-pointer"
+            >
+              <ArrowDownCircle className="w-4 h-4 shrink-0" />
+              <span>{t('recharge')}</span>
+            </button>
 
-          <button
-            onClick={() => setShowWithdrawModal(true)}
-            className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-1.5 transition"
-          >
-            <ArrowUpCircle className="w-4 h-4" />
-            <span>{t('withdraw')}</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setShowWithdrawModal(true)}
+              className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+            >
+              <ArrowUpCircle className="w-4 h-4 shrink-0" />
+              <span>{t('withdraw')}</span>
+            </button>
+          </div>
         </div>
       </div>
 

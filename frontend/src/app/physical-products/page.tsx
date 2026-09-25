@@ -98,7 +98,13 @@ export default function PhysicalProductsPage() {
                       <h2 className="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 hover:text-sky-600 transition leading-snug">{p.title}</h2>
                     </Link>
                     <div className="text-xs sm:text-sm font-extrabold text-sky-600 dark:text-sky-400">
-                      {(p as any).pricingType === 'NEGOTIABLE' ? 'আলোচনাসাপেক্ষ' : `৳ ${Number(p.price).toLocaleString()}`}
+                      {(p as any).pricingType === 'NEGOTIABLE' || Number(p.price) === 0 ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                          {lang === 'bn' ? 'আলোচনাসাপেক্ষ' : 'Negotiable'}
+                        </span>
+                      ) : (
+                        `৳ ${Number(p.price).toLocaleString()}`
+                      )}
                     </div>
                   </div>
                 </div>

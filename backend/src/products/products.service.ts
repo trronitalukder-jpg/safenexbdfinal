@@ -519,6 +519,7 @@ export class ProductsService {
       title: true,
       slug: true,
       price: true,
+      pricingType: true,
       productType: true,
       status: true,
       canonicalUrl: true,

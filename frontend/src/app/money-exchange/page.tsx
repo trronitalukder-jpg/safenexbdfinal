@@ -184,7 +184,7 @@ export default function MoneyExchangePage() {
                     </div>
 
                     <div className="flex items-baseline gap-1">
-                      {(p as any).pricingType === 'NEGOTIABLE' ? (
+                      {(p as any).pricingType === 'NEGOTIABLE' || Number(p.price) === 0 ? (
                         <span className="text-sm font-extrabold text-amber-600 dark:text-amber-400">
                           {lang === 'bn' ? 'আলোচনাসাপেক্ষ' : 'Negotiable'}
                         </span>
