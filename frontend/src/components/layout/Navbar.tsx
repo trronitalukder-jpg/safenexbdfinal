@@ -185,6 +185,21 @@ export const Navbar = () => {
 
           {/* Right Controls: Theme, Lang, Wallet, Auth */}
           <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0 ml-auto md:ml-0">
+            {/* Micro Jobs Link Button (Desktop Header) */}
+            {settings.microJob?.enabled !== false && (
+              <Link
+                href="/micro-jobs"
+                title={lang === 'bn' ? 'মাইক্রো জব (কাজ ও আয়)' : 'Micro Jobs (Work & Earn)'}
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 hover:bg-amber-600 hover:text-white dark:hover:bg-amber-500 dark:hover:text-slate-950 transition shadow-xs flex-shrink-0"
+              >
+                <Briefcase className="w-3.5 h-3.5" />
+                <span>{lang === 'bn' ? 'মাইক্রো জব' : 'Micro Jobs'}</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded-full font-black bg-amber-500 text-white leading-none">
+                  HOT
+                </span>
+              </Link>
+            )}
+
             {/* Guides Link Button (Desktop) */}
             <Link
               href="/guides"
@@ -501,66 +516,80 @@ export const Navbar = () => {
 
           {/* Dynamic Menus or Fallback */}
           {navMenus.length > 0 ? (
-            navMenus.map((item) => {
-              const activeChildren = (item.children || []).filter((c: any) => c.isActive !== false);
-              const hasChildren = activeChildren.length > 0;
+            <>
+              {navMenus.map((item) => {
+                const activeChildren = (item.children || []).filter((c: any) => c.isActive !== false);
+                const hasChildren = activeChildren.length > 0;
 
-              if (hasChildren) {
-                return (
-                  <div
-                    key={item.id}
-                    className="relative"
-                    onMouseEnter={() => setOpenMenuId(item.id)}
-                    onMouseLeave={() => setOpenMenuId(null)}
-                  >
-                    <div className="flex items-center gap-1">
-                      <Link
-                        href={item.url}
-                        target={item.isExternal ? '_blank' : undefined}
-                        className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition py-1"
-                      >
-                        {item.title}
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => setOpenMenuId(openMenuId === item.id ? null : item.id)}
-                        className="text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 p-0.5"
-                      >
-                        <ChevronDown className={`w-3 h-3 transition-transform ${openMenuId === item.id ? 'rotate-180' : ''}`} />
-                      </button>
-                    </div>
-
-                    {openMenuId === item.id && (
-                      <div className="absolute left-0 mt-1 min-w-[190px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1.5 z-50 animate-in fade-in slide-in-from-top-1">
-                        {activeChildren.map((sub: any) => (
-                          <Link
-                            key={sub.id}
-                            href={sub.url}
-                            target={sub.isExternal ? '_blank' : undefined}
-                            onClick={() => setOpenMenuId(null)}
-                            className="flex items-center justify-between px-3.5 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition"
-                          >
-                            <span>{sub.title}</span>
-                            {sub.isExternal && <span className="text-[10px] text-slate-400">↗</span>}
-                          </Link>
-                        ))}
+                if (hasChildren) {
+                  return (
+                    <div
+                      key={item.id}
+                      className="relative"
+                      onMouseEnter={() => setOpenMenuId(item.id)}
+                      onMouseLeave={() => setOpenMenuId(null)}
+                    >
+                      <div className="flex items-center gap-1">
+                        <Link
+                          href={item.url}
+                          target={item.isExternal ? '_blank' : undefined}
+                          className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition py-1"
+                        >
+                          {item.title}
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setOpenMenuId(openMenuId === item.id ? null : item.id)}
+                          className="text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 p-0.5"
+                        >
+                          <ChevronDown className={`w-3 h-3 transition-transform ${openMenuId === item.id ? 'rotate-180' : ''}`} />
+                        </button>
                       </div>
-                    )}
-                  </div>
-                );
-              }
 
-              return (
+                      {openMenuId === item.id && (
+                        <div className="absolute left-0 mt-1 min-w-[190px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1.5 z-50 animate-in fade-in slide-in-from-top-1">
+                          {activeChildren.map((sub: any) => (
+                            <Link
+                              key={sub.id}
+                              href={sub.url}
+                              target={sub.isExternal ? '_blank' : undefined}
+                              onClick={() => setOpenMenuId(null)}
+                              className="flex items-center justify-between px-3.5 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition"
+                            >
+                              <span>{sub.title}</span>
+                              {sub.isExternal && <span className="text-[10px] text-slate-400">↗</span>}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.url}
+                    target={item.isExternal ? '_blank' : undefined}
+                    className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition py-1"
+                  >
+                    {item.title}
+                  </Link>
+                );
+              })}
+              {settings.microJob?.enabled !== false && (
                 <Link
-                  key={item.id}
-                  href={item.url}
-                  target={item.isExternal ? '_blank' : undefined}
-                  className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition py-1"
+                  href="/micro-jobs"
+                  className="font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20"
                 >
-                  {item.title}
+                  <Briefcase className="w-3.5 h-3.5 text-amber-500" />
+                  <span>{lang === 'bn' ? 'মাইক্রো জব' : 'Micro Jobs'}</span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded-full font-extrabold bg-amber-500 text-white">
+                    HOT
+                  </span>
                 </Link>
-              );
-            })
+              )}
+            </>
           ) : (
             <>
               <Link href="/shop" className="font-semibold text-slate-800 dark:text-slate-100 hover:text-sky-600 dark:hover:text-sky-400 transition flex items-center gap-1">

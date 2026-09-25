@@ -675,6 +675,290 @@ export class MicroJobsService {
   }
 
   /**
+   * Admin: get all submissions for a job
+   */
+  async adminGetJobSubmissions(jobId: string) {
+    const job = await this.prisma.microJob.findUnique({
+      where: { id: jobId },
+      include: {
+        category: true,
+        employer: {
+          select: { id: true, firstName: true, lastName: true, uniqueUserId: true },
+        },
+      },
+    });
+
+    if (!job) {
+      throw new NotFoundException('কাজটি খুঁজে পাওয়া যায়নি');
+    }
+
+    const submissions = await this.prisma.microJobSubmission.findMany({
+      where: { jobId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        worker: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            uniqueUserId: true,
+            avatarUrl: true,
+            isVerified: true,
+          },
+        },
+      },
+    });
+
+    return { job, submissions };
+  }
+
+  /**
+   * Admin: get submissions queue with filters
+   */
+  async adminGetAllSubmissions(query: {
+    status?: string;
+    jobId?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const page = Math.max(1, Number(query.page || 1));
+    const limit = Math.min(100, Math.max(1, Number(query.limit || 20)));
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (query.status) where.status = query.status;
+    if (query.jobId) where.jobId = query.jobId;
+
+    const [items, total] = await Promise.all([
+      this.prisma.microJobSubmission.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          job: {
+            select: {
+              id: true,
+              title: true,
+              rewardPerWorker: true,
+              category: { select: { name: true, icon: true } },
+              employer: {
+                select: { id: true, firstName: true, lastName: true, uniqueUserId: true },
+              },
+            },
+          },
+          worker: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              uniqueUserId: true,
+              avatarUrl: true,
+              isVerified: true,
+            },
+          },
+        },
+      }),
+      this.prisma.microJobSubmission.count({ where }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
+   * Admin reviews submission (Approve or Reject on behalf of employer or as platform admin)
+   */
+  async adminReviewSubmission(submissionId: string, adminId: string, dto: ReviewSubmissionDto) {
+    const submission = await this.prisma.microJobSubmission.findUnique({
+      where: { id: submissionId },
+      include: {
+        job: true,
+        worker: {
+          select: { id: true, firstName: true, lastName: true, uniqueUserId: true },
+        },
+      },
+    });
+
+    if (!submission) {
+      throw new NotFoundException('সাবমিশনটি খুঁজে পাওয়া যায়নি');
+    }
+
+    if (submission.status !== 'SUBMITTED') {
+      throw new BadRequestException('এই সাবমিশনটি ইতোমধ্যে রিভিউ করা হয়ে গেছে');
+    }
+
+    const reward = Number(submission.job.rewardPerWorker);
+
+    if (dto.action === 'APPROVE') {
+      return this.prisma.$transaction(async (tx) => {
+        const updated = await tx.microJobSubmission.update({
+          where: { id: submissionId },
+          data: {
+            status: 'APPROVED',
+            reviewedAt: new Date(),
+            adminNotes: `Approved by Admin (${adminId})`,
+          },
+        });
+
+        const workerWallet = await tx.wallet.findUnique({
+          where: { userId: submission.workerId },
+        });
+
+        if (workerWallet) {
+          const balanceBefore = Number(workerWallet.availableBalance);
+          const balanceAfter = balanceBefore + reward;
+
+          await tx.wallet.update({
+            where: { id: workerWallet.id },
+            data: {
+              availableBalance: balanceAfter,
+              version: { increment: 1 },
+            },
+          });
+
+          await tx.walletLedger.create({
+            data: {
+              walletId: workerWallet.id,
+              userId: submission.workerId,
+              type: 'MICROJOB_EARNING',
+              amount: reward,
+              balanceBefore,
+              balanceAfter,
+              holdBefore: Number(workerWallet.holdBalance),
+              holdAfter: Number(workerWallet.holdBalance),
+              referenceId: submission.id,
+              referenceType: 'MICRO_JOB',
+              notes: `Admin Approved Micro Job: ${submission.job.title}`,
+              status: 'COMPLETED',
+            },
+          });
+        }
+
+        const newApprovedCount = submission.job.approvedCount + 1;
+        const newPendingCount = Math.max(0, submission.job.pendingCount - 1);
+        const isCompleted = newApprovedCount >= submission.job.totalWorkersNeeded;
+
+        await tx.microJob.update({
+          where: { id: submission.jobId },
+          data: {
+            approvedCount: newApprovedCount,
+            pendingCount: newPendingCount,
+            status: isCompleted ? 'COMPLETED' : submission.job.status,
+          },
+        });
+
+        return updated;
+      });
+    } else {
+      // REJECT
+      return this.prisma.$transaction(async (tx) => {
+        const updated = await tx.microJobSubmission.update({
+          where: { id: submissionId },
+          data: {
+            status: 'REJECTED',
+            rejectReason: dto.rejectReason?.trim() || 'অ্যাডমিন কর্তৃক বাতিল করা হয়েছে',
+            adminNotes: `Rejected by Admin (${adminId})`,
+            reviewedAt: new Date(),
+          },
+        });
+
+        await tx.microJob.update({
+          where: { id: submission.jobId },
+          data: {
+            pendingCount: { decrement: 1 },
+          },
+        });
+
+        return updated;
+      });
+    }
+  }
+
+  /**
+   * Admin cancels any job and refunds remaining budget to employer
+   */
+  async adminCancelJob(jobId: string, adminId: string) {
+    const job = await this.prisma.microJob.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      throw new NotFoundException('কাজটি খুঁজে পাওয়া যায়নি');
+    }
+
+    if (job.status === 'CANCELLED' || job.status === 'COMPLETED') {
+      throw new BadRequestException('এই কাজটি ইতোমধ্যে সম্পন্ন বা বাতিল করা হয়েছে');
+    }
+
+    const remainingSlots = Math.max(0, job.totalWorkersNeeded - job.approvedCount - job.pendingCount);
+
+    return this.prisma.$transaction(async (tx) => {
+      let refundAmount = 0;
+      if (remainingSlots > 0) {
+        const unitReward = Number(job.rewardPerWorker);
+        const workerBudgetRefund = remainingSlots * unitReward;
+        const totalBudget = Number(job.totalBudget);
+        const feeRatio = totalBudget > 0 ? Number(job.platformFee) / totalBudget : 0;
+        const feeRefund = workerBudgetRefund * feeRatio;
+        refundAmount = workerBudgetRefund + feeRefund;
+
+        const wallet = await tx.wallet.findUnique({
+          where: { userId: job.employerId },
+        });
+
+        if (wallet && refundAmount > 0) {
+          const balanceBefore = Number(wallet.availableBalance);
+          const balanceAfter = balanceBefore + refundAmount;
+
+          await tx.wallet.update({
+            where: { id: wallet.id },
+            data: {
+              availableBalance: balanceAfter,
+              version: { increment: 1 },
+            },
+          });
+
+          await tx.walletLedger.create({
+            data: {
+              walletId: wallet.id,
+              userId: job.employerId,
+              type: 'MICROJOB_REFUND',
+              amount: refundAmount,
+              balanceBefore,
+              balanceAfter,
+              holdBefore: Number(wallet.holdBalance),
+              holdAfter: Number(wallet.holdBalance),
+              referenceId: job.id,
+              referenceType: 'MICRO_JOB',
+              notes: `Admin Cancelled Micro Job Refund: ${job.title} by Admin (${adminId})`,
+              status: 'COMPLETED',
+            },
+          });
+        }
+      }
+
+      const updatedJob = await tx.microJob.update({
+        where: { id: jobId },
+        data: {
+          status: 'CANCELLED',
+        },
+      });
+
+      return {
+        job: updatedJob,
+        refundAmount,
+        refundedSlots: remainingSlots,
+      };
+    });
+  }
+
+  /**
    * Auto-approve pending submissions that have passed the autoApproveAt threshold
    */
   async autoApproveExpiredSubmissions() {

@@ -28,6 +28,7 @@ import {
   Maximize2,
   Ban,
   ArrowRight,
+  ExternalLink,
 } from 'lucide-react';
 
 export default function MicroJobsDashboardPage() {
@@ -80,6 +81,7 @@ export default function MicroJobsDashboardPage() {
   const [creatingJob, setCreatingJob] = useState(false);
   const [createError, setCreateError] = useState('');
   const [createSuccess, setCreateSuccess] = useState(false);
+  const [createdJobModal, setCreatedJobModal] = useState<any | null>(null);
 
   // Cancel Job State
   const [cancellingJobId, setCancellingJobId] = useState<string | null>(null);
@@ -265,7 +267,7 @@ export default function MicroJobsDashboardPage() {
     setCreatingJob(true);
     setCreateError('');
     try {
-      await api.post('/micro-jobs', {
+      const res: any = await api.post('/micro-jobs', {
         categoryId: createForm.categoryId,
         title: createForm.title.trim(),
         description: createForm.description.trim(),
@@ -276,13 +278,23 @@ export default function MicroJobsDashboardPage() {
         minKycRequired: createForm.minKycRequired,
       });
 
+      const newJob = res?.data || res;
+      setCreatedJobModal(newJob);
       setCreateSuccess(true);
       if (refreshMe) refreshMe();
-      setTimeout(() => {
-        setCreateSuccess(false);
-        setActiveTab('my_jobs');
-        fetchMyPostedJobs();
-      }, 1500);
+      fetchMyPostedJobs();
+
+      // Reset create form
+      setCreateForm({
+        categoryId: '',
+        title: '',
+        description: '',
+        steps: [''],
+        proofRequirements: [''],
+        rewardPerWorker: settings.microJob?.minJobReward || 2,
+        totalWorkersNeeded: 10,
+        minKycRequired: false,
+      });
     } catch (err: any) {
       console.error('Job creation failed:', err);
       setCreateError(err?.response?.data?.message || 'কাজ পোস্ট করা সম্ভব হয়নি');
@@ -491,6 +503,15 @@ export default function MicroJobsDashboardPage() {
                         <Eye className="w-3.5 h-3.5" />
                         <span>প্রমাণ দেখুন {pending > 0 && `(${pending})`}</span>
                       </button>
+
+                      <Link
+                        href={`/micro-jobs/${job.id}`}
+                        target="_blank"
+                        title={lang === 'bn' ? 'মার্কেটে লাইভ কাজটি দেখুন' : 'View live job in marketplace'}
+                        className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Link>
 
                       {job.status === 'ACTIVE' && (
                         <button
@@ -1067,6 +1088,62 @@ export default function MicroJobsDashboardPage() {
             >
               <X className="w-5 h-5" />
             </button>
+          </div>
+        </div>
+      )}
+      {/* ========================================================================= */}
+      {/* JOB CREATION SUCCESS MODAL                                                */}
+      {/* ========================================================================= */}
+      {createdJobModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 sm:p-8 text-center space-y-5 shadow-2xl">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto border border-emerald-500/20">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+                {lang === 'bn' ? '🎉 অভিনন্দন! কাজটি সফলভাবে পোস্ট হয়েছে!' : '🎉 Success! Job Posted Successfully!'}
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {lang === 'bn'
+                  ? 'আপনার কাজটি এখন পাবলিক মাইক্রো জব মার্কেটপ্লেসে সরাসরি লাইভ রয়েছে। কর্মীরা কাজ সম্পন্ন করে প্রুফ জমা দিলে আপনি এখানে দেখতে ও রিভিউ করতে পারবেন।'
+                  : 'Your job is now live on the public marketplace. You can review worker submissions right here.'}
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 text-left space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                {lang === 'bn' ? 'কাজের শিরোনাম' : 'Job Title'}
+              </span>
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                {createdJobModal.title}
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-2">
+              <Link
+                href={`/micro-jobs/${createdJobModal.id}`}
+                target="_blank"
+                onClick={() => {
+                  setCreatedJobModal(null);
+                  setActiveTab('my_jobs');
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition shadow-sm"
+              >
+                <ExternalLink className="w-4 h-4" />
+                <span>{lang === 'bn' ? '🌐 সরাসরি কাজটি দেখুন' : 'View Live Job'}</span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setCreatedJobModal(null);
+                  setActiveTab('my_jobs');
+                }}
+                className="w-full py-3 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition"
+              >
+                {lang === 'bn' ? '📋 আমার কাজের তালিকায় যান' : 'Go to My Posted Tasks'}
+              </button>
+            </div>
           </div>
         </div>
       )}

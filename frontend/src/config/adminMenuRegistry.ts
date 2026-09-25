@@ -276,10 +276,10 @@ export const adminMenuRegistry: AdminMenuItem[] = [
     key: 'micro_jobs',
     labelEn: 'Micro Jobs Control',
     labelBn: 'মাইক্রো জব কন্ট্রোল',
-    href: '/admin/settings?tab=micro_job',
+    href: '/admin/micro-jobs',
     icon: Briefcase,
-    descriptionEn: 'Master toggle, platform fee, auto-approve timer & settings',
-    descriptionBn: 'মাইক্রো জব মাস্টার সুইচ, প্ল্যাটফর্ম ফি ও অটো-অ্যাপ্রুভাল সেটিংস',
+    descriptionEn: 'Manage all micro tasks, review proofs, approve/reject & control settings',
+    descriptionBn: 'সকল মাইক্রো জব ও প্রুফ ম্যানেজমেন্ট, অনুমোদন ও নিয়ন্ত্রণ',
     category: 'moderation',
   },
   {

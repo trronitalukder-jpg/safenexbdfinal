@@ -18,8 +18,11 @@ import {
   ExternalLink,
   X,
   Package,
+  Briefcase,
+  PlusCircle,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { useSettings } from '@/context/SettingsContext';
 import { api } from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
 
@@ -35,6 +38,7 @@ function HomePositionTag({ position }: { position: number }) {
 
 export default function HomePage() {
   const { lang, t } = useLanguage();
+  const { settings } = useSettings();
   const [sliders, setSliders] = useState<any[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -881,6 +885,64 @@ export default function HomePage() {
 
       {/* 2. Dynamically Rendered Sections in Admin-Defined Sequence Order */}
       {homeSettings.sectionOrder.map((sectionKey: string) => renderOrderedSection(sectionKey))}
+
+      {/* 2.5 Micro Jobs Featured Section */}
+      {settings.microJob?.enabled !== false && (
+        <section className="max-w-[1650px] w-full mx-auto px-4 sm:px-6 lg:px-8 my-4 sm:my-8">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent dark:from-amber-950/40 dark:via-amber-900/15 dark:to-transparent border border-amber-500/25 dark:border-amber-500/35 p-6 sm:p-10 shadow-sm">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+              <div className="space-y-4 max-w-2xl text-center lg:text-left">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-black uppercase tracking-wider">
+                  <Briefcase className="w-3.5 h-3.5" />
+                  <span>{lang === 'bn' ? 'মাইক্রো জব মার্কেটপ্লেস' : 'Micro Jobs Marketplace'}</span>
+                  <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[9px] font-black">HOT</span>
+                </div>
+                <h2 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white leading-tight">
+                  {lang === 'bn'
+                    ? 'ছোট ছোট কাজ সম্পন্ন করে ঘরে বসেই আয় করুন'
+                    : 'Complete Small Tasks & Earn Money Online'}
+                </h2>
+                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+                  {lang === 'bn'
+                    ? 'সোশ্যাল মিডিয়া ফলো, লাইক, অ্যাপ ডাউনলোড, চ্যানেল সাবস্ক্রাইব ও ভিডিও ওয়াচ সহ শত শত কাজ। ১০০% সুরক্ষিত এসক্রো পেমেন্ট ও তাত্ক্ষণিক ওয়ালেট ক্রেডিট।'
+                    : 'Hundreds of easy tasks like follow, like, subscribe, review and app installs with 100% escrow guaranteed payouts.'}
+                </p>
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    <span>{lang === 'bn' ? 'নিরাপদ এসক্রো বাজেট' : 'Safe Escrow Budget'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    <span>{lang === 'bn' ? 'সহজ স্ক্রিনশট প্রুফ' : 'Easy Screenshot Proof'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    <span>{lang === 'bn' ? 'তাৎক্ষণিক ওয়ালেট ক্যাশআউট' : 'Instant Wallet Cashout'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+                <Link
+                  href="/micro-jobs"
+                  className="w-full sm:w-auto text-center px-6 py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-sm shadow-lg shadow-amber-500/25 transition transform active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <Briefcase className="w-4 h-4" />
+                  <span>{lang === 'bn' ? 'কাজের বাজার দেখুন' : 'Browse Tasks'}</span>
+                </Link>
+                <Link
+                  href="/dashboard/micro-jobs?tab=create"
+                  className="w-full sm:w-auto text-center px-6 py-3.5 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-extrabold text-sm border border-slate-200 dark:border-slate-700 shadow-sm transition transform active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <PlusCircle className="w-4 h-4 text-amber-500" />
+                  <span>{lang === 'bn' ? 'কাজ পোস্ট করুন' : 'Post a Job'}</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* 3. Trust & Safety Statistics */}
       <section className="bg-slate-100 dark:bg-slate-900/60 border-y border-slate-200 dark:border-slate-800 py-10 sm:py-16">
