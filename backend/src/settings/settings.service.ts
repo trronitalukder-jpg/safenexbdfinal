@@ -137,6 +137,14 @@ export const DEFAULT_SETTINGS = {
     disputeSummaryEnabled: true,
     dealProposalEnabled: true,
   },
+  microJob: {
+    enabled: true,
+    autoApproveHours: 48,
+    platformFeePercent: 5,
+    minJobReward: 1,
+    requireKycToPost: false,
+    requireKycToWork: false,
+  },
 };
 
 export const DEFAULT_NOTIFICATION_SETTINGS = {
@@ -260,6 +268,7 @@ const CATEGORY_KEYS: Record<string, string> = {
   operations: 'WEBSITE_OPERATIONS',
   performance: 'WEBSITE_PERFORMANCE',
   ai: 'WEBSITE_AI',
+  microJob: 'WEBSITE_MICRO_JOB',
 };
 
 @Injectable()
@@ -304,6 +313,10 @@ export class SettingsService {
       ai: {
         ...DEFAULT_SETTINGS.ai,
         ...(settingsMap.get(CATEGORY_KEYS.ai) || {}),
+      },
+      microJob: {
+        ...DEFAULT_SETTINGS.microJob,
+        ...(settingsMap.get(CATEGORY_KEYS.microJob) || {}),
       },
     };
   }
@@ -366,6 +379,14 @@ export class SettingsService {
         inChatWarningEnabled: Boolean(all.ai?.inChatWarningEnabled),
         dealProposalEnabled: Boolean(all.ai?.dealProposalEnabled),
       },
+      microJob: {
+        enabled: Boolean(all.microJob?.enabled !== false),
+        autoApproveHours: Number(all.microJob?.autoApproveHours || 48),
+        platformFeePercent: Number(all.microJob?.platformFeePercent || 5),
+        minJobReward: Number(all.microJob?.minJobReward || 1),
+        requireKycToPost: Boolean(all.microJob?.requireKycToPost),
+        requireKycToWork: Boolean(all.microJob?.requireKycToWork),
+      },
     };
 
     this.publicSettingsCache = {
@@ -374,6 +395,30 @@ export class SettingsService {
     };
 
     return result;
+  }
+
+  /**
+   * Helper to check if micro job feature is globally enabled
+   */
+  async isMicroJobEnabled(): Promise<boolean> {
+    try {
+      const all = await this.getAllSettings();
+      return Boolean(all.microJob?.enabled !== false);
+    } catch {
+      return true;
+    }
+  }
+
+  /**
+   * Helper to get micro job operational settings
+   */
+  async getMicroJobSettings() {
+    try {
+      const all = await this.getAllSettings();
+      return all.microJob || DEFAULT_SETTINGS.microJob;
+    } catch {
+      return DEFAULT_SETTINGS.microJob;
+    }
   }
 
   /**

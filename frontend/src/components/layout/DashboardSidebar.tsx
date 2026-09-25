@@ -30,10 +30,12 @@ import {
   Download,
   Bell,
   Gift,
+  Briefcase,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguage } from '@/context/LanguageContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useSettings } from '@/context/SettingsContext';
 import { usePwa } from '@/context/PwaContext';
 import { useNotification } from '@/context/NotificationContext';
 import { getImageUrl } from '@/lib/imageUtils';
@@ -45,6 +47,8 @@ export const DashboardSidebar = () => {
   const { theme, toggleTheme } = useTheme();
   const { installApp, isInstalled } = usePwa();
   const { unreadCount } = useNotification();
+  const { settings } = useSettings();
+  const isMicroJobEnabled = settings.microJob?.enabled !== false;
 
   const links = [
     { href: '/dashboard', label: lang === 'bn' ? 'ওভারভিউ' : 'Overview', icon: LayoutDashboard },
@@ -52,6 +56,15 @@ export const DashboardSidebar = () => {
     { href: '/dashboard/chat', label: lang === 'bn' ? 'মেসেজ ও লাইভ চ্যাট' : 'Live Chat & Deals', icon: MessageSquare },
     { href: '/dashboard/notifications', label: lang === 'bn' ? 'নোটিফিকেশন' : 'Notifications', icon: Bell },
     { href: '/dashboard/affiliate', label: lang === 'bn' ? '🎁 রেফার ও আয়' : '🎁 Refer & Earn', icon: Gift },
+    ...(isMicroJobEnabled
+      ? [
+          {
+            href: '/dashboard/micro-jobs',
+            label: lang === 'bn' ? '💼 মাইক্রো জবস' : '💼 Micro Jobs',
+            icon: Briefcase,
+          },
+        ]
+      : []),
     { href: '/dashboard/transactions', label: lang === 'bn' ? 'লেনদেন ইতিহাস' : 'My Transactions', icon: ArrowLeftRight },
     { href: '/dashboard/products', label: lang === 'bn' ? 'আমার প্রোডাক্টসমূহ' : 'My Products', icon: Package },
     { href: '/dashboard/products/new', label: lang === 'bn' ? 'প্রোডাক্ট আপলোড' : 'Upload Product', icon: PlusCircle },

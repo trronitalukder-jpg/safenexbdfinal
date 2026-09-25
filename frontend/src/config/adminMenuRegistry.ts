@@ -20,6 +20,7 @@ import {
   MessageSquareCode,
   Globe,
   Activity,
+  Briefcase,
   LucideIcon,
 } from 'lucide-react';
 
@@ -269,6 +270,16 @@ export const adminMenuRegistry: AdminMenuItem[] = [
     icon: BookOpen,
     descriptionEn: 'Publish video tutorials and rich HTML instructions for users',
     descriptionBn: 'ব্যবহারকারীদের জন্য নির্দেশিকা ও ভিডিও টিউটোরিয়াল প্রকাশ',
+    category: 'moderation',
+  },
+  {
+    key: 'micro_jobs',
+    labelEn: 'Micro Jobs Control',
+    labelBn: 'মাইক্রো জব কন্ট্রোল',
+    href: '/admin/settings?tab=micro_job',
+    icon: Briefcase,
+    descriptionEn: 'Master toggle, platform fee, auto-approve timer & settings',
+    descriptionBn: 'মাইক্রো জব মাস্টার সুইচ, প্ল্যাটফর্ম ফি ও অটো-অ্যাপ্রুভাল সেটিংস',
     category: 'moderation',
   },
   {

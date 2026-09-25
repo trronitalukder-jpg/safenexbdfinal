@@ -28,6 +28,7 @@ import {
   Scale,
   Info,
   Store,
+  Briefcase,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTheme } from '@/context/ThemeContext';
@@ -577,6 +578,18 @@ export const Navbar = () => {
               <Link href="/transactions" className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition">
                 {t('safe_transactions')}
               </Link>
+              {settings.microJob?.enabled !== false && (
+                <Link
+                  href="/micro-jobs"
+                  className="font-semibold text-slate-700 dark:text-slate-200 hover:text-amber-600 dark:hover:text-amber-400 transition flex items-center gap-1.5"
+                >
+                  <Briefcase className="w-3.5 h-3.5 text-amber-500" />
+                  <span>{lang === 'bn' ? 'মাইক্রো জব' : 'Micro Jobs'}</span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded-full font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                    Hot
+                  </span>
+                </Link>
+              )}
               <Link href="/users" className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition">
                 {t('users')}
               </Link>
@@ -843,6 +856,23 @@ export const Navbar = () => {
               <ShieldCheck className="w-4 h-4 text-teal-500" />
               <span>{t('safe_transactions')}</span>
             </Link>
+
+            {/* Micro Jobs */}
+            {settings.microJob?.enabled !== false && (
+              <Link
+                href="/micro-jobs"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between py-2 px-3 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs sm:text-sm font-bold transition border border-amber-500/20"
+              >
+                <div className="flex items-center gap-3">
+                  <Briefcase className="w-4 h-4 text-amber-500" />
+                  <span>{lang === 'bn' ? 'মাইক্রো জব (কাজ ও আয়)' : 'Micro Jobs (Work & Earn)'}</span>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500 text-white font-black">
+                  HOT
+                </span>
+              </Link>
+            )}
 
             {/* Users */}
             <Link

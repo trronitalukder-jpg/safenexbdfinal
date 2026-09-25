@@ -85,6 +85,15 @@ export interface WebsiteSystemSettings {
   requireKycForWithdraw?: boolean;
 }
 
+export interface WebsiteMicroJobSettings {
+  enabled: boolean;
+  autoApproveHours: number;
+  platformFeePercent: number;
+  minJobReward: number;
+  requireKycToPost: boolean;
+  requireKycToWork: boolean;
+}
+
 export interface WebsiteSettings {
   general: WebsiteGeneralSettings;
   seo: WebsiteSeoSettings;
@@ -92,6 +101,7 @@ export interface WebsiteSettings {
   localization: WebsiteLocalizationSettings;
   footer: WebsiteFooterSettings;
   system: WebsiteSystemSettings;
+  microJob: WebsiteMicroJobSettings;
 }
 
 export const DEFAULT_PUBLIC_SETTINGS: WebsiteSettings = {
@@ -177,6 +187,14 @@ export const DEFAULT_PUBLIC_SETTINGS: WebsiteSettings = {
     allowRegistration: true,
     requireKycForWithdraw: false,
   },
+  microJob: {
+    enabled: true,
+    autoApproveHours: 48,
+    platformFeePercent: 5,
+    minJobReward: 1,
+    requireKycToPost: false,
+    requireKycToWork: false,
+  },
 };
 
 interface SettingsContextType {
@@ -207,6 +225,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             localization: { ...DEFAULT_PUBLIC_SETTINGS.localization, ...(parsed.localization || {}) },
             footer: { ...DEFAULT_PUBLIC_SETTINGS.footer, ...(parsed.footer || {}) },
             system: { ...DEFAULT_PUBLIC_SETTINGS.system, ...(parsed.system || {}) },
+            microJob: { ...DEFAULT_PUBLIC_SETTINGS.microJob, ...(parsed.microJob || {}) },
           };
         }
       } catch {}
@@ -234,6 +253,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             localization: { ...prev.localization, ...(data.localization || {}) },
             footer: { ...prev.footer, ...(data.footer || {}) },
             system: { ...prev.system, ...(data.system || {}) },
+            microJob: { ...prev.microJob, ...(data.microJob || {}) },
           };
           if (typeof window !== 'undefined') {
             try {

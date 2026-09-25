@@ -12,6 +12,7 @@ import {
   Search,
   Activity,
   Clock,
+  Briefcase,
   LayoutTemplate,
   ShieldCheck,
   UploadCloud,
@@ -31,6 +32,7 @@ import {
   FileCode,
   Sliders,
   DollarSign,
+  Percent,
   Share2,
   Users,
   GitFork,
@@ -82,7 +84,7 @@ export default function AdminSettingsPage() {
   const { lang } = useLanguage();
   const { refreshSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<
-    'general' | 'seo' | 'tracking' | 'localization' | 'footer' | 'system' | 'withdrawal' | 'operations' | 'performance' | 'chat_rules' | 'telegram' | 'ai'
+    'general' | 'seo' | 'tracking' | 'localization' | 'footer' | 'system' | 'withdrawal' | 'operations' | 'performance' | 'chat_rules' | 'telegram' | 'ai' | 'micro_job'
   >('general');
 
   const [loading, setLoading] = useState(true);
@@ -408,6 +410,14 @@ export default function AdminSettingsPage() {
       disputeSummaryEnabled: true,
       dealProposalEnabled: true,
     },
+    microJob: {
+      enabled: true,
+      autoApproveHours: 48,
+      platformFeePercent: 5,
+      minJobReward: 1,
+      requireKycToPost: false,
+      requireKycToWork: false,
+    },
   });
 
   const fetchSettings = async () => {
@@ -428,6 +438,7 @@ export default function AdminSettingsPage() {
           operations: { ...prev.operations, ...(data.operations || {}) },
           performance: { ...prev.performance, ...(data.performance || {}) },
           ai: { ...prev.ai, ...(data.ai || {}) },
+          microJob: { ...prev.microJob, ...(data.microJob || {}) },
         }));
       }
       try {
@@ -727,6 +738,7 @@ export default function AdminSettingsPage() {
           operations: { ...prev.operations, ...(data.operations || {}) },
           performance: { ...prev.performance, ...(data.performance || {}) },
           ai: { ...prev.ai, ...(data.ai || {}) },
+          microJob: { ...prev.microJob, ...(data.microJob || {}) },
         }));
       }
 
@@ -892,6 +904,12 @@ export default function AdminSettingsPage() {
       label: lang === 'bn' ? '🤖 এআই চ্যাট অ্যানালাইসিস' : '🤖 AI Engine & Chat',
       icon: Sparkles,
       desc: lang === 'bn' ? 'প্রতারণা প্রতিরোধ, বাইপাস অ্যালার্ট ও ডিসপ্যুট এআই' : 'Scam prevention, bypass alerts & dispute AI',
+    },
+    {
+      id: 'micro_job' as const,
+      label: lang === 'bn' ? '💼 মাইক্রো জব কন্ট্রোল' : '💼 Micro Job Control',
+      icon: Briefcase,
+      desc: lang === 'bn' ? 'মাস্টার সুইচ, অটো-অ্যাপ্রুভ ও প্ল্যাটফর্ম ফি' : 'Master toggle, auto-approval & platform fee',
     },
   ];
 
@@ -6042,6 +6060,254 @@ export default function AdminSettingsPage() {
                   : lang === 'bn'
                   ? 'সব এআই সেটিংস সেভ করুন'
                   : 'Save All AI Settings'}
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 13. MICRO JOB SETTINGS (MASTER SWITCH & PARAMETERS)                       */}
+      {/* ========================================================================= */}
+      {activeTab === 'micro_job' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Master Control Card */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-start gap-3.5">
+                <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                  <Briefcase className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>{lang === 'bn' ? 'মাইক্রো জব মাস্টার সুইচ' : 'Micro Job Master Switch'}</span>
+                    <span
+                      className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                        settings.microJob?.enabled !== false
+                          ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                          : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                      }`}
+                    >
+                      {settings.microJob?.enabled !== false
+                        ? lang === 'bn'
+                          ? 'সক্রিয় (ENABLED)'
+                          : 'ENABLED'
+                        : lang === 'bn'
+                        ? 'বন্ধ (DISABLED)'
+                        : 'DISABLED'}
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
+                    {lang === 'bn'
+                      ? 'এই সুইচটি অফ করলে ওয়েবসাইট হেডার, মোবাইল ড্রয়ার, ইউজার ড্যাশবোর্ড এবং সমস্ত পাবলিক রুট থেকে মাইক্রো জব সম্পূর্ণ অদৃশ্য ও নিষ্ক্রিয় থাকবে।'
+                      : 'Turning off this master switch completely hides and disables Micro Jobs from Navbar, Mobile Drawers, User Dashboard, and public URLs.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Master Toggle Button */}
+              <button
+                type="button"
+                onClick={() =>
+                  setSettings((prev: any) => ({
+                    ...prev,
+                    microJob: {
+                      ...prev.microJob,
+                      enabled: prev.microJob?.enabled === false ? true : false,
+                    },
+                  }))
+                }
+                className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors flex-shrink-0 ${
+                  settings.microJob?.enabled !== false ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700'
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${
+                    settings.microJob?.enabled !== false ? 'translate-x-8' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Micro Job Operational Parameters */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {/* Platform Fee */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Percent className="w-3.5 h-3.5 text-amber-500" />
+                  <span>{lang === 'bn' ? 'প্ল্যাটফর্ম সার্ভিস ফি (%)' : 'Platform Service Fee (%)'}</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    max="50"
+                    step="0.5"
+                    value={settings.microJob?.platformFeePercent ?? 5}
+                    onChange={(e) =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        microJob: { ...prev.microJob, platformFeePercent: Number(e.target.value) },
+                      }))
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <span className="absolute right-3.5 top-2.5 text-xs text-slate-400 font-bold">%</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  {lang === 'bn'
+                    ? 'নিয়োগকর্তা কাজ পোস্ট করার সময় এই শতাংশ হারে সার্ভিস ফি যোগ হবে।'
+                    : 'Commission charged from employer on top of task budget.'}
+                </p>
+              </div>
+
+              {/* Auto Approve Hours */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-sky-500" />
+                  <span>{lang === 'bn' ? 'স্বয়ংক্রিয় অনুমোদন সময় (ঘণ্টা)' : 'Auto-Approve Timer (Hours)'}</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    max="168"
+                    value={settings.microJob?.autoApproveHours ?? 48}
+                    onChange={(e) =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        microJob: { ...prev.microJob, autoApproveHours: Number(e.target.value) },
+                      }))
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                  <span className="absolute right-3.5 top-2.5 text-xs text-slate-400 font-bold">ঘণ্টা</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  {lang === 'bn'
+                    ? 'নিয়োগকর্তা রিভিউ না করলে এত ঘণ্টা পর স্বয়ংক্রিয় অ্যাপ্রুভ হয়ে কর্মীর ওয়ালেটে টাকা যাবে।'
+                    : 'Pending submissions auto-approve after this duration.'}
+                </p>
+              </div>
+
+              {/* Minimum Reward Per Task */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>{lang === 'bn' ? 'সর্বনিম্ন কাজের পারিশ্রমিক (BDT)' : 'Min Worker Reward (BDT)'}</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0.5"
+                    step="0.5"
+                    value={settings.microJob?.minJobReward ?? 1}
+                    onChange={(e) =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        microJob: { ...prev.microJob, minJobReward: Number(e.target.value) },
+                      }))
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <span className="absolute right-3.5 top-2.5 text-xs text-slate-400 font-bold">৳</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  {lang === 'bn'
+                    ? 'কোনো নিয়োগকর্তা এর চেয়ে কম টাকা দিয়ে কাজ পোস্ট করতে পারবেন না।'
+                    : 'Minimum reward per worker per task.'}
+                </p>
+              </div>
+            </div>
+
+            {/* KYC / Verification Restrictions */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                <div className="space-y-0.5 pr-2">
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    {lang === 'bn' ? 'কাজ পোস্ট করতে NID ভেরিফিকেশন বাধ্যতামূলক' : 'Require KYC/NID to Post Tasks'}
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {lang === 'bn' ? 'শুধুমাত্র ভেরিফাইড ইউজাররা জব পোস্ট করতে পারবে' : 'Only verified users can create jobs'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettings((prev: any) => ({
+                      ...prev,
+                      microJob: { ...prev.microJob, requireKycToPost: !prev.microJob?.requireKycToPost },
+                    }))
+                  }
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    settings.microJob?.requireKycToPost ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                      settings.microJob?.requireKycToPost ? 'translate-x-4' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                <div className="space-y-0.5 pr-2">
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    {lang === 'bn' ? 'কাজ করতে NID ভেরিফিকেশন বাধ্যতামূলক' : 'Require KYC/NID to Work'}
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {lang === 'bn' ? 'শুধুমাত্র ভেরিফাইড কর্মীরা প্রুফ সাবমিট করতে পারবে' : 'Only verified workers can submit tasks'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettings((prev: any) => ({
+                      ...prev,
+                      microJob: { ...prev.microJob, requireKycToWork: !prev.microJob?.requireKycToWork },
+                    }))
+                  }
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    settings.microJob?.requireKycToWork ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                      settings.microJob?.requireKycToWork ? 'translate-x-4' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Save Button for Micro Job Tab */}
+          <div className="pt-2 flex justify-end">
+            <button
+              onClick={() => handleSave('microJob')}
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-amber-500/20 transition disabled:opacity-50"
+            >
+              {saving ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : saveSuccess ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              <span>
+                {saving
+                  ? lang === 'bn'
+                    ? 'সংরক্ষণ হচ্ছে...'
+                    : 'Saving...'
+                  : saveSuccess
+                  ? lang === 'bn'
+                    ? 'সংরক্ষিত হয়েছে!'
+                    : 'Saved Successfully!'
+                  : lang === 'bn'
+                  ? 'মাইক্রো জব সেটিংস সংরক্ষণ করুন'
+                  : 'Save Micro Job Settings'}
               </span>
             </button>
           </div>
