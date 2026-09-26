@@ -1596,6 +1596,13 @@ model ScammerRecord {
   reporterName    String               @db.VarChar(100)
   reporterPhone   String               @db.VarChar(30)
   reporterIp      String?              @db.VarChar(50)
+  warningOnlyMode         Boolean              @default(false)
+  showScammerName         Boolean              @default(true)
+  showPhonePublicly       Boolean              @default(true)
+  showFacebookPublicly    Boolean              @default(true)
+  showProofPublicly       Boolean              @default(true)
+  showDescriptionPublicly Boolean              @default(true)
+  customWarning           String?              @db.Text
   searchHitCount  Int                  @default(0)
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
