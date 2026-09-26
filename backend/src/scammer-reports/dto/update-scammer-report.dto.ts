@@ -61,26 +61,4 @@ export class UpdateScammerReportDto {
   @IsOptional()
   @IsString()
   rejectionReason?: string;
-
-  @IsOptional()
-  warningOnlyMode?: boolean;
-
-  @IsOptional()
-  showScammerName?: boolean;
-
-  @IsOptional()
-  showPhonePublicly?: boolean;
-
-  @IsOptional()
-  showFacebookPublicly?: boolean;
-
-  @IsOptional()
-  showProofPublicly?: boolean;
-
-  @IsOptional()
-  showDescriptionPublicly?: boolean;
-
-  @IsOptional()
-  @IsString()
-  customWarning?: string;
 }

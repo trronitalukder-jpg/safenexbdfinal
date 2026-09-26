@@ -69,15 +69,7 @@ export const DashboardSidebar = () => {
     { href: '/dashboard/products/new', label: lang === 'bn' ? 'প্রোডাক্ট আপলোড' : 'Upload Product', icon: PlusCircle },
     { href: '/dashboard/bids', label: lang === 'bn' ? 'আমার বিডসমূহ' : 'My Bids', icon: Coins },
     { href: '/dashboard/disputes', label: lang === 'bn' ? 'ডিসপ্যুট / কল অ্যাডমিন' : 'Disputes', icon: ShieldAlert },
-    ...(settings?.system?.scammerCheckerEnabled !== false
-      ? [
-          {
-            href: '/dashboard/scammer-reports',
-            label: lang === 'bn' ? '🛡️ স্ক্যামার চেকার ও রিপোর্ট' : '🛡️ Scammer Checker & Reports',
-            icon: ShieldCheck,
-          },
-        ]
-      : []),
+    { href: '/dashboard/scammer-reports', label: lang === 'bn' ? '🛡️ স্ক্যামার চেকার ও রিপোর্ট' : '🛡️ Scammer Checker & Reports', icon: ShieldCheck },
     { href: '/guides', label: lang === 'bn' ? 'গাইডস ও টিউটোরিয়াল' : 'Guides & Tutorials', icon: BookOpen },
     { href: '/users', label: lang === 'bn' ? 'ইউজার খুঁজুন' : 'Search Users', icon: Search },
     { href: '/dashboard/settings', label: lang === 'bn' ? 'অ্যাকাউন্ট সেটিংস' : 'Account Settings', icon: Settings },

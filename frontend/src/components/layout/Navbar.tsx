@@ -211,17 +211,15 @@ export const Navbar = () => {
               <span>{lang === 'bn' ? 'গাইডস' : 'Guides'}</span>
             </Link>
 
-            {/* Scammer & Trust Checker Button (Hidden on mobile header to prevent overflow) */}
-            {settings?.system?.scammerCheckerEnabled !== false && (
-              <Link
-                href="/check"
-                title={lang === 'bn' ? 'স্ক্যামার ও ট্রাস্ট চেকার' : 'Scammer & Trust Checker'}
-                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-slate-950 transition shadow-xs flex-shrink-0"
-              >
-                <ShieldAlert className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                <span>{lang === 'bn' ? 'স্ক্যামার চেকার' : 'Trust Check'}</span>
-              </Link>
-            )}
+            {/* Scammer & Trust Checker Button */}
+            <Link
+              href="/check"
+              title={lang === 'bn' ? 'স্ক্যামার ও ট্রাস্ট চেকার' : 'Scammer & Trust Checker'}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-slate-950 transition shadow-xs flex-shrink-0"
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-red-500 shrink-0" />
+              <span>{lang === 'bn' ? 'স্ক্যামার চেকার' : 'Trust Check'}</span>
+            </Link>
 
             {/* Language Switch (Desktop) */}
             <button
@@ -912,23 +910,6 @@ export const Navbar = () => {
                 </div>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500 text-white font-black">
                   HOT
-                </span>
-              </Link>
-            )}
-
-            {/* Scammer & Trust Checker (Mobile Drawer) */}
-            {settings?.system?.scammerCheckerEnabled !== false && (
-              <Link
-                href="/check"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-between py-2 px-3 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 text-xs sm:text-sm font-bold transition border border-red-500/20"
-              >
-                <div className="flex items-center gap-3">
-                  <ShieldAlert className="w-4 h-4 text-red-500" />
-                  <span>{lang === 'bn' ? 'স্ক্যামার ও ট্রাস্ট চেকার' : 'Scammer & Trust Checker'}</span>
-                </div>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500 text-white font-black">
-                  NEW
                 </span>
               </Link>
             )}

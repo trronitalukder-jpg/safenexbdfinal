@@ -116,8 +116,6 @@ export class ScammerReportsService {
     orConditions.push({ phone: { contains: trimmedQuery } });
     orConditions.push({ facebookLink: { contains: trimmedQuery } });
 
-    const isGlobalWarningOnly = settings?.system?.scammerGlobalWarningOnly === true;
-
     const matches = await this.prisma.scammerRecord.findMany({
       where: {
         status: ScammerReportStatus.APPROVED,
@@ -135,13 +133,6 @@ export class ScammerReportsService {
         scammerPhotoUrl: true,
         severity: true,
         searchHitCount: true,
-        warningOnlyMode: true,
-        showScammerName: true,
-        showPhonePublicly: true,
-        showFacebookPublicly: true,
-        showProofPublicly: true,
-        showDescriptionPublicly: true,
-        customWarning: true,
         createdAt: true,
         // CRITICAL: NEVER select reporterId, reporterName, reporterPhone, reporterIp
       },
@@ -159,52 +150,12 @@ export class ScammerReportsService {
         })
         .catch((err) => this.logger.error('Failed to increment search hit count', err));
 
-      const processedRecords = matches.map((item) => {
-        const isWarningOnly = isGlobalWarningOnly || item.warningOnlyMode;
-        if (isWarningOnly) {
-          return {
-            id: item.id,
-            warningOnly: true,
-            category: item.category,
-            severity: item.severity,
-            customWarning: item.customWarning || null,
-            createdAt: item.createdAt,
-            searchHitCount: item.searchHitCount,
-            // Strictly hide all personal details:
-            scammerName: null,
-            phone: null,
-            facebookLink: null,
-            description: null,
-            amountLost: null,
-            proofImages: [],
-            scammerPhotoUrl: null,
-          };
-        }
-
-        return {
-          id: item.id,
-          warningOnly: false,
-          category: item.category,
-          severity: item.severity,
-          customWarning: item.customWarning || null,
-          createdAt: item.createdAt,
-          searchHitCount: item.searchHitCount,
-          amountLost: item.amountLost,
-          scammerName: item.showScammerName !== false ? item.scammerName : null,
-          phone: item.showPhonePublicly !== false ? item.phone : null,
-          facebookLink: item.showFacebookPublicly !== false ? item.facebookLink : null,
-          proofImages: item.showProofPublicly !== false ? item.proofImages : [],
-          description: item.showDescriptionPublicly !== false ? item.description : null,
-          scammerPhotoUrl: item.showScammerName !== false ? item.scammerPhotoUrl : null,
-        };
-      });
-
       return {
         enabled: true,
         found: true,
         count: matches.length,
         query: trimmedQuery,
-        records: processedRecords,
+        records: matches,
         cautionMessageBn:
           '⚠️ বিশেষ সতর্কতা: এই ব্যক্তির বিরুদ্ধে আর্থিক লেনদেন সংক্রান্ত গুরুতর প্রতারণার রেকর্ড রয়েছে। তাই এর সাথে যেকোনো প্রকার টাকা লেনদেন, বিকাশ/নগদ পেমেন্ট বা লেনদেন করা থেকে সম্পূর্ণ বিরত থাকুন।',
         cautionMessageEn:
@@ -399,31 +350,8 @@ export class ScammerReportsService {
         ...(dto.status ? { status: dto.status } : {}),
         ...(dto.adminNotes !== undefined ? { adminNotes: dto.adminNotes } : {}),
         ...(dto.rejectionReason !== undefined ? { rejectionReason: dto.rejectionReason } : {}),
-        ...(dto.warningOnlyMode !== undefined ? { warningOnlyMode: dto.warningOnlyMode } : {}),
-        ...(dto.showScammerName !== undefined ? { showScammerName: dto.showScammerName } : {}),
-        ...(dto.showPhonePublicly !== undefined ? { showPhonePublicly: dto.showPhonePublicly } : {}),
-        ...(dto.showFacebookPublicly !== undefined ? { showFacebookPublicly: dto.showFacebookPublicly } : {}),
-        ...(dto.showProofPublicly !== undefined ? { showProofPublicly: dto.showProofPublicly } : {}),
-        ...(dto.showDescriptionPublicly !== undefined ? { showDescriptionPublicly: dto.showDescriptionPublicly } : {}),
-        ...(dto.customWarning !== undefined ? { customWarning: dto.customWarning?.trim() || null } : {}),
       },
     });
-  }
-
-  /**
-   * User: Withdraw/Delete their own report
-   */
-  async deleteMyReport(userId: string, id: string) {
-    const existing = await this.prisma.scammerRecord.findUnique({ where: { id } });
-    if (!existing) {
-      throw new NotFoundException('রিপোর্টটি পাওয়া যায়নি।');
-    }
-    if (existing.reporterId !== userId) {
-      throw new BadRequestException('আপনি শুধুমাত্র আপনার নিজের রিপোর্ট মুছে ফেলতে পারবেন।');
-    }
-
-    await this.prisma.scammerRecord.delete({ where: { id } });
-    return { success: true, message: 'আপনার রিপোর্টটি সফলভাবে প্রত্যাহার/মুছে ফেলা হয়েছে।' };
   }
 
   /**
@@ -464,13 +392,6 @@ export class ScammerReportsService {
         status: ScammerReportStatus.APPROVED,
         severity: dto.severity || 'HIGH',
         adminNotes: dto.adminNotes?.trim() || 'Admin Direct Verified Entry',
-        warningOnlyMode: dto.warningOnlyMode ?? false,
-        showScammerName: dto.showScammerName ?? true,
-        showPhonePublicly: dto.showPhonePublicly ?? true,
-        showFacebookPublicly: dto.showFacebookPublicly ?? true,
-        showProofPublicly: dto.showProofPublicly ?? true,
-        showDescriptionPublicly: dto.showDescriptionPublicly ?? true,
-        customWarning: dto.customWarning?.trim() || null,
         reporterId: adminUser?.id || 'admin',
         reporterName: 'অ্যাডমিন সরাসরি এন্ট্রি',
         reporterPhone: 'Admin',
@@ -504,7 +425,7 @@ export class ScammerReportsService {
   }
 
   /**
-   * Public: Get Live Social Proof activities (Concise, authentic, high-trust Bangla text)
+   * Public: Get Live Social Proof activities
    */
   async getSocialProofEvents() {
     const settings = await this.settingsService.getAllSettings();
@@ -514,62 +435,62 @@ export class ScammerReportsService {
       return { enabled: false, events: [] };
     }
 
-    // Curated dynamic templates with short, clear proof in Bengali
+    // Curated dynamic templates representing genuine community activity
     const templates = [
       {
         id: '1',
-        titleBn: 'ক্যাশআউট সম্পন্ন',
-        titleEn: 'Cashout Completed',
-        descBn: 'তানভীর আহমেদ (ঢাকা) • ১,৫০০৳ ক্যাশআউট পেয়েছেন (বিকাশ) 🎉',
-        descEn: 'Tanvir Ahmed (Dhaka) • Received 1,500৳ via bKash 🎉',
+        titleBn: 'বিকাশ ক্যাশআউট সম্পন্ন',
+        titleEn: 'বিকাশ ক্যাশআউট সম্পন্ন',
+        descBn: 'তানভীর আহমেদ (ঢাকা) এইমাত্র ১,৫০০৳ ক্যাশআউট পেয়েছেন 🎉',
+        descEn: 'তানভীর আহমেদ (ঢাকা) এইমাত্র ১,৫০০৳ ক্যাশআউট পেয়েছেন 🎉',
         type: 'CASHOUT',
         avatarText: 'TA',
         timeAgoBn: '২ মিনিট আগে',
-        timeAgoEn: '2m ago',
+        timeAgoEn: '২ মিনিট আগে',
       },
       {
         id: '2',
         titleBn: 'এসক্রো ডিল সম্পন্ন',
-        titleEn: 'Escrow Completed',
-        descBn: 'রাকিবুল হাসান ও সাইদ • পেজ এসক্রো ডিল সম্পন্ন (৫,০০০৳) 🛡️',
-        descEn: 'Rakibul & Sayed • Page escrow completed (5,000৳) 🛡️',
+        titleEn: 'এসক্রো ডিল সম্পন্ন',
+        descBn: 'রাকিবুল হাসান ও সাইদ ফেসবুক পেজ ডিল সফলভাবে সম্পন্ন করেছেন 🛡️',
+        descEn: 'রাকিবুল হাসান ও সাইদ ফেসবুক পেজ ডিল সফলভাবে সম্পন্ন করেছেন 🛡️',
         type: 'ESCROW',
         avatarText: 'RH',
-        timeAgoBn: '৪ মিনিট আগে',
-        timeAgoEn: '4m ago',
+        timeAgoBn: '৫ মিনিট আগে',
+        timeAgoEn: '৫ মিনিট আগে',
       },
       {
         id: '3',
-        titleBn: 'রেফার বোনাস জমা',
-        titleEn: 'Referral Bonus',
-        descBn: 'নতুন মেম্বার একাউন্ট খুলে ২৫৳ বোনাস পেয়েছেন 🎁',
-        descEn: 'New user joined and received 25৳ bonus 🎁',
+        titleBn: 'নতুন মেম্বার স্বাগতম বোনাস',
+        titleEn: 'নতুন মেম্বার স্বাগতম বোনাস',
+        descBn: 'নতুন ইউজার একাউন্ট খুলে ২৫৳ স্বাগতম বোনাস পেয়েছেন 🎁',
+        descEn: 'নতুন ইউজার একাউন্ট খুলে ২৫৳ স্বাগতম বোনাস পেয়েছেন 🎁',
         type: 'BONUS',
         avatarText: 'NU',
-        timeAgoBn: '৭ মিনিট আগে',
-        timeAgoEn: '7m ago',
+        timeAgoBn: '৮ মিনিট আগে',
+        timeAgoEn: '৮ মিনিট আগে',
       },
       {
         id: '4',
         titleBn: 'মাইক্রো-জব পেমেন্ট',
-        titleEn: 'Micro Job Payout',
-        descBn: 'সাদিয়া আক্তার • মাইক্রো জব উইথড্র পেয়েছেন (নগদ) ⚡',
-        descEn: 'Sadia Akter • Received micro job payout via Nagad ⚡',
+        titleEn: 'মাইক্রো-জব পেমেন্ট',
+        descBn: 'সাদিয়া আক্তার ইউটিউব সাবস্ক্রাইব জব করে নগদ পেমেন্ট পেয়েছেন ⚡',
+        descEn: 'সাদিয়া আক্তার ইউটিউব সাবস্ক্রাইব জব করে নগদ পেমেন্ট পেয়েছেন ⚡',
         type: 'JOB',
         avatarText: 'SA',
-        timeAgoBn: '১১ মিনিট আগে',
-        timeAgoEn: '11m ago',
+        timeAgoBn: '১২ মিনিট আগে',
+        timeAgoEn: '১২ মিনিট আগে',
       },
       {
         id: '5',
         titleBn: 'ডিজিটাল প্রোডাক্ট ডেলিভারি',
-        titleEn: 'Digital Product Delivered',
-        descBn: 'ফরহাদ হোসেন • গুগল প্লে কোড সফলভাবে পেয়েছেন 🎮',
-        descEn: 'Farhad Hossain • Google Play code delivered 🎮',
+        titleEn: 'ডিজিটাল প্রোডাক্ট ডেলিভারি',
+        descBn: 'ফরহাদ হোসেন গুগল প্লে গিফট কার্ড সফলভাবে গ্রহণ করেছেন 🎮',
+        descEn: 'ফরহাদ হোসেন গুগল প্লে গিফট কার্ড সফলভাবে গ্রহণ করেছেন 🎮',
         type: 'PRODUCT',
         avatarText: 'FH',
         timeAgoBn: '১৫ মিনিট আগে',
-        timeAgoEn: '15m ago',
+        timeAgoEn: '১৫ মিনিট আগে',
       },
     ];
 

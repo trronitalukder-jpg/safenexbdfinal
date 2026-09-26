@@ -123,7 +123,7 @@ export default function AdminScammersPage() {
 
   // Global & Social Proof Settings State
   const [globalWarningOnly, setGlobalWarningOnly] = useState(
-    settings?.system?.scammerGlobalWarningOnly === true,
+    Boolean(settings?.system?.scammerGlobalWarningOnly),
   );
   const [socialProofEnabled, setSocialProofEnabled] = useState(
     settings?.system?.socialProofEnabled !== false,
@@ -138,6 +138,23 @@ export default function AdminScammersPage() {
     settings?.system?.socialProofDurationSeconds ?? 8,
   );
   const [savingSettings, setSavingSettings] = useState(false);
+
+  // Sync state when settings load or refresh from backend
+  useEffect(() => {
+    if (settings?.system) {
+      setGlobalWarningOnly(Boolean(settings.system.scammerGlobalWarningOnly));
+      setSocialProofEnabled(settings.system.socialProofEnabled !== false);
+      if (settings.system.socialProofInitialDelaySeconds !== undefined) {
+        setSocialInitialDelay(settings.system.socialProofInitialDelaySeconds);
+      }
+      if (settings.system.socialProofIntervalSeconds !== undefined) {
+        setSocialInterval(settings.system.socialProofIntervalSeconds);
+      }
+      if (settings.system.socialProofDurationSeconds !== undefined) {
+        setSocialDuration(settings.system.socialProofDurationSeconds);
+      }
+    }
+  }, [settings?.system]);
 
   // Fetch Queue Data
   const fetchQueue = async () => {
@@ -259,13 +276,6 @@ export default function AdminScammersPage() {
         amountLost: editItem.amountLost ? Number(editItem.amountLost) : undefined,
         severity: editItem.severity,
         adminNotes: editItem.adminNotes,
-        warningOnlyMode: editItem.warningOnlyMode ?? false,
-        showScammerName: editItem.showScammerName ?? true,
-        showPhonePublicly: editItem.showPhonePublicly ?? true,
-        showFacebookPublicly: editItem.showFacebookPublicly ?? true,
-        showProofPublicly: editItem.showProofPublicly ?? true,
-        showDescriptionPublicly: editItem.showDescriptionPublicly ?? true,
-        customWarning: editItem.customWarning?.trim() || null,
       });
       setEditItem(null);
       setActionSuccessMsg(isBn ? 'তথ্য সফলভাবে আপডেট করা হয়েছে।' : 'Record updated successfully.');
@@ -305,13 +315,6 @@ export default function AdminScammersPage() {
         description: directDescription.trim(),
         proofImages: directProofList,
         adminNotes: directAdminNotes.trim() || undefined,
-        warningOnlyMode: directWarningOnly,
-        showScammerName: directShowName,
-        showPhonePublicly: directShowPhone,
-        showFacebookPublicly: directShowFacebook,
-        showProofPublicly: directShowProof,
-        showDescriptionPublicly: directShowDescription,
-        customWarning: directCustomWarning.trim() || undefined,
       });
 
       setActionSuccessMsg(isBn ? 'স্ক্যামার রেকর্ডটি সফলভাবে তৈরি করা হয়েছে এবং লাইভ ডাটাবেজে যুক্ত হয়েছে!' : 'Scammer record created & live!');
@@ -323,19 +326,35 @@ export default function AdminScammersPage() {
       setDirectDescription('');
       setDirectProofList([]);
       setDirectAdminNotes('');
-      setDirectWarningOnly(false);
-      setDirectShowName(true);
-      setDirectShowPhone(true);
-      setDirectShowFacebook(true);
-      setDirectShowProof(true);
-      setDirectShowDescription(true);
-      setDirectCustomWarning('');
       setActiveTab('APPROVED');
       setTimeout(() => setActionSuccessMsg(''), 4000);
     } catch (err: any) {
       setActionErrorMsg(err?.response?.data?.message || err?.message || 'Failed to create record');
     } finally {
       setDirectSubmitting(false);
+    }
+  };
+
+  // Instant toggle for Global Warning-Only mode
+  const handleToggleGlobalWarning = async (nextVal: boolean) => {
+    setGlobalWarningOnly(nextVal);
+    try {
+      await api.post('/settings/admin', {
+        category: 'system',
+        data: {
+          ...settings?.system,
+          scammerGlobalWarningOnly: nextVal,
+        },
+      });
+      await refreshSettings();
+      setActionSuccessMsg(
+        nextVal
+          ? (isBn ? 'গ্লোবাল সতর্কবার্তা মোড সক্রিয় করা হয়েছে।' : 'Global Warning-Only mode activated.')
+          : (isBn ? 'গ্লোবাল সতর্কবার্তা মোড নিষ্ক্রিয় করা হয়েছে।' : 'Global Warning-Only mode deactivated.'),
+      );
+      setTimeout(() => setActionSuccessMsg(''), 4000);
+    } catch (err: any) {
+      setActionErrorMsg(err?.response?.data?.message || 'Failed to update warning mode');
     }
   };
 
@@ -347,15 +366,15 @@ export default function AdminScammersPage() {
         category: 'system',
         data: {
           ...settings?.system,
+          scammerGlobalWarningOnly: globalWarningOnly,
           socialProofEnabled,
           socialProofInitialDelaySeconds: Number(socialInitialDelay),
           socialProofIntervalSeconds: Number(socialInterval),
           socialProofDurationSeconds: Number(socialDuration),
-          scammerGlobalWarningOnly: globalWarningOnly,
         },
       });
-      refreshSettings();
-      setActionSuccessMsg(isBn ? 'সোশ্যাল প্রুফ ও সিস্টেম সেটিংস সফলভাবে সংরক্ষিত হয়েছে!' : 'Settings successfully saved!');
+      await refreshSettings();
+      setActionSuccessMsg(isBn ? 'সোশ্যাল প্রুফ ও সতর্কবার্তা সেটিংস সংরক্ষিত হয়েছে!' : 'Settings saved successfully!');
       setTimeout(() => setActionSuccessMsg(''), 4000);
     } catch (err: any) {
       setActionErrorMsg(err?.response?.data?.message || 'Failed to save settings');
@@ -400,16 +419,16 @@ export default function AdminScammersPage() {
       )}
 
       {/* Header & Master Kill-Switch Card */}
-      <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-semibold">
-            <ShieldAlert className="w-4 h-4 text-amber-500" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold">
+            <ShieldAlert className="w-4 h-4 text-amber-400" />
             <span>{isBn ? 'অ্যাডমিন প্রতারক ও ট্রাস্ট কনসোল' : 'Admin Scammer & Trust Console'}</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
             {isBn ? 'স্ক্যামার ও ট্রাস্ট চেকার ম্যানেজমেন্ট' : 'Scammer & Trust Management'}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-xs sm:text-sm text-slate-400">
             {isBn
               ? 'ইউজারদের দাখিলকৃত রিপোর্ট যাচাই করুন, সরাসরি এন্ট্রি দিন এবং প্রয়োজন অনুযায়ী যেকোনো রেকর্ড স্থায়ীভাবে মুছুন।'
               : 'Audit user scam reports, approve records, add direct entries, and manage system status.'}
@@ -417,10 +436,10 @@ export default function AdminScammersPage() {
         </div>
 
         {/* Master ON/OFF Switch Button */}
-        <div className="flex items-center gap-4 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shrink-0">
+        <div className="flex items-center gap-4 p-3 rounded-2xl bg-slate-950 border border-slate-800 shrink-0">
           <div className="text-right">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">{isBn ? 'সিস্টেম স্ট্যাটাস:' : 'Checker System:'}</span>
-            <span className={`text-sm font-bold ${isCheckerEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+            <span className="text-xs font-medium text-slate-400 block">{isBn ? 'সিস্টেম স্ট্যাটাস:' : 'Checker System:'}</span>
+            <span className={`text-sm font-bold ${isCheckerEnabled ? 'text-emerald-400' : 'text-red-400'}`}>
               {isCheckerEnabled ? (isBn ? 'সক্রিয় (ON)' : 'ACTIVE (ON)') : (isBn ? 'নিষ্ক্রিয় (OFF)' : 'DISABLED (OFF)')}
             </span>
           </div>
@@ -429,7 +448,7 @@ export default function AdminScammersPage() {
             onClick={handleToggleMaster}
             disabled={togglingMaster}
             className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-              isCheckerEnabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+              isCheckerEnabled ? 'bg-emerald-500' : 'bg-slate-700'
             }`}
           >
             <span
@@ -448,14 +467,14 @@ export default function AdminScammersPage() {
           className={`p-4 rounded-2xl border cursor-pointer transition-all ${
             activeTab === 'PENDING'
               ? 'bg-amber-500/10 border-amber-500/50 shadow-md shadow-amber-500/10'
-              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-amber-400'
+              : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
           }`}
         >
-          <div className="flex items-center justify-between text-xs text-amber-600 dark:text-amber-400 font-semibold mb-1">
+          <div className="flex items-center justify-between text-xs text-amber-400 font-semibold mb-1">
             <span>{isBn ? 'পেন্ডিং রিভিউ' : 'Pending Review'}</span>
             <Clock className="w-4 h-4" />
           </div>
-          <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{stats.pending}</span>
+          <span className="text-2xl sm:text-3xl font-black text-white">{stats.pending}</span>
         </div>
 
         <div
@@ -463,14 +482,14 @@ export default function AdminScammersPage() {
           className={`p-4 rounded-2xl border cursor-pointer transition-all ${
             activeTab === 'APPROVED'
               ? 'bg-emerald-500/10 border-emerald-500/50 shadow-md shadow-emerald-500/10'
-              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-emerald-400'
+              : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
           }`}
         >
-          <div className="flex items-center justify-between text-xs text-emerald-600 dark:text-emerald-400 font-semibold mb-1">
+          <div className="flex items-center justify-between text-xs text-emerald-400 font-semibold mb-1">
             <span>{isBn ? 'অনুমোদিত ও লাইভ' : 'Approved & Live'}</span>
             <CheckCircle2 className="w-4 h-4" />
           </div>
-          <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{stats.approved}</span>
+          <span className="text-2xl sm:text-3xl font-black text-white">{stats.approved}</span>
         </div>
 
         <div
@@ -478,34 +497,34 @@ export default function AdminScammersPage() {
           className={`p-4 rounded-2xl border cursor-pointer transition-all ${
             activeTab === 'REJECTED'
               ? 'bg-red-500/10 border-red-500/50 shadow-md shadow-red-500/10'
-              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-red-400'
+              : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
           }`}
         >
-          <div className="flex items-center justify-between text-xs text-red-600 dark:text-red-400 font-semibold mb-1">
+          <div className="flex items-center justify-between text-xs text-red-400 font-semibold mb-1">
             <span>{isBn ? 'বাতিলকৃত তালিকা' : 'Rejected Reports'}</span>
             <XCircle className="w-4 h-4" />
           </div>
-          <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{stats.rejected}</span>
+          <span className="text-2xl sm:text-3xl font-black text-white">{stats.rejected}</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-          <div className="flex items-center justify-between text-xs text-sky-600 dark:text-sky-400 font-semibold mb-1">
+        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
+          <div className="flex items-center justify-between text-xs text-sky-400 font-semibold mb-1">
             <span>{isBn ? 'সর্বমোট রেকর্ড' : 'Total Records'}</span>
             <ShieldCheck className="w-4 h-4" />
           </div>
-          <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{stats.totalAll}</span>
+          <span className="text-2xl sm:text-3xl font-black text-white">{stats.totalAll}</span>
         </div>
       </div>
 
       {/* Tabs Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setActiveTab('PENDING')}
             className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${
               activeTab === 'PENDING'
                 ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                : 'bg-slate-900 text-slate-400 hover:text-white'
             }`}
           >
             {isBn ? `পেন্ডিং রিপোর্ট (${stats.pending})` : `Pending (${stats.pending})`}
@@ -516,7 +535,7 @@ export default function AdminScammersPage() {
             className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${
               activeTab === 'APPROVED'
                 ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                : 'bg-slate-900 text-slate-400 hover:text-white'
             }`}
           >
             {isBn ? `অনুমোদিত ডাটাবেজ (${stats.approved})` : `Approved (${stats.approved})`}
@@ -527,7 +546,7 @@ export default function AdminScammersPage() {
             className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${
               activeTab === 'REJECTED'
                 ? 'bg-red-500 text-white shadow-md shadow-red-500/20'
-                : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                : 'bg-slate-900 text-slate-400 hover:text-white'
             }`}
           >
             {isBn ? `বাতিলকৃত (${stats.rejected})` : `Rejected (${stats.rejected})`}
@@ -538,7 +557,7 @@ export default function AdminScammersPage() {
             className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 ${
               activeTab === 'DIRECT_ADD'
                 ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-                : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                : 'bg-slate-900 text-slate-400 hover:text-white'
             }`}
           >
             <PlusCircle className="w-4 h-4" />
@@ -550,11 +569,11 @@ export default function AdminScammersPage() {
             className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 ${
               activeTab === 'SETTINGS'
                 ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20'
-                : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                : 'bg-slate-900 text-slate-400 hover:text-white'
             }`}
           >
             <Sliders className="w-4 h-4" />
-            <span>{isBn ? 'সেটিংস ও সোশ্যাল প্রুফ' : 'Settings'}</span>
+            <span>{isBn ? 'সোশ্যাল প্রুফ ও টাইমার' : 'Social Proof'}</span>
           </button>
         </div>
 
@@ -562,19 +581,19 @@ export default function AdminScammersPage() {
         {activeTab !== 'DIRECT_ADD' && activeTab !== 'SETTINGS' && (
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
               <input
                 type="text"
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && fetchQueue()}
                 placeholder={isBn ? 'নম্বর বা নাম দিয়ে খুঁজুন...' : 'Search phone or name...'}
-                className="pl-9 pr-3 py-1.5 text-xs rounded-xl bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-amber-400"
+                className="pl-9 pr-3 py-1.5 text-xs rounded-xl bg-slate-900 border border-slate-800 text-white outline-none focus:border-amber-400"
               />
             </div>
             <button
               onClick={fetchQueue}
-              className="px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold"
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
             >
               {isBn ? 'ফিল্টার' : 'Filter'}
             </button>
@@ -591,9 +610,9 @@ export default function AdminScammersPage() {
               <p className="text-xs">{isBn ? 'ডাটা লোড হচ্ছে...' : 'Loading records...'}</p>
             </div>
           ) : items.length === 0 ? (
-            <div className="p-12 text-center rounded-3xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 space-y-2">
-              <CheckCircle2 className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto" />
-              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+            <div className="p-12 text-center rounded-3xl bg-slate-900/40 border border-slate-800/80 space-y-2">
+              <CheckCircle2 className="w-10 h-10 text-slate-600 mx-auto" />
+              <p className="text-sm font-semibold text-slate-400">
                 {isBn ? 'এই ক্যাটাগরিতে কোনো রেকর্ড পাওয়া যায়নি।' : 'No records found in this view.'}
               </p>
             </div>
@@ -602,59 +621,49 @@ export default function AdminScammersPage() {
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 space-y-4 shadow-sm transition-all"
+                  className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 space-y-4 transition-all"
                 >
                   {/* Top Bar: Reporter Info (CONFIDENTIAL AUDIT) */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-amber-500/20 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-950/80 border border-amber-500/20 text-xs">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                      <span className="text-slate-500 dark:text-slate-400 font-semibold">{isBn ? 'অভিযোগকারী (গোপন অডিট):' : 'Reporter Audit:'}</span>
-                      <span className="font-bold text-slate-900 dark:text-white">{item.reporterName}</span>
-                      <span className="font-mono text-amber-600 dark:text-amber-300">({item.reporterPhone})</span>
+                      <span className="text-slate-400 font-semibold">{isBn ? 'অভিযোগকারী (গোপন অডিট):' : 'Reporter Audit:'}</span>
+                      <span className="font-bold text-white">{item.reporterName}</span>
+                      <span className="font-mono text-amber-300">({item.reporterPhone})</span>
                       {item.reporterIp && (
-                        <span className="text-slate-400 font-mono">IP: {item.reporterIp}</span>
+                        <span className="text-slate-500 font-mono">IP: {item.reporterIp}</span>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center gap-2 text-slate-400">
                       <span>{new Date(item.createdAt).toLocaleString(isBn ? 'bn-BD' : 'en-US')}</span>
-                      <span className="text-slate-300 dark:text-slate-600">•</span>
-                      <span className="font-mono text-amber-600 dark:text-amber-400">
+                      <span className="text-slate-600">•</span>
+                      <span className="font-mono text-amber-400">
                         {isBn ? `সার্চ হিট: ${item.searchHitCount} বার` : `Hits: ${item.searchHitCount}`}
                       </span>
                     </div>
                   </div>
 
-                  {/* Mode & Privacy Badges if Warning Only or customized */}
-                  {item.warningOnlyMode && (
-                    <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-600 dark:text-red-400 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 font-bold">
-                        <AlertTriangle className="w-4 h-4 shrink-0" />
-                        <span>{isBn ? '⚠️ এই রেকর্ডটি শুধুমাত্র সতর্কবার্তা মোডে রয়েছে (সার্চে নাম ও নম্বর লুকানো থাকবে)' : '⚠️ Warning-Only Mode Active (Name & phone hidden publicly)'}</span>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Target Scammer Details Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs sm:text-sm">
                     <div className="space-y-1">
                       <span className="text-slate-500 text-xs">{isBn ? 'প্রতারকের নাম / ডাকনাম:' : 'Scammer Name:'}</span>
-                      <p className="font-bold text-base text-slate-900 dark:text-white">{item.scammerName || (isBn ? 'নামহীন' : 'N/A')}</p>
+                      <p className="font-bold text-base text-white">{item.scammerName || (isBn ? 'নামহীন' : 'N/A')}</p>
                     </div>
 
                     <div className="space-y-1">
                       <span className="text-slate-500 text-xs">{isBn ? 'মোবাইল / বিকাশ নম্বর:' : 'Target Phone:'}</span>
-                      <p className="font-mono text-base font-bold text-amber-600 dark:text-amber-400">{item.phone || (isBn ? 'নেই' : 'N/A')}</p>
+                      <p className="font-mono text-base font-bold text-amber-400">{item.phone || (isBn ? 'নেই' : 'N/A')}</p>
                     </div>
 
                     <div className="space-y-1">
                       <span className="text-slate-500 text-xs">{isBn ? 'ক্যাটাগরি ও ক্ষতি:' : 'Category & Loss:'}</span>
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-lg bg-red-500/15 text-red-600 dark:text-red-300 font-semibold text-xs">
+                        <span className="px-2 py-0.5 rounded-lg bg-red-500/20 text-red-300 font-semibold text-xs">
                           {isBn ? categoryLabelsBn[item.category] || item.category : item.category}
                         </span>
                         {item.amountLost && (
-                          <span className="font-bold text-red-500">৳{item.amountLost.toLocaleString()}</span>
+                          <span className="font-bold text-red-400">৳{item.amountLost.toLocaleString()}</span>
                         )}
                       </div>
                     </div>
@@ -666,7 +675,7 @@ export default function AdminScammersPage() {
                           href={item.facebookLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 text-sky-600 dark:text-sky-400 hover:underline break-all font-mono text-xs"
+                          className="flex items-center gap-1.5 text-sky-400 hover:underline break-all font-mono text-xs"
                         >
                           <FacebookIcon className="w-3.5 h-3.5 shrink-0" />
                           <span>{item.facebookLink}</span>
@@ -677,17 +686,10 @@ export default function AdminScammersPage() {
                   </div>
 
                   {/* Description Box */}
-                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 text-xs sm:text-sm text-slate-300">
                     <span className="text-slate-500 font-bold block mb-1">{isBn ? 'প্রতারণার বিস্তারিত বিবরণ:' : 'Incident Description:'}</span>
                     <p className="whitespace-pre-line leading-relaxed">{item.description}</p>
                   </div>
-
-                  {/* Custom Warning Notice if defined */}
-                  {item.customWarning && (
-                    <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-300 dark:border-amber-500/30 text-xs text-amber-800 dark:text-amber-300">
-                      <span className="font-bold">{isBn ? 'কাস্টম সতর্কবার্তা:' : 'Custom Warning:'}</span> {item.customWarning}
-                    </div>
-                  )}
 
                   {/* Proof Screenshots Gallery */}
                   {item.proofImages && item.proofImages.length > 0 && (
@@ -701,7 +703,7 @@ export default function AdminScammersPage() {
                             key={imgIdx}
                             type="button"
                             onClick={() => setActiveProofZoom(imgUrl)}
-                            className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 hover:border-amber-400 transition-all group shrink-0"
+                            className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-700 hover:border-amber-400 transition-all group shrink-0"
                           >
                             <img src={imgUrl} alt="Proof" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -715,19 +717,19 @@ export default function AdminScammersPage() {
 
                   {/* Admin Notes & Rejection Reason if any */}
                   {item.adminNotes && (
-                    <div className="p-3 rounded-xl bg-amber-50 dark:bg-slate-950 border border-amber-200 dark:border-slate-800 text-xs text-amber-800 dark:text-amber-300">
+                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-amber-300">
                       <span className="font-bold">{isBn ? 'অ্যাডমিন নোট:' : 'Admin Notes:'}</span> {item.adminNotes}
                     </div>
                   )}
 
                   {item.rejectionReason && (
-                    <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-500/30 text-xs text-red-700 dark:text-red-300">
+                    <div className="p-3 rounded-xl bg-red-950/40 border border-red-500/30 text-xs text-red-300">
                       <span className="font-bold">{isBn ? 'বাতিলের কারণ:' : 'Rejection Reason:'}</span> {item.rejectionReason}
                     </div>
                   )}
 
                   {/* Action Buttons Bar */}
-                  <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                  <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       {/* Approve button (if pending or rejected) */}
                       {item.status !== 'APPROVED' && (
@@ -744,7 +746,7 @@ export default function AdminScammersPage() {
                       {item.status === 'PENDING' && (
                         <button
                           onClick={() => setRejectModalItem(item)}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-600 dark:text-red-400 font-semibold text-xs active:scale-95 transition-all"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-semibold text-xs active:scale-95 transition-all"
                         >
                           <XCircle className="w-4 h-4" />
                           <span>{isBn ? 'বাতিল করুন (Reject)' : 'Reject'}</span>
@@ -754,17 +756,17 @@ export default function AdminScammersPage() {
                       {/* Edit Button */}
                       <button
                         onClick={() => setEditItem(item)}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
-                        <span>{isBn ? 'এডিট ও ডিসপ্লে সেটিংস' : 'Edit & Display'}</span>
+                        <span>{isBn ? 'এডিট' : 'Edit'}</span>
                       </button>
                     </div>
 
                     {/* Permanent Delete Button */}
                     <button
                       onClick={() => setDeleteConfirmId(item.id)}
-                      className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-xs transition-colors ml-auto"
+                      className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 font-semibold text-xs transition-colors ml-auto"
                       title={isBn ? 'স্থায়ীভাবে ডিলিট' : 'Permanent Delete'}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1051,7 +1053,7 @@ export default function AdminScammersPage() {
         </div>
       )}
 
-      {/* TAB CONTENT 5: SOCIAL PROOF SETTINGS */}
+      {/* TAB CONTENT 5: GLOBAL SETTINGS & SOCIAL PROOF */}
       {activeTab === 'SETTINGS' && (
         <div className="max-w-2xl mx-auto p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl space-y-6 text-slate-900 dark:text-white">
           <div className="flex items-center gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
@@ -1071,7 +1073,7 @@ export default function AdminScammersPage() {
           </div>
 
           <div className="space-y-5 text-xs sm:text-sm">
-            {/* Global Warning-Only Toggle */}
+            {/* Global Warning-Only Instant Toggle */}
             <div className="flex items-center justify-between p-4 rounded-2xl bg-red-500/10 border border-red-500/30">
               <div>
                 <span className="font-bold text-slate-900 dark:text-white block">
@@ -1085,7 +1087,7 @@ export default function AdminScammersPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setGlobalWarningOnly(!globalWarningOnly)}
+                onClick={() => handleToggleGlobalWarning(!globalWarningOnly)}
                 className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                   globalWarningOnly ? 'bg-red-500' : 'bg-slate-300 dark:bg-slate-700'
                 }`}

@@ -66,15 +66,6 @@ export class ScammerReportsController {
     return this.scammerReportsService.getMyReports(userId);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Delete('my/:id')
-  async deleteMyReport(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
-    return this.scammerReportsService.deleteMyReport(userId, id);
-  }
-
   // ---------------------------------------------------------------------------
   // Admin Endpoints (Full access, moderation, delete, direct add)
   // ---------------------------------------------------------------------------

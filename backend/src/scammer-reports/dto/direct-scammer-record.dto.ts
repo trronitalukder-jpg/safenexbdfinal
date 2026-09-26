@@ -54,26 +54,4 @@ export class DirectScammerRecordDto {
   @IsOptional()
   @IsString()
   adminNotes?: string;
-
-  @IsOptional()
-  warningOnlyMode?: boolean;
-
-  @IsOptional()
-  showScammerName?: boolean;
-
-  @IsOptional()
-  showPhonePublicly?: boolean;
-
-  @IsOptional()
-  showFacebookPublicly?: boolean;
-
-  @IsOptional()
-  showProofPublicly?: boolean;
-
-  @IsOptional()
-  showDescriptionPublicly?: boolean;
-
-  @IsOptional()
-  @IsString()
-  customWarning?: string;
 }

@@ -29,22 +29,12 @@ export class SettingsController {
   }
 
   /**
-   * Admin endpoint to save website settings (supports both /settings/admin and /settings)
+   * Admin endpoint to save website settings
    */
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPER_ADMIN', 'ADMIN')
   @Post('admin')
   async saveAdminSettings(
-    @Body() payload: any,
-    @CurrentUser('id') adminId: string,
-  ) {
-    return this.settingsService.saveSettings(payload, adminId);
-  }
-
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN', 'ADMIN')
-  @Post()
-  async saveSettingsDirect(
     @Body() payload: any,
     @CurrentUser('id') adminId: string,
   ) {

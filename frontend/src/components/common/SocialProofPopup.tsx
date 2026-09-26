@@ -71,15 +71,15 @@ export const SocialProofPopup: React.FC = () => {
           if (isMounted) setEvents(data.events);
         }
       } catch {
-        // Fallback default events (concise, clear Bangla proofs)
+        // Fallback default events
         if (isMounted) {
           setEvents([
             {
               id: '1',
-              titleBn: 'ক্যাশআউট সম্পন্ন',
-              titleEn: 'Cashout Completed',
-              descBn: 'তানভীর আহমেদ (ঢাকা) • ১,৫০০৳ ক্যাশআউট পেয়েছেন (বিকাশ) 🎉',
-              descEn: 'Tanvir Ahmed (Dhaka) • Received 1,500৳ via bKash 🎉',
+              titleBn: 'বিকাশ ক্যাশআউট সম্পন্ন',
+              titleEn: 'bKash Cashout Received',
+              descBn: 'তানভীর আহমেদ (ঢাকা) এইমাত্র ১,৫০০৳ ক্যাশআউট পেয়েছেন 🎉',
+              descEn: 'Tanvir Ahmed (Dhaka) just received 1,500৳ payout 🎉',
               type: 'CASHOUT',
               avatarText: 'TA',
               timeAgoBn: '২ মিনিট আগে',
@@ -88,9 +88,9 @@ export const SocialProofPopup: React.FC = () => {
             {
               id: '2',
               titleBn: 'এসক্রো ডিল সম্পন্ন',
-              titleEn: 'Escrow Completed',
-              descBn: 'রাকিবুল হাসান ও সাইদ • পেজ এসক্রো ডিল সম্পন্ন (৫,০০০৳) 🛡️',
-              descEn: 'Rakibul & Sayed • Page escrow completed (5,000৳) 🛡️',
+              titleEn: 'Escrow Deal Completed',
+              descBn: 'রাকিবুল হাসান ও সাইদ ফেসবুক পেজ ডিল সফলভাবে সম্পন্ন করেছেন 🛡️',
+              descEn: 'Rakibul & Sayed safely completed a Facebook Page escrow deal 🛡️',
               type: 'ESCROW',
               avatarText: 'RH',
               timeAgoBn: '৪ মিনিট আগে',
@@ -98,36 +98,14 @@ export const SocialProofPopup: React.FC = () => {
             },
             {
               id: '3',
-              titleBn: 'রেফার বোনাস জমা',
-              titleEn: 'Referral Bonus',
-              descBn: 'নতুন মেম্বার একাউন্ট খুলে ২৫৳ বোনাস পেয়েছেন 🎁',
-              descEn: 'New user joined and received 25৳ bonus 🎁',
+              titleBn: 'নতুন মেম্বার স্বাগতম বোনাস',
+              titleEn: 'New Member Welcome Bonus',
+              descBn: 'নতুন ইউজার একাউন্ট খুলে ২৫৳ স্বাগতম বোনাস পেয়েছেন 🎁',
+              descEn: 'A new user registered and received 25৳ bonus 🎁',
               type: 'BONUS',
               avatarText: 'NU',
-              timeAgoBn: '৭ মিনিট আগে',
-              timeAgoEn: '7m ago',
-            },
-            {
-              id: '4',
-              titleBn: 'মাইক্রো-জব পেমেন্ট',
-              titleEn: 'Micro Job Payout',
-              descBn: 'সাদিয়া আক্তার • মাইক্রো জব উইথড্র পেয়েছেন (নগদ) ⚡',
-              descEn: 'Sadia Akter • Received micro job payout via Nagad ⚡',
-              type: 'JOB',
-              avatarText: 'SA',
-              timeAgoBn: '১১ মিনিট আগে',
-              timeAgoEn: '11m ago',
-            },
-            {
-              id: '5',
-              titleBn: 'ডিজিটাল প্রোডাক্ট ডেলিভারি',
-              titleEn: 'Digital Product Delivered',
-              descBn: 'ফরহাদ হোসেন • গুগল প্লে কোড সফলভাবে পেয়েছেন 🎮',
-              descEn: 'Farhad Hossain • Google Play code delivered 🎮',
-              type: 'PRODUCT',
-              avatarText: 'FH',
-              timeAgoBn: '১৫ মিনিট আগে',
-              timeAgoEn: '15m ago',
+              timeAgoBn: '৬ মিনিট আগে',
+              timeAgoEn: '6m ago',
             },
           ]);
         }
@@ -189,10 +167,10 @@ export const SocialProofPopup: React.FC = () => {
     return null;
   }
 
-  const isBn = lang !== 'en'; // Default to Bangla unless explicitly switched to English
-  const title = isBn ? currentEvent.titleBn || currentEvent.titleEn : currentEvent.titleEn || currentEvent.titleBn;
-  const desc = isBn ? currentEvent.descBn || currentEvent.descEn : currentEvent.descEn || currentEvent.descBn;
-  const timeAgo = isBn ? currentEvent.timeAgoBn || currentEvent.timeAgoEn : currentEvent.timeAgoEn || currentEvent.timeAgoBn;
+  // Always display in clear, concise Bangla as requested
+  const title = currentEvent.titleBn || currentEvent.titleEn;
+  const desc = currentEvent.descBn || currentEvent.descEn;
+  const timeAgo = currentEvent.timeAgoBn || currentEvent.timeAgoEn;
 
   return (
     <div className="fixed bottom-20 md:bottom-6 left-3 md:left-6 z-50 max-w-[340px] sm:max-w-sm w-full animate-in slide-in-from-bottom-5 fade-in duration-300">
@@ -204,7 +182,7 @@ export const SocialProofPopup: React.FC = () => {
         <button
           onClick={handleDismiss}
           className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center transition-colors z-10"
-          title={isBn ? 'বন্ধ করুন' : 'Close'}
+          title="বন্ধ করুন"
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -227,7 +205,7 @@ export const SocialProofPopup: React.FC = () => {
           <div className="flex-1 pr-5">
             <div className="flex items-center gap-1.5 mb-0.5">
               <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wide">
+              <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wide">
                 {title}
               </span>
               <span className="text-[10px] text-zinc-500">• {timeAgo}</span>
@@ -238,32 +216,29 @@ export const SocialProofPopup: React.FC = () => {
             </p>
 
             {/* Action Bar */}
-            <div className="mt-2 pt-2 border-t border-zinc-800/60 flex items-center justify-between">
+            <div className="mt-2.5 pt-2 border-t border-zinc-800/60 flex items-center justify-between">
               {!user ? (
                 <Link
                   href="/register"
                   onClick={handleDismiss}
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-bold text-[10px] shadow-sm shadow-amber-500/20 transition-all hover:scale-[1.02] active:scale-95"
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-bold text-[11px] shadow-sm shadow-amber-500/20 transition-all hover:scale-[1.02] active:scale-95"
                 >
                   <Sparkles className="w-3 h-3" />
-                  {isBn ? 'রেজিস্ট্রেশন (ফ্রি)' : 'Register Free'}
+                  <span>রেজিস্ট্রেশন (ফ্রি)</span>
                   <ArrowRight className="w-3 h-3" />
                 </Link>
               ) : (
                 <Link
                   href="/check"
                   onClick={handleDismiss}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-amber-400 font-semibold text-[10px] transition-colors"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-amber-400 font-semibold text-[11px] transition-colors"
                 >
                   <ShieldCheck className="w-3 h-3" />
-                  {isBn ? 'ট্রাস্ট চেকার' : 'Trust Check'}
+                  <span>ট্রাস্ট চেক</span>
                 </Link>
               )}
 
-              <span className="text-[10px] text-emerald-500/80 font-semibold flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" />
-                {isBn ? 'ভেরিফাইড লেনদেন' : 'Verified Deal'}
-              </span>
+              <span className="text-[10px] text-zinc-400 font-mono">🛡️ ভেরিফাইড লেনদেন</span>
             </div>
           </div>
         </div>
