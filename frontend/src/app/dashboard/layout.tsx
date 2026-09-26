@@ -30,6 +30,7 @@ import {
   Bell,
   Gift,
   Briefcase,
+  Search,
 } from 'lucide-react';
 import { DashboardSidebar } from '@/components/layout/DashboardSidebar';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -113,6 +114,7 @@ export default function DashboardLayout({
     { href: '/dashboard/bids', label: lang === 'bn' ? 'আমার বিডসমূহ' : 'My Bids', icon: Coins },
     { href: '/dashboard/disputes', label: lang === 'bn' ? 'ডিসপ্যুট / কল অ্যাডমিন' : 'Disputes', icon: ShieldAlert },
     { href: '/guides', label: lang === 'bn' ? 'গাইডস ও টিউটোরিয়াল' : 'Guides & Tutorials', icon: BookOpen },
+    { href: '/users', label: lang === 'bn' ? 'ইউজার খুঁজুন' : 'Search Users', icon: Search },
     { href: '/dashboard/settings', label: lang === 'bn' ? 'অ্যাকাউন্ট সেটিংস' : 'Account Settings', icon: Settings },
   ];
 
@@ -136,35 +138,49 @@ export default function DashboardLayout({
 
       {/* 2. Mobile Drawer Navigation Overlay */}
       {mobileDrawerOpen && (
-        <div className="fixed inset-0 z-50 md:hidden bg-slate-950/70 backdrop-blur-xs flex">
-          <div className="w-72 max-w-[85vw] bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col justify-between p-4 animate-in slide-in-from-left">
-            <div>
-              {/* Brand Logo & Close */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-sky-600 flex items-center justify-center text-white font-black">
-                    <ShieldCheck className="w-4 h-4" />
-                  </div>
+        <div
+          className="fixed inset-0 z-50 md:hidden bg-slate-950/70 backdrop-blur-xs flex"
+          onClick={() => setMobileDrawerOpen(false)}
+        >
+          <div
+            className="w-72 max-w-[85vw] bg-white dark:bg-slate-900 h-[100dvh] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-left"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Fixed Header with Brand & Close Button */}
+            <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-sky-600 flex items-center justify-center text-white font-black shadow-sm">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
                   <span className="font-extrabold text-sm text-slate-900 dark:text-white">
                     Safnex<span className="text-sky-500">BD</span>
                   </span>
+                  <span className="ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-50 dark:bg-sky-950 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800">
+                    DASHBOARD
+                  </span>
                 </div>
-                <button
-                  onClick={() => setMobileDrawerOpen(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
               </div>
+              <button
+                type="button"
+                onClick={() => setMobileDrawerOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
+            {/* Scrollable Navigation Body */}
+            <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3 custom-scrollbar">
               {/* Home Page link on mobile */}
               <Link
                 href="/"
                 onClick={() => setMobileDrawerOpen(false)}
-                className="mt-3 mb-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition group"
               >
                 <div className="flex items-center gap-2">
-                  <Home className="w-4 h-4 text-sky-500" />
+                  <Home className="w-4 h-4 text-sky-500 group-hover:scale-110 transition" />
                   <span>{lang === 'bn' ? 'হোম পেজে যান' : 'Home Page'}</span>
                 </div>
                 <ExternalLink className="w-3.5 h-3.5 opacity-60" />
@@ -174,14 +190,39 @@ export default function DashboardLayout({
               <Link
                 href="/products"
                 onClick={() => setMobileDrawerOpen(false)}
-                className="mb-3 px-3 py-2 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex items-center justify-between text-xs font-bold"
+                className="px-3 py-2 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex items-center justify-between text-xs font-bold hover:bg-sky-500/15 transition group"
               >
                 <div className="flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4" />
+                  <ShoppingBag className="w-4 h-4 text-sky-500 group-hover:scale-110 transition" />
                   <span>{lang === 'bn' ? 'মার্কেটপ্লেস ব্রাউজ' : 'Marketplace'}</span>
                 </div>
-                <ExternalLink className="w-3.5 h-3.5" />
+                <ExternalLink className="w-3.5 h-3.5 opacity-60" />
               </Link>
+
+              {/* User Info Card */}
+              {user && (
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-2.5">
+                  {user.avatarUrl ? (
+                    <img
+                      src={getImageUrl(user.avatarUrl)}
+                      alt={user.firstName}
+                      className="w-8 h-8 rounded-full object-cover border border-sky-500/30 flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-sky-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
+                      {user.firstName?.charAt(0) || 'U'}
+                    </div>
+                  )}
+                  <div className="overflow-hidden flex-1">
+                    <div className="font-semibold text-xs text-slate-900 dark:text-slate-100 truncate">
+                      {user.firstName} {user.lastName}
+                    </div>
+                    <div className="text-[10px] font-mono text-sky-600 dark:text-sky-400 font-semibold truncate">
+                      {user.uniqueUserId}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Navigation Links */}
               <nav className="space-y-1">
@@ -193,14 +234,14 @@ export default function DashboardLayout({
                       key={l.href}
                       href={l.href}
                       onClick={() => setMobileDrawerOpen(false)}
-                      className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
+                      className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
                         isActive
                           ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 font-bold border border-sky-200 dark:border-sky-800'
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900'
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <Icon className="w-5 h-5 shrink-0" />
+                        <Icon className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
                         <span>{l.label}</span>
                       </div>
                       {l.href === '/dashboard/notifications' && unreadCount > 0 ? (
@@ -214,10 +255,7 @@ export default function DashboardLayout({
                   );
                 })}
               </nav>
-            </div>
 
-            {/* Bottom Controls */}
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
               {/* Complaint Button in Mobile Drawer */}
               <button
                 type="button"
@@ -258,28 +296,34 @@ export default function DashboardLayout({
                 </div>
                 <Download className="w-3.5 h-3.5 text-sky-500" />
               </button>
+            </div>
 
+            {/* Bottom Fixed Footer Controls: Language, Theme & Logout */}
+            <div className="flex-shrink-0 p-3.5 border-t border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur space-y-2">
               <div className="flex items-center justify-between">
                 <button
+                  type="button"
                   onClick={toggleLang}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-semibold"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition"
                 >
                   <Globe className="w-3.5 h-3.5" />
                   <span>{lang === 'bn' ? 'বাংলা' : 'EN'}</span>
                 </button>
                 <button
+                  type="button"
                   onClick={toggleTheme}
-                  className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800"
+                  className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition"
                 >
                   {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
                 </button>
               </div>
 
               <button
+                type="button"
                 onClick={logout}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/30"
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900/40 transition shadow-xs"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-4 h-4 text-rose-500" />
                 <span>{t('logout')}</span>
               </button>
             </div>
