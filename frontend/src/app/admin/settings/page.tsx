@@ -2839,6 +2839,208 @@ export default function AdminSettingsPage() {
                 <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
               </label>
             </div>
+
+            {/* 1. App Install Prompt After Registration */}
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <Smartphone className="w-4 h-4 text-sky-500" />
+                    <span>{lang === 'bn' ? 'রেজিস্ট্রেশনের পর PWA অ্যাপ ইনস্টল পপআপ' : 'Post-Registration App Install Popup'}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">
+                    {lang === 'bn'
+                      ? 'সাইটে ঢোকার সাথে সাথে নয়, ইউজার সফলভাবে রেজিস্ট্রেশন করার পর নির্ধারিত সেকেন্ড বিলম্বে পপআপ আসবে।'
+                      : 'Show the install prompt only after user completes registration, with configurable second delay.'}
+                  </div>
+                </div>
+
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={settings.system.appInstallPromptOnRegister !== false}
+                    onChange={(e) =>
+                      setSettings((p: any) => ({
+                        ...p,
+                        system: { ...p.system, appInstallPromptOnRegister: e.target.checked },
+                      }))
+                    }
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
+                </label>
+              </div>
+
+              {settings.system.appInstallPromptOnRegister !== false && (
+                <div className="pt-2 flex items-center gap-3">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                    {lang === 'bn' ? 'রেজিস্ট্রেশনের কত সেকেন্ড পর পপআপ আসবে (Seconds):' : 'Delay After Registration (Seconds):'}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="300"
+                    value={settings.system.appInstallDelaySeconds ?? 10}
+                    onChange={(e) =>
+                      setSettings((p: any) => ({
+                        ...p,
+                        system: { ...p.system, appInstallDelaySeconds: Math.max(1, parseInt(e.target.value, 10) || 10) },
+                      }))
+                    }
+                    className="w-24 p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-center font-bold text-sky-500"
+                  />
+                  <span className="text-[11px] text-slate-400">সেকেন্ড পর</span>
+                </div>
+              )}
+            </div>
+
+            {/* 2. New Visitor Welcome & Promotional Modal */}
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-emerald-500" />
+                    <span>{lang === 'bn' ? 'নতুন ভিজিটরদের জন্য স্বাগতম ও সাইন-আপ পপআপ' : 'New Visitor Welcome & Signup Modal'}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">
+                    {lang === 'bn'
+                      ? 'নতুন ভিজিটর সাইটে ঢুকলে রেজিস্ট্রেশন ও ইনকাম করার আকর্ষণীয় প্রমোশনাল পপআপ মেসেজ প্রদর্শিত হবে।'
+                      : 'Show high-converting welcome popup to new first-time visitors with registration button.'}
+                  </div>
+                </div>
+
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={settings.system.newVisitorPopupEnabled !== false}
+                    onChange={(e) =>
+                      setSettings((p: any) => ({
+                        ...p,
+                        system: { ...p.system, newVisitorPopupEnabled: e.target.checked },
+                      }))
+                    }
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+              </div>
+
+              {settings.system.newVisitorPopupEnabled !== false && (
+                <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-slate-700/60">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                        {lang === 'bn' ? 'সাইটে আসার কত সেকেন্ড পর পপআপ আসবে:' : 'Delay before showing (Seconds):'}
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="120"
+                        value={settings.system.newVisitorPopupDelaySeconds ?? 3}
+                        onChange={(e) =>
+                          setSettings((p: any) => ({
+                            ...p,
+                            system: { ...p.system, newVisitorPopupDelaySeconds: Math.max(0, parseInt(e.target.value, 10) || 0) },
+                          }))
+                        }
+                        className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                        {lang === 'bn' ? 'কত সেকেন্ড পর অটোমেটিক বন্ধ হবে (0 = ক্রস না করা পর্যন্ত থাকবে):' : 'Auto-close duration (0 = stay until closed):'}
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="300"
+                        value={settings.system.newVisitorPopupAutoCloseSeconds ?? 0}
+                        onChange={(e) =>
+                          setSettings((p: any) => ({
+                            ...p,
+                            system: { ...p.system, newVisitorPopupAutoCloseSeconds: Math.max(0, parseInt(e.target.value, 10) || 0) },
+                          }))
+                        }
+                        className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                      {lang === 'bn' ? 'পপআপের মূল শিরোনাম (Title):' : 'Popup Title:'}
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.system.newVisitorPopupTitle || 'ফ্রি রেজিস্ট্রেশন করে আজই আয় শুরু করুন!'}
+                      onChange={(e) =>
+                        setSettings((p: any) => ({
+                          ...p,
+                          system: { ...p.system, newVisitorPopupTitle: e.target.value },
+                        }))
+                      }
+                      className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                      {lang === 'bn' ? 'পপআপের বিস্তারিত মেসেজ (Message):' : 'Popup Message:'}
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={
+                        settings.system.newVisitorPopupMessage ||
+                        'নিরাপদ ট্রানজেকশনে প্রোডাক্ট কেনাবেচা করুন এবং সহজ কাজ সম্পন্ন করে বিকাশ/নগদে ঘরে বসেই আয় করুন।'
+                      }
+                      onChange={(e) =>
+                        setSettings((p: any) => ({
+                          ...p,
+                          system: { ...p.system, newVisitorPopupMessage: e.target.value },
+                        }))
+                      }
+                      className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                        {lang === 'bn' ? 'বাটন টেক্সট (Button Label):' : 'CTA Button Label:'}
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.system.newVisitorPopupCtaText || '🚀 এখনই ফ্রি রেজিস্ট্রেশন করুন'}
+                        onChange={(e) =>
+                          setSettings((p: any) => ({
+                            ...p,
+                            system: { ...p.system, newVisitorPopupCtaText: e.target.value },
+                          }))
+                        }
+                        className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                        {lang === 'bn' ? 'বাটন লিংক (Button Link):' : 'CTA Button Link:'}
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.system.newVisitorPopupCtaUrl || '/register'}
+                        onChange={(e) =>
+                          setSettings((p: any) => ({
+                            ...p,
+                            system: { ...p.system, newVisitorPopupCtaUrl: e.target.value },
+                          }))
+                        }
+                        className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

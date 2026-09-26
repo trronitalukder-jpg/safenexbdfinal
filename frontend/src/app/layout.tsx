@@ -6,6 +6,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import MobileBottomNav from '@/components/layout/MobileBottomNav';
 import TrafficTracker from '@/components/analytics/TrafficTracker';
+import NewVisitorWelcomeModal from '@/components/common/NewVisitorWelcomeModal';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -66,6 +67,7 @@ export default function RootLayout({
       >
         <Providers>
           <TrafficTracker />
+          <NewVisitorWelcomeModal />
           <Navbar />
           <main className="flex-1 pb-16 md:pb-0">
             {children}

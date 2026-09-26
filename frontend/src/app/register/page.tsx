@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useSettings } from '@/context/SettingsContext';
+import { usePwa } from '@/context/PwaContext';
 import { api } from '@/lib/api';
 import { compressImage } from '@/lib/imageUtils';
 import { trackEvent } from '@/lib/tracking';
@@ -28,6 +30,8 @@ function RegisterContent() {
   const searchParams = useSearchParams();
   const { lang, t } = useLanguage();
   const { setAuth } = useAuthStore();
+  const { settings } = useSettings();
+  const { triggerPostRegistrationPrompt } = usePwa();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const refParam = searchParams.get('ref') || '';
@@ -157,6 +161,12 @@ function RegisterContent() {
       });
 
       setAuth(res.user, res.accessToken, res.refreshToken);
+
+      // Trigger PWA app install prompt after admin configurable seconds
+      if (settings?.system?.appInstallPromptOnRegister !== false) {
+        const delaySec = settings?.system?.appInstallDelaySeconds ?? 10;
+        triggerPostRegistrationPrompt(delaySec);
+      }
 
       // Track Meta Pixel & Analytics Registration Event
       trackEvent('CompleteRegistration', {

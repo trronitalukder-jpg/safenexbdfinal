@@ -84,6 +84,15 @@ export interface WebsiteSystemSettings {
   allowRegistration: boolean;
   requireKycForWithdraw?: boolean;
   mobileBottomNavEnabled?: boolean;
+  appInstallPromptOnRegister?: boolean;
+  appInstallDelaySeconds?: number;
+  newVisitorPopupEnabled?: boolean;
+  newVisitorPopupDelaySeconds?: number;
+  newVisitorPopupAutoCloseSeconds?: number;
+  newVisitorPopupTitle?: string;
+  newVisitorPopupMessage?: string;
+  newVisitorPopupCtaText?: string;
+  newVisitorPopupCtaUrl?: string;
 }
 
 export interface WebsiteMicroJobSettings {

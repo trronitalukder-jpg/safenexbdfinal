@@ -10,6 +10,7 @@ interface PwaContextType {
   openInstallModal: () => void;
   closeInstallModal: (snooze?: boolean) => void;
   installApp: () => Promise<void>;
+  triggerPostRegistrationPrompt: (delaySeconds?: number) => void;
 }
 
 const PwaContext = createContext<PwaContextType>({
@@ -20,6 +21,7 @@ const PwaContext = createContext<PwaContextType>({
   openInstallModal: () => {},
   closeInstallModal: () => {},
   installApp: async () => {},
+  triggerPostRegistrationPrompt: () => {},
 });
 
 const SNOOZE_HOURS = 24;
@@ -72,20 +74,6 @@ export const PwaProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       e.preventDefault();
       setDeferredPrompt(e);
       setCanInstall(true);
-
-      // Auto-trigger prompt popup if user has not installed and not snoozed
-      if (!checkInstalled()) {
-        const snoozedUntil =
-          localStorage.getItem('safnexbd_install_snoozed_until') ||
-          localStorage.getItem('safnexbd_install_snoozed_until');
-        const now = Date.now();
-        if (!snoozedUntil || now > parseInt(snoozedUntil, 10)) {
-          // Open popup after a short delay so user can see the site first
-          setTimeout(() => {
-            setIsInstallModalOpen(true);
-          }, 2500);
-        }
-      }
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -101,42 +89,25 @@ export const PwaProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // 6. If on iOS and not installed and not snoozed, trigger after delay
     if (isIosDevice && !installed) {
       setCanInstall(true);
-      const snoozedUntil =
-        localStorage.getItem('safnexbd_install_snoozed_until') ||
-        localStorage.getItem('safnexbd_install_snoozed_until');
-      const now = Date.now();
-      if (!snoozedUntil || now > parseInt(snoozedUntil, 10)) {
-        setTimeout(() => {
-          setIsInstallModalOpen(true);
-        }, 3000);
-      }
-    } else if (!installed) {
-      // If browser doesn't trigger beforeinstallprompt within 4 seconds (e.g. desktop browsers, Firefox, or Chrome delay)
-      const fallbackTimer = setTimeout(() => {
-        if (!checkInstalled()) {
-          const snoozedUntil =
-            localStorage.getItem('safnexbd_install_snoozed_until') ||
-            localStorage.getItem('safnexbd_install_snoozed_until');
-          const now = Date.now();
-          if (!snoozedUntil || now > parseInt(snoozedUntil, 10)) {
-            setIsInstallModalOpen(true);
-          }
-        }
-      }, 3500);
-
-      return () => {
-        clearTimeout(fallbackTimer);
-        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        window.removeEventListener('appinstalled', handleAppInstalled);
-      };
     }
+
+    // 6. Listen for custom post-registration install trigger
+    const handleRegistrationComplete = (e: any) => {
+      const delay = (e.detail?.delaySeconds ?? 10) * 1000;
+      setTimeout(() => {
+        if (!checkInstalled()) {
+          setIsInstallModalOpen(true);
+        }
+      }, delay);
+    };
+    window.addEventListener('safnex:registration_completed', handleRegistrationComplete);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
+      window.removeEventListener('safnex:registration_completed', handleRegistrationComplete);
     };
   }, [checkInstalled]);
 
@@ -172,6 +143,16 @@ export const PwaProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [deferredPrompt]);
 
+  const triggerPostRegistrationPrompt = useCallback((delaySeconds = 10) => {
+    if (typeof window === 'undefined') return;
+    const delay = Math.max(1, delaySeconds) * 1000;
+    setTimeout(() => {
+      if (!checkInstalled()) {
+        setIsInstallModalOpen(true);
+      }
+    }, delay);
+  }, [checkInstalled]);
+
   return (
     <PwaContext.Provider
       value={{
@@ -182,6 +163,7 @@ export const PwaProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         openInstallModal,
         closeInstallModal,
         installApp,
+        triggerPostRegistrationPrompt,
       }}
     >
       {children}

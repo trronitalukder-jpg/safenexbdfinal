@@ -22,6 +22,8 @@ import {
   TrendingUp,
   AlertTriangle,
   ChevronRight,
+  ChevronLeft,
+  MessageCircle,
   Eye,
   FileSpreadsheet,
   Send,
@@ -133,6 +135,47 @@ export default function AdminTrafficPage() {
       return () => clearInterval(interval);
     }
   }, [activeTab, autoRefresh]);
+
+  const tabsContainerRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollTabs = (direction: 'left' | 'right') => {
+    if (tabsContainerRef.current) {
+      const offset = direction === 'left' ? -220 : 220;
+      tabsContainerRef.current.scrollBy({ left: offset, behavior: 'smooth' });
+    }
+  };
+
+  // Always fetch sources data when dateRange changes so top highlight cards are accurate
+  useEffect(() => {
+    const fetchSourcesOverview = async () => {
+      try {
+        const res = await api.get(`/traffic/sources?range=${dateRange}`);
+        setSourcesData(unwrap(res));
+      } catch (err) {
+        console.error('Failed to fetch sources summary:', err);
+      }
+    };
+    fetchSourcesOverview();
+  }, [dateRange]);
+
+  const getSourceMetric = (keyword: string) => {
+    if (!sourcesData?.sourceBreakdown) return { count: 0, percentage: 0, avgDwellSeconds: 0 };
+    const matches = sourcesData.sourceBreakdown.filter((s: any) =>
+      s.source.toUpperCase().includes(keyword.toUpperCase())
+    );
+    const count = matches.reduce((acc: number, m: any) => acc + m.count, 0);
+    const total = sourcesData.totalSessions || 1;
+    const percentage = Number(((count / total) * 100).toFixed(1));
+    const avgDwell = matches.length > 0 ? matches[0].avgDwellSeconds : 0;
+    return { count, percentage, avgDwellSeconds: avgDwell };
+  };
+
+  const fbMetric = getSourceMetric('FACEBOOK');
+  const directMetric = getSourceMetric('DIRECT');
+  const tgMetric = getSourceMetric('TELEGRAM');
+  const waMetric = getSourceMetric('WHATSAPP');
+  const googleMetric = getSourceMetric('GOOGLE');
+  const affiliateMetric = getSourceMetric('AFFILIATE');
 
   // Open 360° Drawer
   const openDrawer = async (identifier: string) => {
@@ -291,34 +334,206 @@ export default function AdminTrafficPage() {
         </div>
       </div>
 
-      {/* 2. Top Navigation Tabs */}
-      <div className="flex overflow-x-auto gap-2 pb-2 border-b border-slate-800 scrollbar-thin">
-        {[
-          { id: 'radar', label: '🔴 লাইভ রাডার (Live Radar)', icon: Activity },
-          { id: 'new_vs_repeat', label: '👥 নতুন বনাম রিপিট (New vs Repeat)', icon: Users },
-          { id: 'ips', label: '🌐 আইপি অডিট ও ফ্রড (IP Intelligence)', icon: ShieldAlert },
-          { id: 'engagement', label: '⏱️ অবস্থানকাল ও বাউন্স (Dwell Time)', icon: Clock },
-          { id: 'sources', label: '🧭 ট্রাফিক উৎস (Sources & UTM)', icon: Compass },
-          { id: 'funnel', label: '🎯 কনভার্শন ফানেল (Behavior Funnel)', icon: TrendingUp },
-          { id: 'reports', label: '📊 এক্সপোর্ট ও টেলিগ্রাম (Reports)', icon: FileSpreadsheet },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-3 text-xs md:text-sm font-semibold rounded-xl whitespace-nowrap transition-all ${
-                isActive
-                  ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/25 border-sky-400'
-                  : 'bg-slate-800/70 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/50'
-              }`}
-            >
-              <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-              {tab.label}
-            </button>
-          );
-        })}
+      {/* 2. Top Prominent Traffic Sources Highlight Cards */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <Share2 className="w-3.5 h-3.5 text-sky-400" />
+            <span>শীর্ষ ট্রাফিক উৎস এক নজরে (Traffic Acquisition Channels)</span>
+          </h2>
+          <span className="text-[11px] text-slate-500 font-mono">
+            {dateRange === 'today' ? 'আজকের ট্রাফিক' : dateRange === 'yesterday' ? 'গতকালের ট্রাফিক' : dateRange === '7d' ? 'গত ৭ দিনের ট্রাফিক' : 'গত ৩০ দিনের ট্রাফিক'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {/* 1. Facebook */}
+          <div
+            onClick={() => setActiveTab('sources')}
+            className="cursor-pointer bg-gradient-to-br from-blue-950/40 via-slate-900 to-slate-900 border border-blue-500/40 hover:border-blue-400 p-4 rounded-2xl shadow-lg transition-all hover:scale-[1.02] group"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-base group-hover:bg-blue-600 group-hover:text-white transition">
+                f
+              </div>
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300">
+                {fbMetric.percentage}%
+              </span>
+            </div>
+            <div className="text-xs font-semibold text-slate-300">Facebook</div>
+            <div className="text-xl font-extrabold text-white mt-1">
+              {fbMetric.count} <span className="text-[10px] font-normal text-slate-400">জন</span>
+            </div>
+            <div className="text-[10px] text-blue-400/80 mt-1 flex items-center gap-1 truncate">
+              <Clock className="w-3 h-3" /> {formatSeconds(fbMetric.avgDwellSeconds)}
+            </div>
+          </div>
+
+          {/* 2. Direct */}
+          <div
+            onClick={() => setActiveTab('sources')}
+            className="cursor-pointer bg-gradient-to-br from-sky-950/40 via-slate-900 to-slate-900 border border-sky-500/40 hover:border-sky-400 p-4 rounded-2xl shadow-lg transition-all hover:scale-[1.02] group"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-8 h-8 rounded-xl bg-sky-600/20 text-sky-400 flex items-center justify-center font-bold group-hover:bg-sky-600 group-hover:text-white transition">
+                <Globe className="w-4 h-4" />
+              </div>
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300">
+                {directMetric.percentage}%
+              </span>
+            </div>
+            <div className="text-xs font-semibold text-slate-300">Direct Visit</div>
+            <div className="text-xl font-extrabold text-white mt-1">
+              {directMetric.count} <span className="text-[10px] font-normal text-slate-400">জন</span>
+            </div>
+            <div className="text-[10px] text-sky-400/80 mt-1 flex items-center gap-1 truncate">
+              <Clock className="w-3 h-3" /> {formatSeconds(directMetric.avgDwellSeconds)}
+            </div>
+          </div>
+
+          {/* 3. Telegram */}
+          <div
+            onClick={() => setActiveTab('sources')}
+            className="cursor-pointer bg-gradient-to-br from-cyan-950/40 via-slate-900 to-slate-900 border border-cyan-500/40 hover:border-cyan-400 p-4 rounded-2xl shadow-lg transition-all hover:scale-[1.02] group"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-8 h-8 rounded-xl bg-cyan-600/20 text-cyan-400 flex items-center justify-center font-bold group-hover:bg-cyan-600 group-hover:text-white transition">
+                <Send className="w-4 h-4" />
+              </div>
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300">
+                {tgMetric.percentage}%
+              </span>
+            </div>
+            <div className="text-xs font-semibold text-slate-300">Telegram</div>
+            <div className="text-xl font-extrabold text-white mt-1">
+              {tgMetric.count} <span className="text-[10px] font-normal text-slate-400">জন</span>
+            </div>
+            <div className="text-[10px] text-cyan-400/80 mt-1 flex items-center gap-1 truncate">
+              <Clock className="w-3 h-3" /> {formatSeconds(tgMetric.avgDwellSeconds)}
+            </div>
+          </div>
+
+          {/* 4. WhatsApp */}
+          <div
+            onClick={() => setActiveTab('sources')}
+            className="cursor-pointer bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-900 border border-emerald-500/40 hover:border-emerald-400 p-4 rounded-2xl shadow-lg transition-all hover:scale-[1.02] group"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-8 h-8 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold group-hover:bg-emerald-600 group-hover:text-white transition">
+                <MessageCircle className="w-4 h-4" />
+              </div>
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">
+                {waMetric.percentage}%
+              </span>
+            </div>
+            <div className="text-xs font-semibold text-slate-300">WhatsApp</div>
+            <div className="text-xl font-extrabold text-white mt-1">
+              {waMetric.count} <span className="text-[10px] font-normal text-slate-400">জন</span>
+            </div>
+            <div className="text-[10px] text-emerald-400/80 mt-1 flex items-center gap-1 truncate">
+              <Clock className="w-3 h-3" /> {formatSeconds(waMetric.avgDwellSeconds)}
+            </div>
+          </div>
+
+          {/* 5. Google Search */}
+          <div
+            onClick={() => setActiveTab('sources')}
+            className="cursor-pointer bg-gradient-to-br from-amber-950/40 via-slate-900 to-slate-900 border border-amber-500/40 hover:border-amber-400 p-4 rounded-2xl shadow-lg transition-all hover:scale-[1.02] group"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-8 h-8 rounded-xl bg-amber-600/20 text-amber-400 flex items-center justify-center font-bold group-hover:bg-amber-600 group-hover:text-white transition">
+                <Search className="w-4 h-4" />
+              </div>
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">
+                {googleMetric.percentage}%
+              </span>
+            </div>
+            <div className="text-xs font-semibold text-slate-300">Google Search</div>
+            <div className="text-xl font-extrabold text-white mt-1">
+              {googleMetric.count} <span className="text-[10px] font-normal text-slate-400">জন</span>
+            </div>
+            <div className="text-[10px] text-amber-400/80 mt-1 flex items-center gap-1 truncate">
+              <Clock className="w-3 h-3" /> {formatSeconds(googleMetric.avgDwellSeconds)}
+            </div>
+          </div>
+
+          {/* 6. Affiliate / Referrals */}
+          <div
+            onClick={() => setActiveTab('sources')}
+            className="cursor-pointer bg-gradient-to-br from-purple-950/40 via-slate-900 to-slate-900 border border-purple-500/40 hover:border-purple-400 p-4 rounded-2xl shadow-lg transition-all hover:scale-[1.02] group"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center font-bold group-hover:bg-purple-600 group-hover:text-white transition">
+                <Users className="w-4 h-4" />
+              </div>
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">
+                {affiliateMetric.percentage}%
+              </span>
+            </div>
+            <div className="text-xs font-semibold text-slate-300">রেফারেল / অন্যান্য</div>
+            <div className="text-xl font-extrabold text-white mt-1">
+              {affiliateMetric.count} <span className="text-[10px] font-normal text-slate-400">জন</span>
+            </div>
+            <div className="text-[10px] text-purple-400/80 mt-1 flex items-center gap-1 truncate">
+              <Clock className="w-3 h-3" /> {formatSeconds(affiliateMetric.avgDwellSeconds)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Smooth Horizontal Scrollable Tab Bar with Navigation Controls */}
+      <div className="relative flex items-center bg-slate-800/60 p-1.5 rounded-2xl border border-slate-700/60">
+        {/* Scroll Left Button */}
+        <button
+          onClick={() => scrollTabs('left')}
+          className="shrink-0 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition shadow border border-slate-700 hidden sm:flex items-center justify-center"
+          title="Scroll Left"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+
+        {/* Scrollable Container */}
+        <div
+          ref={tabsContainerRef}
+          className="flex overflow-x-auto gap-2 px-2 py-1 scroll-smooth w-full no-scrollbar select-none"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {[
+            { id: 'radar', label: '🔴 লাইভ রাডার (Live Radar)', icon: Activity },
+            { id: 'new_vs_repeat', label: '👥 নতুন বনাম রিপিট (New vs Repeat)', icon: Users },
+            { id: 'ips', label: '🌐 আইপি অডিট ও ফ্রড (IP Intelligence)', icon: ShieldAlert },
+            { id: 'engagement', label: '⏱️ অবস্থানকাল ও বাউন্স (Dwell Time)', icon: Clock },
+            { id: 'sources', label: '🧭 ট্রাফিক উৎস ও চ্যানেল (Sources & UTM)', icon: Compass },
+            { id: 'funnel', label: '🎯 আচরণ ও কনভার্শন ফানেল (Funnel)', icon: TrendingUp },
+            { id: 'reports', label: '📊 এক্সপোর্ট ও টেলিগ্রাম (Reports)', icon: FileSpreadsheet },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center gap-2 px-4 py-2.5 text-xs md:text-sm font-bold rounded-xl whitespace-nowrap transition-all shrink-0 ${
+                  isActive
+                    ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-lg shadow-sky-500/30 border border-sky-400'
+                    : 'bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-700/50'
+                }`}
+              >
+                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Scroll Right Button */}
+        <button
+          onClick={() => scrollTabs('right')}
+          className="shrink-0 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition shadow border border-slate-700 hidden sm:flex items-center justify-center"
+          title="Scroll Right"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
 
       {/* 3. Tab Contents */}
