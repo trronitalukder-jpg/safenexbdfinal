@@ -38,7 +38,6 @@ import { useTheme } from '@/context/ThemeContext';
 import { useSettings } from '@/context/SettingsContext';
 import { usePwa } from '@/context/PwaContext';
 import { useNotification } from '@/context/NotificationContext';
-import { getImageUrl } from '@/lib/imageUtils';
 
 export const DashboardSidebar = () => {
   const pathname = usePathname();
@@ -97,10 +96,10 @@ export const DashboardSidebar = () => {
         {/* Back to Home Page Action */}
         <Link
           href="/"
-          className="w-full mb-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs font-bold transition group"
+          className="w-full mb-2 px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-sm font-semibold transition group"
         >
-          <div className="flex items-center gap-2">
-            <Home className="w-4 h-4 text-sky-500 group-hover:scale-110 transition" />
+          <div className="flex items-center gap-2.5">
+            <Home className="w-4 h-4 text-sky-500 group-hover:scale-110 transition shrink-0" />
             <span>{lang === 'bn' ? 'হোম পেজে যান' : 'Go to Home'}</span>
           </div>
           <ExternalLink className="w-3.5 h-3.5 opacity-60" />
@@ -109,39 +108,14 @@ export const DashboardSidebar = () => {
         {/* Back to Public Marketplace Action */}
         <Link
           href="/shop"
-          className="w-full mb-3 px-3 py-2 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex items-center justify-between text-xs font-bold transition group"
+          className="w-full mb-3 px-3.5 py-2.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex items-center justify-between text-sm font-semibold transition group"
         >
-          <div className="flex items-center gap-2">
-            <ShoppingBag className="w-4 h-4 text-sky-500 group-hover:scale-110 transition" />
+          <div className="flex items-center gap-2.5">
+            <ShoppingBag className="w-4 h-4 text-sky-500 group-hover:scale-110 transition shrink-0" />
             <span>{lang === 'bn' ? 'শপ পেজে যান (SHOP)' : 'Visit SHOP'}</span>
           </div>
           <ExternalLink className="w-3.5 h-3.5 opacity-60" />
         </Link>
-
-        {/* User Profile Card */}
-        {user && (
-          <div className="p-3 mb-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-3">
-            {user.avatarUrl ? (
-              <img
-                src={getImageUrl(user.avatarUrl)}
-                alt={user.firstName}
-                className="w-10 h-10 rounded-full object-cover border border-sky-500/30 flex-shrink-0"
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-sky-600 text-white font-bold flex items-center justify-center flex-shrink-0">
-                {user.firstName.charAt(0)}
-              </div>
-            )}
-            <div className="overflow-hidden flex-1">
-              <div className="font-semibold text-xs text-slate-900 dark:text-slate-100 truncate">
-                {user.firstName} {user.lastName}
-              </div>
-              <div className="text-[11px] font-mono text-sky-600 dark:text-sky-400 font-semibold truncate">
-                {user.uniqueUserId}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Navigation Links */}
         <nav className="space-y-1">
@@ -152,7 +126,7 @@ export const DashboardSidebar = () => {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm sm:text-[15px] font-semibold transition ${
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[15px] font-semibold transition ${
                   isActive
                     ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 font-bold border border-sky-200 dark:border-sky-800'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'
@@ -222,13 +196,13 @@ export const DashboardSidebar = () => {
         <button
           type="button"
           onClick={logout}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900/50 transition cursor-pointer group shadow-xs"
+          className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900/50 transition cursor-pointer group shadow-xs"
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <LogOut className="w-4 h-4 text-rose-500 transition-transform group-hover:scale-110" />
             <span>{lang === 'bn' ? 'লগআউট করুন' : 'Logout'}</span>
           </div>
-          <span className="text-[10px] text-rose-400 opacity-60">ESC</span>
+          <span className="text-xs text-rose-400 opacity-60">ESC</span>
         </button>
       </div>
     </aside>

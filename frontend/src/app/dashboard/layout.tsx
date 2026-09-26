@@ -177,10 +177,10 @@ export default function DashboardLayout({
               <Link
                 href="/"
                 onClick={() => setMobileDrawerOpen(false)}
-                className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition group"
+                className="px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition group"
               >
-                <div className="flex items-center gap-2">
-                  <Home className="w-4 h-4 text-sky-500 group-hover:scale-110 transition" />
+                <div className="flex items-center gap-2.5">
+                  <Home className="w-4 h-4 text-sky-500 group-hover:scale-110 transition shrink-0" />
                   <span>{lang === 'bn' ? 'হোম পেজে যান' : 'Home Page'}</span>
                 </div>
                 <ExternalLink className="w-3.5 h-3.5 opacity-60" />
@@ -190,39 +190,14 @@ export default function DashboardLayout({
               <Link
                 href="/products"
                 onClick={() => setMobileDrawerOpen(false)}
-                className="px-3 py-2 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex items-center justify-between text-xs font-bold hover:bg-sky-500/15 transition group"
+                className="px-3.5 py-2.5 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex items-center justify-between text-sm font-semibold hover:bg-sky-500/15 transition group"
               >
-                <div className="flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4 text-sky-500 group-hover:scale-110 transition" />
+                <div className="flex items-center gap-2.5">
+                  <ShoppingBag className="w-4 h-4 text-sky-500 group-hover:scale-110 transition shrink-0" />
                   <span>{lang === 'bn' ? 'মার্কেটপ্লেস ব্রাউজ' : 'Marketplace'}</span>
                 </div>
                 <ExternalLink className="w-3.5 h-3.5 opacity-60" />
               </Link>
-
-              {/* User Info Card */}
-              {user && (
-                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-2.5">
-                  {user.avatarUrl ? (
-                    <img
-                      src={getImageUrl(user.avatarUrl)}
-                      alt={user.firstName}
-                      className="w-8 h-8 rounded-full object-cover border border-sky-500/30 flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-sky-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
-                      {user.firstName?.charAt(0) || 'U'}
-                    </div>
-                  )}
-                  <div className="overflow-hidden flex-1">
-                    <div className="font-semibold text-xs text-slate-900 dark:text-slate-100 truncate">
-                      {user.firstName} {user.lastName}
-                    </div>
-                    <div className="text-[10px] font-mono text-sky-600 dark:text-sky-400 font-semibold truncate">
-                      {user.uniqueUserId}
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Navigation Links */}
               <nav className="space-y-1">
@@ -234,14 +209,14 @@ export default function DashboardLayout({
                       key={l.href}
                       href={l.href}
                       onClick={() => setMobileDrawerOpen(false)}
-                      className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
+                      className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[15px] font-semibold transition ${
                         isActive
                           ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 font-bold border border-sky-200 dark:border-sky-800'
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900'
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <Icon className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                        <Icon className="w-5 h-5 shrink-0" />
                         <span>{l.label}</span>
                       </div>
                       {l.href === '/dashboard/notifications' && unreadCount > 0 ? (
@@ -263,15 +238,15 @@ export default function DashboardLayout({
                   setMobileDrawerOpen(false);
                   setShowComplaintModal(true);
                 }}
-                className="w-full p-2.5 rounded-xl bg-gradient-to-r from-rose-500/10 via-amber-500/10 to-rose-500/10 border border-rose-500/25 flex items-center justify-between text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-500/15 transition shadow-xs"
+                className="w-full p-3 rounded-xl bg-gradient-to-r from-rose-500/10 via-amber-500/10 to-rose-500/10 border border-rose-500/25 flex items-center justify-between text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/15 transition shadow-xs"
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0" />
                   <span>
                     {lang === 'bn' ? '📢 অভিযোগ দাখিল করুন' : '📢 File a Complaint'}
                   </span>
                 </div>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold">
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold">
                   {lang === 'bn' ? 'সাপোর্ট' : 'Support'}
                 </span>
               </button>
@@ -280,9 +255,9 @@ export default function DashboardLayout({
               <button
                 type="button"
                 onClick={installApp}
-                className="w-full p-2.5 rounded-xl bg-gradient-to-r from-sky-500/10 to-indigo-500/10 border border-sky-500/25 flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-200"
+                className="w-full p-3 rounded-xl bg-gradient-to-r from-sky-500/10 to-indigo-500/10 border border-sky-500/25 flex items-center justify-between text-sm font-semibold text-slate-800 dark:text-slate-200"
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <Smartphone className="w-4 h-4 text-sky-500" />
                   <span>
                     {isInstalled
@@ -304,7 +279,7 @@ export default function DashboardLayout({
                 <button
                   type="button"
                   onClick={toggleLang}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition"
                 >
                   <Globe className="w-3.5 h-3.5" />
                   <span>{lang === 'bn' ? 'বাংলা' : 'EN'}</span>
@@ -321,7 +296,7 @@ export default function DashboardLayout({
               <button
                 type="button"
                 onClick={logout}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900/40 transition shadow-xs"
+                className="w-full flex items-center justify-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900/40 transition shadow-xs"
               >
                 <LogOut className="w-4 h-4 text-rose-500" />
                 <span>{t('logout')}</span>
