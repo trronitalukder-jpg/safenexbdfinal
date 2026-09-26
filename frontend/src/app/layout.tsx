@@ -5,6 +5,7 @@ import { Providers } from '@/components/Providers';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import MobileBottomNav from '@/components/layout/MobileBottomNav';
+import TrafficTracker from '@/components/analytics/TrafficTracker';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -64,6 +65,7 @@ export default function RootLayout({
         className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased selection:bg-sky-500 selection:text-white"
       >
         <Providers>
+          <TrafficTracker />
           <Navbar />
           <main className="flex-1 pb-16 md:pb-0">
             {children}

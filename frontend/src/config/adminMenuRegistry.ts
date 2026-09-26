@@ -110,6 +110,16 @@ export const adminMenuRegistry: AdminMenuItem[] = [
     category: 'general',
   },
   {
+    key: 'traffic',
+    labelEn: 'Traffic & Visitors',
+    labelBn: 'ট্রাফিক ও ভিজিটর (Traffic)',
+    href: '/admin/traffic',
+    icon: Activity,
+    descriptionEn: 'Live traffic radar, IP intelligence, dwell times, new vs repeat visitors & funnel',
+    descriptionBn: 'লাইভ ভিজিটর রাডার, আইপি অডিট, অবস্থানকাল ও আচরণ ফানেল অ্যানালিটিক্স',
+    category: 'general',
+  },
+  {
     key: 'users',
     labelEn: 'User Management',
     labelBn: 'ইউজার ম্যানেজমেন্ট',

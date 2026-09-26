@@ -132,6 +132,7 @@ model User {
 
   postedMicroJobs      MicroJob[]          @relation("EmployerJobs")
   workerSubmissions    MicroJobSubmission[] @relation("WorkerSubmissions")
+  trafficSessions      TrafficSession[]
 
   @@index([uniqueUserId])
   @@index([email])
@@ -1465,5 +1466,98 @@ model MicroJobSubmission {
   @@index([autoApproveAt])
   @@map("micro_job_submissions")
 }
+
+// -----------------------------------------------------------------------------
+// 19. Advanced Web Traffic & User Behavior Intelligence
+// -----------------------------------------------------------------------------
+
+model TrafficSession {
+  id              String            @id @default(uuid())
+  visitorId       String            @db.VarChar(100) // safnex_vid_...
+  ipAddress       String            @db.VarChar(100)
+  city            String?           @db.VarChar(100)
+  country         String?           @default("BD") @db.VarChar(10)
+  isp             String?           @db.VarChar(150) // Mobile operator or broadband ISP
+  deviceType      String            @default("MOBILE") @db.VarChar(20) // MOBILE, DESKTOP, TABLET
+  browser         String?           @db.VarChar(50)
+  os              String?           @db.VarChar(50)
+  isRepeat        Boolean           @default(false)
+  sessionNumber   Int               @default(1)
+  referrer        String?           @db.Text
+  referrerDomain  String?           @db.VarChar(200)
+  trafficSource   String            @default("DIRECT") @db.VarChar(50) // DIRECT, FACEBOOK, TELEGRAM, WHATSAPP, GOOGLE, REFERRAL, etc.
+  utmSource       String?           @db.VarChar(100)
+  utmMedium       String?           @db.VarChar(100)
+  utmCampaign     String?           @db.VarChar(150)
+  landingPage     String?           @db.VarChar(255)
+  exitPage        String?           @db.VarChar(255)
+  durationSeconds Int               @default(0)
+  activeSeconds   Int               @default(0)
+  pageviewsCount  Int               @default(1)
+  isBounce        Boolean           @default(true)
+  lastPingAt      DateTime          @default(now())
+  
+  userId          String?
+  user            User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  pageViews       TrafficPageView[]
+  events          TrafficEvent[]
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([visitorId])
+  @@index([ipAddress])
+  @@index([trafficSource])
+  @@index([isRepeat])
+  @@index([createdAt])
+  @@index([userId])
+  @@index([lastPingAt])
+  @@map("traffic_sessions")
+}
+
+model TrafficPageView {
+  id           String         @id @default(uuid())
+  sessionId    String
+  session      TrafficSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  pagePath     String         @db.VarChar(255)
+  pageTitle    String?        @db.VarChar(255)
+  dwellSeconds Int            @default(0)
+  createdAt    DateTime       @default(now())
+
+  @@index([sessionId])
+  @@index([pagePath])
+  @@index([createdAt])
+  @@map("traffic_page_views")
+}
+
+model TrafficEvent {
+  id        String         @id @default(uuid())
+  sessionId String
+  session   TrafficSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  eventType String         @db.VarChar(50) // CLICK, CTA, FORM_SUBMIT, FUNNEL_STEP
+  eventName String         @db.VarChar(100) // e.g. APPLY_JOB, REGISTER_INTENT, DEPOSIT_CLICK
+  pagePath  String?        @db.VarChar(255)
+  metadata  Json?
+  createdAt DateTime       @default(now())
+
+  @@index([sessionId])
+  @@index([eventName])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("traffic_events")
+}
+
+model BlockedIp {
+  id        String   @id @default(uuid())
+  ipAddress String   @unique @db.VarChar(100)
+  reason    String?  @db.Text
+  blockedBy String?  @db.VarChar(100)
+  createdAt DateTime @default(now())
+
+  @@index([ipAddress])
+  @@map("blocked_ips")
+}
+
 
 
