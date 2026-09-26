@@ -93,6 +93,11 @@ export interface WebsiteSystemSettings {
   newVisitorPopupMessage?: string;
   newVisitorPopupCtaText?: string;
   newVisitorPopupCtaUrl?: string;
+  scammerCheckerEnabled?: boolean;
+  socialProofEnabled?: boolean;
+  socialProofInitialDelaySeconds?: number;
+  socialProofIntervalSeconds?: number;
+  socialProofDurationSeconds?: number;
 }
 
 export interface WebsiteMicroJobSettings {
@@ -198,6 +203,11 @@ export const DEFAULT_PUBLIC_SETTINGS: WebsiteSettings = {
     allowRegistration: true,
     requireKycForWithdraw: false,
     mobileBottomNavEnabled: true,
+    scammerCheckerEnabled: true,
+    socialProofEnabled: true,
+    socialProofInitialDelaySeconds: 5,
+    socialProofIntervalSeconds: 25,
+    socialProofDurationSeconds: 8,
   },
   microJob: {
     enabled: true,

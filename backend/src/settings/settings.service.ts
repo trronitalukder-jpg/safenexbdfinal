@@ -93,6 +93,11 @@ export const DEFAULT_SETTINGS = {
     newVisitorPopupMessage: 'নিরাপদ ট্রানজেকশনে প্রোডাক্ট কেনাবেচা করুন এবং সহজ কাজ সম্পন্ন করে বিকাশ/নগদে ঘরে বসেই আয় করুন।',
     newVisitorPopupCtaText: '🚀 এখনই ফ্রি রেজিস্ট্রেশন করুন',
     newVisitorPopupCtaUrl: '/register',
+    scammerCheckerEnabled: true,
+    socialProofEnabled: true,
+    socialProofInitialDelaySeconds: 5,
+    socialProofIntervalSeconds: 25,
+    socialProofDurationSeconds: 8,
   },
   withdrawal: {
     requirePasswordForPayoutAccount: true,
@@ -372,6 +377,11 @@ export class SettingsService {
         maintenanceMessage: all.system.maintenanceMessage,
         allowRegistration: all.system.allowRegistration,
         mobileBottomNavEnabled: Boolean(all.system?.mobileBottomNavEnabled !== false),
+        scammerCheckerEnabled: Boolean(all.system?.scammerCheckerEnabled !== false),
+        socialProofEnabled: Boolean(all.system?.socialProofEnabled !== false),
+        socialProofInitialDelaySeconds: Number(all.system?.socialProofInitialDelaySeconds ?? 5),
+        socialProofIntervalSeconds: Number(all.system?.socialProofIntervalSeconds ?? 25),
+        socialProofDurationSeconds: Number(all.system?.socialProofDurationSeconds ?? 8),
       },
       withdrawal: all.withdrawal,
       operations: {

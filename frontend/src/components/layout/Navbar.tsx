@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   ShieldCheck,
+  ShieldAlert,
   Search,
   Wallet,
   User,
@@ -208,6 +209,16 @@ export const Navbar = () => {
             >
               <BookOpen className="w-3.5 h-3.5" />
               <span>{lang === 'bn' ? 'গাইডস' : 'Guides'}</span>
+            </Link>
+
+            {/* Scammer & Trust Checker Button */}
+            <Link
+              href="/check"
+              title={lang === 'bn' ? 'স্ক্যামার ও ট্রাস্ট চেকার' : 'Scammer & Trust Checker'}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-slate-950 transition shadow-xs flex-shrink-0"
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-red-500 shrink-0" />
+              <span>{lang === 'bn' ? 'স্ক্যামার চেকার' : 'Trust Check'}</span>
             </Link>
 
             {/* Language Switch (Desktop) */}

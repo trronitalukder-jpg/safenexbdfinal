@@ -43,7 +43,7 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { user, isLoading, isAdmin, isSuperAdmin, hasAdminPermission, refreshMe, logout } = useAuthStore();
-  const { lang, setLang, toggleLang } = useLanguage();
+  const { lang, toggleLang } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const {
@@ -429,33 +429,16 @@ export default function AdminLayout({
             )}
           </Link>
 
-          {/* Explicit Language Switcher: Bangla | English */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700/60 text-xs font-bold">
-            <button
-              type="button"
-              onClick={() => setLang('bn')}
-              className={`px-2.5 py-1 rounded-lg transition-all ${
-                lang === 'bn'
-                  ? 'bg-sky-600 text-white shadow-xs font-black'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-              title="বাংলায় দেখুন"
-            >
-              বাংলা
-            </button>
-            <button
-              type="button"
-              onClick={() => setLang('en')}
-              className={`px-2.5 py-1 rounded-lg transition-all ${
-                lang === 'en'
-                  ? 'bg-sky-600 text-white shadow-xs font-black'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-              title="View in English"
-            >
-              English
-            </button>
-          </div>
+          {/* Language Switch */}
+          <button
+            type="button"
+            onClick={toggleLang}
+            title={lang === 'bn' ? 'Switch to English' : 'বাংলায় পরিবর্তন করুন'}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 transition"
+          >
+            <Globe className="w-3.5 h-3.5 text-amber-500" />
+            <span>{lang === 'bn' ? 'বাংলা' : 'EN'}</span>
+          </button>
 
           {/* Dark / Light Mode Toggle */}
           <button

@@ -12,6 +12,7 @@ import {
   Trophy,
   LayoutDashboard,
   Wallet,
+  ShieldAlert,
 } from 'lucide-react';
 
 export default function MobileBottomNav() {
@@ -38,6 +39,14 @@ export default function MobileBottomNav() {
       isActive: pathname === '/',
     },
     {
+      href: '/check',
+      labelBn: 'চেকার',
+      labelEn: 'Checker',
+      icon: ShieldAlert,
+      badge: 'নতুন',
+      isActive: pathname.startsWith('/check'),
+    },
+    {
       href: '/micro-jobs',
       labelBn: 'মাইক্রো জব',
       labelEn: 'Jobs',
@@ -51,13 +60,6 @@ export default function MobileBottomNav() {
       labelEn: 'Shop',
       icon: ShoppingBag,
       isActive: pathname.startsWith('/shop') || pathname.startsWith('/products'),
-    },
-    {
-      href: '/leaderboard',
-      labelBn: 'লিডারবোর্ড',
-      labelEn: 'Top',
-      icon: Trophy,
-      isActive: pathname === '/leaderboard',
     },
     {
       href: '/dashboard',

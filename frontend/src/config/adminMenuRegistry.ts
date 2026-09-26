@@ -211,6 +211,16 @@ export const adminMenuRegistry: AdminMenuItem[] = [
     category: 'moderation',
   },
   {
+    key: 'scammers',
+    labelEn: 'Scammer & Trust Checker',
+    labelBn: 'স্ক্যামার ও ট্রাস্ট চেকার',
+    href: '/admin/scammers',
+    icon: ShieldAlert,
+    descriptionEn: 'Review user scam reports, approve records, add direct entries and purge scammers',
+    descriptionBn: 'ইউজারদের দাখিলকৃত স্ক্যামার রিপোর্ট অডিট, অনুমোদন, সরাসরি এন্ট্রি ও ডিলিট',
+    category: 'moderation',
+  },
+  {
     key: 'transactions',
     labelEn: 'All Transactions',
     labelBn: 'সব ট্রানজ্যাকশন',

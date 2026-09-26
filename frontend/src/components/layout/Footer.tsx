@@ -363,6 +363,14 @@ export const Footer = () => {
             </h4>
             <ul className="space-y-2.5 text-sm">
               <li>
+                <Link
+                  href="/check"
+                  className="hover:text-red-500 dark:hover:text-red-400 transition font-bold text-red-600 dark:text-red-400 flex items-center gap-1.5"
+                >
+                  <span>🛡️ {lang === 'bn' ? 'স্ক্যামার ও ট্রাস্ট ভেরিফিকেশন' : 'Scammer & Trust Verification'}</span>
+                </Link>
+              </li>
+              <li>
                 <Link href="/partner-api" className="hover:text-sky-600 dark:hover:text-white transition font-medium text-indigo-600 dark:text-indigo-400">
                   {lang === 'bn' ? '🚀 এপিআই আবেদন (API Apply)' : '🚀 Partner API Application'}
                 </Link>

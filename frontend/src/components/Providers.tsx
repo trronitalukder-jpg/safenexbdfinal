@@ -9,6 +9,7 @@ import { NotificationProvider } from '@/context/NotificationContext';
 import { InstallPromptModal } from '@/components/pwa/InstallPromptModal';
 import { NotificationPromptBanner } from '@/components/notifications/NotificationPromptBanner';
 import { TrackingRouteListener } from '@/components/tracking/TrackingRouteListener';
+import { SocialProofPopup } from '@/components/common/SocialProofPopup';
 
 export const Providers: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
@@ -21,6 +22,7 @@ export const Providers: React.FC<{ children: React.ReactNode }> = ({ children })
               {children}
               <InstallPromptModal />
               <NotificationPromptBanner />
+              <SocialProofPopup />
             </PwaProvider>
           </NotificationProvider>
         </SettingsProvider>

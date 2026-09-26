@@ -1559,5 +1559,53 @@ model BlockedIp {
   @@map("blocked_ips")
 }
 
+// -----------------------------------------------------------------------------
+// Scammer & Trust Checker
+// -----------------------------------------------------------------------------
+
+enum ScammerReportStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ScammerCategory {
+  TRANSACTION_FRAUD
+  FAKE_PRODUCT
+  ACCOUNT_THEFT
+  FAKE_SERVICE
+  OTHER
+}
+
+model ScammerRecord {
+  id              String               @id @default(uuid())
+  phone           String?              @db.VarChar(30)
+  facebookLink    String?              @db.VarChar(500)
+  facebookUid     String?              @db.VarChar(100)
+  scammerName     String?              @db.VarChar(150)
+  scammerPhotoUrl String?              @db.VarChar(500)
+  category        ScammerCategory      @default(TRANSACTION_FRAUD)
+  description     String               @db.Text
+  amountLost      Decimal?             @db.Decimal(12, 2)
+  proofImages     Json
+  severity        String               @default("HIGH") @db.VarChar(20)
+  status          ScammerReportStatus  @default(PENDING)
+  adminNotes      String?              @db.Text
+  rejectionReason String?              @db.Text
+  reporterId      String               @db.VarChar(36)
+  reporterName    String               @db.VarChar(100)
+  reporterPhone   String               @db.VarChar(30)
+  reporterIp      String?              @db.VarChar(50)
+  searchHitCount  Int                  @default(0)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([phone])
+  @@index([facebookUid])
+  @@index([status])
+  @@index([reporterId])
+  @@map("scammer_records")
+}
+
 
 

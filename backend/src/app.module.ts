@@ -28,6 +28,7 @@ import { AffiliateModule } from './affiliate/affiliate.module';
 import { MicroJobsModule } from './micro-jobs/micro-jobs.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { TrafficModule } from './traffic/traffic.module';
+import { ScammerReportsModule } from './scammer-reports/scammer-reports.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { TrafficModule } from './traffic/traffic.module';
     MicroJobsModule,
     LeaderboardModule,
     TrafficModule,
+    ScammerReportsModule,
   ],
   providers: [
     {
