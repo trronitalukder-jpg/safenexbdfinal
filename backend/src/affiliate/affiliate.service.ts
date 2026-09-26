@@ -5,7 +5,7 @@ import { ChatGateway } from '../chat/chat.gateway';
 
 export interface AffiliateSettings {
   isEnabled: boolean;
-  commissionSource: 'TRANSACTION' | 'RECHARGE' | 'BOTH';
+  commissionSource: 'TRANSACTION' | 'RECHARGE' | 'MICRO_JOB' | 'BOTH' | 'ALL';
   rewardType: 'PERCENTAGE' | 'FLAT';
   rewardValue: number;
   triggerCondition: 'LIFETIME' | 'FIRST_ONLY';
@@ -90,19 +90,25 @@ export class AffiliateService {
    * Called on Transaction completion or Recharge approval
    */
   async processReferralReward(params: {
-    userId: string; // The user who did the transaction/recharge
-    sourceType: 'TRANSACTION' | 'RECHARGE';
-    sourceId: string; // transactionId or rechargeId
+    userId: string; // The user who did the transaction/recharge/microjob
+    sourceType: 'TRANSACTION' | 'RECHARGE' | 'MICRO_JOB';
+    sourceId: string; // transactionId, rechargeId, or submissionId/jobId
     adminFee: number; // The profit/fee company took
+    notes?: string;
   }) {
-    const { userId, sourceType, sourceId, adminFee } = params;
+    const { userId, sourceType, sourceId, adminFee, notes } = params;
 
     try {
       const settings = await this.getSettings();
       if (!settings.isEnabled) return null;
 
       // Check if source type is enabled
-      if (settings.commissionSource !== 'BOTH' && settings.commissionSource !== sourceType) {
+      const isSourceEnabled =
+        settings.commissionSource === 'ALL' ||
+        (settings.commissionSource === 'BOTH' && (sourceType === 'TRANSACTION' || sourceType === 'RECHARGE')) ||
+        settings.commissionSource === sourceType;
+
+      if (!isSourceEnabled) {
         return null;
       }
 
@@ -213,7 +219,15 @@ export class AffiliateService {
             holdAfter: refWallet.holdBalance,
             referenceId: rewardLog.id,
             referenceType: 'AFFILIATE_REWARD',
-            notes: `রেফারেল ইনকাম: ব্যবহারকারী @${user.uniqueUserId || user.firstName} এর ${sourceType === 'RECHARGE' ? 'রিচার্জ' : 'লেনদেন'} থেকে কমিশন`,
+            notes: notes
+              ? `রেফারেল ইনকাম (${notes}): @${user.uniqueUserId || user.firstName}`
+              : `রেফারেল ইনকাম: ব্যবহারকারী @${user.uniqueUserId || user.firstName} এর ${
+                  sourceType === 'RECHARGE'
+                    ? 'রিচার্জ'
+                    : sourceType === 'MICRO_JOB'
+                    ? 'মাইক্রো জব'
+                    : 'লেনদেন'
+                } থেকে কমিশন`,
             status: 'COMPLETED',
             createdBy: 'SYSTEM',
           },
@@ -224,12 +238,19 @@ export class AffiliateService {
 
       // 5. Notify referrer in real-time
       if (this.chatGateway && result) {
+        const sourceLabel =
+          sourceType === 'RECHARGE'
+            ? 'রিচার্জ'
+            : sourceType === 'MICRO_JOB'
+            ? 'মাইক্রো জব'
+            : 'লেনদেন';
+
         this.chatGateway.notifyUser(referrerId, 'notification:affiliate_reward', {
           amount: rewardAmount,
           fromUser: user.uniqueUserId || user.firstName,
           sourceType,
           title: '🎉 রেফারেল কমিশন জমা হয়েছে!',
-          message: `আপনার রেফারেল @${user.uniqueUserId || user.firstName} এর সফল কার্যক্রম থেকে ৳${rewardAmount} কমিশন আপনার ওয়ালেটে জমা হয়েছে।`,
+          message: `আপনার রেফারেল @${user.uniqueUserId || user.firstName} এর ${sourceLabel} থেকে ৳${rewardAmount} কমিশন আপনার ওয়ালেটে জমা হয়েছে।`,
         });
       }
 

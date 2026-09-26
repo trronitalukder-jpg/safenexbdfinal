@@ -5,9 +5,10 @@ import { MicroJobsAdminController } from './micro-jobs-admin.controller';
 import { MicroJobsGuard } from './micro-jobs.guard';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SettingsModule } from '../settings/settings.module';
+import { AffiliateModule } from '../affiliate/affiliate.module';
 
 @Module({
-  imports: [PrismaModule, SettingsModule],
+  imports: [PrismaModule, SettingsModule, AffiliateModule],
   controllers: [MicroJobsController, MicroJobsAdminController],
   providers: [MicroJobsService, MicroJobsGuard],
   exports: [MicroJobsService],

@@ -124,7 +124,7 @@ export default function AdminCommissionsPage() {
   // Affiliate Settings state
   const [affiliateSettings, setAffiliateSettings] = useState({
     isEnabled: true,
-    commissionSource: 'BOTH' as 'TRANSACTION' | 'RECHARGE' | 'BOTH',
+    commissionSource: 'ALL' as 'TRANSACTION' | 'RECHARGE' | 'MICRO_JOB' | 'BOTH' | 'ALL',
     rewardType: 'PERCENTAGE' as 'PERCENTAGE' | 'FLAT',
     rewardValue: 20,
     triggerCondition: 'LIFETIME' as 'LIFETIME' | 'FIRST_ONLY',
@@ -178,7 +178,7 @@ export default function AdminCommissionsPage() {
       if (affData) {
         setAffiliateSettings({
           isEnabled: affData.isEnabled !== false,
-          commissionSource: affData.commissionSource || 'BOTH',
+          commissionSource: affData.commissionSource || 'ALL',
           rewardType: affData.rewardType || 'PERCENTAGE',
           rewardValue: Number(affData.rewardValue ?? 20),
           triggerCondition: affData.triggerCondition || 'LIFETIME',
@@ -1133,7 +1133,29 @@ export default function AdminCommissionsPage() {
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
               {lang === 'bn' ? '১. কমিশন দেওয়ার খাত (Commission Source)' : '1. Commission Source'}
             </label>
-            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => setAffiliateSettings((p) => ({ ...p, commissionSource: 'ALL' }))}
+                className={`py-2 px-2 rounded-xl text-[11px] font-bold transition text-center ${
+                  affiliateSettings.commissionSource === 'ALL' || affiliateSettings.commissionSource === 'BOTH'
+                    ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                {lang === 'bn' ? 'সব খাত (All)' : 'All Sources'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAffiliateSettings((p) => ({ ...p, commissionSource: 'MICRO_JOB' }))}
+                className={`py-2 px-2 rounded-xl text-[11px] font-bold transition text-center ${
+                  affiliateSettings.commissionSource === 'MICRO_JOB'
+                    ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                {lang === 'bn' ? 'মাইক্রো জব' : 'Micro Job'}
+              </button>
               <button
                 type="button"
                 onClick={() => setAffiliateSettings((p) => ({ ...p, commissionSource: 'TRANSACTION' }))}
@@ -1156,22 +1178,11 @@ export default function AdminCommissionsPage() {
               >
                 {lang === 'bn' ? 'রিচার্জ' : 'Recharge'}
               </button>
-              <button
-                type="button"
-                onClick={() => setAffiliateSettings((p) => ({ ...p, commissionSource: 'BOTH' }))}
-                className={`py-2 px-2 rounded-xl text-[11px] font-bold transition text-center ${
-                  affiliateSettings.commissionSource === 'BOTH'
-                    ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                {lang === 'bn' ? 'উভয়টি' : 'Both'}
-              </button>
             </div>
             <p className="text-[11px] text-slate-400">
               {lang === 'bn'
-                ? 'রেফার করা ব্যক্তি যখন লেনদেন বা রিচার্জ করবে তখন কমিশন পাবে।'
-                : 'Triggers when user makes escrow deal or wallet recharge.'}
+                ? 'রেফার করা ব্যবহারকারী যখন মাইক্রো জব, লেনদেন বা রিচার্জ করবে তখন রেফারার কমিশন পাবে।'
+                : 'Triggers when user posts/completes micro jobs, escrow deals or wallet recharges.'}
             </p>
           </div>
 

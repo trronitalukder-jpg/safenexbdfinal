@@ -440,8 +440,18 @@ export default function AffiliateDashboardPage() {
                   <div>
                     <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                       <span className="text-emerald-500">+৳ {rw.amount}</span>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                        {rw.sourceType}
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        rw.sourceType === 'MICRO_JOB'
+                          ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
+                          : rw.sourceType === 'RECHARGE'
+                          ? 'bg-sky-500/10 text-sky-700 dark:text-sky-400 border border-sky-500/20'
+                          : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
+                      }`}>
+                        {rw.sourceType === 'MICRO_JOB'
+                          ? (lang === 'bn' ? 'মাইক্রো জব' : 'Micro Job')
+                          : rw.sourceType === 'RECHARGE'
+                          ? (lang === 'bn' ? 'রিচার্জ' : 'Recharge')
+                          : (lang === 'bn' ? 'লেনদেন' : 'Transaction')}
                       </span>
                     </div>
                     <div className="text-[11px] text-slate-400">

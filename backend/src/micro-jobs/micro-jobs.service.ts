@@ -2,7 +2,9 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
@@ -10,12 +12,16 @@ import { CreateMicroJobDto } from './dto/create-micro-job.dto';
 import { SubmitMicroJobDto } from './dto/submit-micro-job.dto';
 import { ReviewSubmissionDto } from './dto/review-submission.dto';
 import { Decimal } from '@prisma/client/runtime/library';
+import { AffiliateService } from '../affiliate/affiliate.service';
 
 @Injectable()
 export class MicroJobsService {
+  private readonly logger = new Logger(MicroJobsService.name);
+
   constructor(
     private prisma: PrismaService,
     private settingsService: SettingsService,
+    @Optional() private affiliateService?: AffiliateService,
   ) {}
 
   /**
@@ -105,7 +111,7 @@ export class MicroJobsService {
     const autoApproveHours = dto.autoApproveHours || Number(settings.autoApproveHours || 48);
 
     // Atomically verify balance and lock funds
-    return this.prisma.$transaction(async (tx) => {
+    const createdJob = await this.prisma.$transaction(async (tx) => {
       const wallet = await tx.wallet.findUnique({
         where: { userId: employerId },
       });
@@ -174,6 +180,22 @@ export class MicroJobsService {
 
       return job;
     });
+
+    // Process Affiliate Referral Reward for employer referral (from company platform fee profit)
+    const affiliate = this.affiliateService;
+    if (affiliate && platformFee > 0) {
+      affiliate
+        .processReferralReward({
+          userId: employerId,
+          sourceType: 'MICRO_JOB',
+          sourceId: createdJob.id,
+          adminFee: platformFee,
+          notes: 'মাইক্রো জব পোস্ট ফি',
+        })
+        .catch((err) => this.logger.error('Failed to process micro job employer referral reward:', err));
+    }
+
+    return createdJob;
   }
 
   /**
@@ -452,7 +474,7 @@ export class MicroJobsService {
     const reward = Number(submission.job.rewardPerWorker);
 
     if (dto.action === 'APPROVE') {
-      return this.prisma.$transaction(async (tx) => {
+      const approvedResult = await this.prisma.$transaction(async (tx) => {
         // 1. Update submission
         const updated = await tx.microJobSubmission.update({
           where: { id: submissionId },
@@ -513,6 +535,27 @@ export class MicroJobsService {
 
         return updated;
       });
+
+      // Process Affiliate Referral Reward for worker referral (from task platform fee)
+      const affiliate = this.affiliateService;
+      if (affiliate && submission) {
+        const settings = await this.settingsService.getMicroJobSettings();
+        const platformFeePercent = Number(settings.platformFeePercent ?? 5);
+        const taskAdminFee = (reward * platformFeePercent) / 100;
+        if (taskAdminFee > 0) {
+          affiliate
+            .processReferralReward({
+              userId: submission.workerId,
+              sourceType: 'MICRO_JOB',
+              sourceId: submission.id,
+              adminFee: taskAdminFee,
+              notes: 'মাইক্রো জব কাজ সম্পন্ন',
+            })
+            .catch((err) => this.logger.error('Failed to process worker affiliate reward:', err));
+        }
+      }
+
+      return approvedResult;
     } else {
       // REJECT
       return this.prisma.$transaction(async (tx) => {
@@ -619,6 +662,211 @@ export class MicroJobsService {
         refundAmount,
         remainingSlots,
       };
+    });
+  }
+
+  /**
+   * Employer or Admin pauses / resumes a job (toggles between ACTIVE and PAUSED)
+   */
+  async toggleJobStatus(jobId: string, userId: string, isAdmin = false) {
+    const job = await this.prisma.microJob.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      throw new NotFoundException('কাজটি খুঁজে পাওয়া যায়নি');
+    }
+
+    if (!isAdmin && job.employerId !== userId) {
+      throw new ForbiddenException('এই কাজটি পরিবর্তন করার অনুমতি আপনার নেই');
+    }
+
+    if (job.status === 'COMPLETED' || job.status === 'CANCELLED') {
+      throw new BadRequestException('সম্পন্ন বা বাতিল কাজ পুনরায় পরিবর্তন করা যাবে না');
+    }
+
+    const nextStatus = job.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+
+    const updated = await this.prisma.microJob.update({
+      where: { id: jobId },
+      data: { status: nextStatus },
+      include: { category: true },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Employer permanently deletes a job (refunds remaining slots if active/paused)
+   */
+  async deleteJob(jobId: string, employerId: string) {
+    const job = await this.prisma.microJob.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      throw new NotFoundException('কাজটি খুঁজে পাওয়া যায়নি');
+    }
+
+    if (job.employerId !== employerId) {
+      throw new ForbiddenException('এই কাজটি মুছে ফেলার অনুমতি আপনার নেই');
+    }
+
+    const remainingSlots = Math.max(0, job.totalWorkersNeeded - job.approvedCount - job.pendingCount);
+
+    return this.prisma.$transaction(async (tx) => {
+      let refundAmount = 0;
+      if ((job.status === 'ACTIVE' || job.status === 'PAUSED') && remainingSlots > 0) {
+        const unitReward = Number(job.rewardPerWorker);
+        const workerBudgetRefund = remainingSlots * unitReward;
+        const totalBudget = Number(job.totalBudget);
+        const feeRatio = totalBudget > 0 ? Number(job.platformFee) / totalBudget : 0;
+        const feeRefund = workerBudgetRefund * feeRatio;
+        refundAmount = workerBudgetRefund + feeRefund;
+
+        const wallet = await tx.wallet.findUnique({
+          where: { userId: employerId },
+        });
+
+        if (wallet && refundAmount > 0) {
+          const balanceBefore = Number(wallet.availableBalance);
+          const balanceAfter = balanceBefore + refundAmount;
+
+          await tx.wallet.update({
+            where: { id: wallet.id },
+            data: {
+              availableBalance: balanceAfter,
+              version: { increment: 1 },
+            },
+          });
+
+          await tx.walletLedger.create({
+            data: {
+              walletId: wallet.id,
+              userId: employerId,
+              type: 'MICROJOB_REFUND',
+              amount: refundAmount,
+              balanceBefore,
+              balanceAfter,
+              holdBefore: Number(wallet.holdBalance),
+              holdAfter: Number(wallet.holdBalance),
+              referenceId: job.id,
+              referenceType: 'MICRO_JOB',
+              notes: `Refund for deleted micro job (${remainingSlots} unfulfilled slots): ${job.title}`,
+              status: 'COMPLETED',
+            },
+          });
+        }
+      }
+
+      await tx.microJob.delete({
+        where: { id: jobId },
+      });
+
+      return {
+        success: true,
+        deletedJobId: jobId,
+        refundAmount,
+      };
+    });
+  }
+
+  /**
+   * Admin permanently deletes any job (refunds remaining slots if active/paused)
+   */
+  async adminDeleteJob(jobId: string, adminId: string) {
+    const job = await this.prisma.microJob.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      throw new NotFoundException('কাজটি খুঁজে পাওয়া যায়নি');
+    }
+
+    const remainingSlots = Math.max(0, job.totalWorkersNeeded - job.approvedCount - job.pendingCount);
+
+    return this.prisma.$transaction(async (tx) => {
+      let refundAmount = 0;
+      if ((job.status === 'ACTIVE' || job.status === 'PAUSED') && remainingSlots > 0) {
+        const unitReward = Number(job.rewardPerWorker);
+        const workerBudgetRefund = remainingSlots * unitReward;
+        const totalBudget = Number(job.totalBudget);
+        const feeRatio = totalBudget > 0 ? Number(job.platformFee) / totalBudget : 0;
+        const feeRefund = workerBudgetRefund * feeRatio;
+        refundAmount = workerBudgetRefund + feeRefund;
+
+        const wallet = await tx.wallet.findUnique({
+          where: { userId: job.employerId },
+        });
+
+        if (wallet && refundAmount > 0) {
+          const balanceBefore = Number(wallet.availableBalance);
+          const balanceAfter = balanceBefore + refundAmount;
+
+          await tx.wallet.update({
+            where: { id: wallet.id },
+            data: {
+              availableBalance: balanceAfter,
+              version: { increment: 1 },
+            },
+          });
+
+          await tx.walletLedger.create({
+            data: {
+              walletId: wallet.id,
+              userId: job.employerId,
+              type: 'MICROJOB_REFUND',
+              amount: refundAmount,
+              balanceBefore,
+              balanceAfter,
+              holdBefore: Number(wallet.holdBalance),
+              holdAfter: Number(wallet.holdBalance),
+              referenceId: job.id,
+              referenceType: 'MICRO_JOB',
+              notes: `Refund for micro job deleted by admin (${adminId}): ${job.title}`,
+              status: 'COMPLETED',
+            },
+          });
+        }
+      }
+
+      await tx.microJob.delete({
+        where: { id: jobId },
+      });
+
+      return {
+        success: true,
+        deletedJobId: jobId,
+        refundAmount,
+      };
+    });
+  }
+
+  /**
+   * Admin updates job status (ACTIVE, PAUSED, CANCELLED, COMPLETED)
+   */
+  async adminUpdateJobStatus(jobId: string, status: any, adminId: string) {
+    const job = await this.prisma.microJob.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      throw new NotFoundException('কাজটি খুঁজে পাওয়া যায়নি');
+    }
+
+    if (status === 'CANCELLED') {
+      return this.adminCancelJob(jobId, adminId);
+    }
+
+    return this.prisma.microJob.update({
+      where: { id: jobId },
+      data: { status },
+      include: {
+        category: true,
+        employer: {
+          select: { id: true, firstName: true, lastName: true, uniqueUserId: true },
+        },
+      },
     });
   }
 
@@ -796,7 +1044,7 @@ export class MicroJobsService {
     const reward = Number(submission.job.rewardPerWorker);
 
     if (dto.action === 'APPROVE') {
-      return this.prisma.$transaction(async (tx) => {
+      const approvedResult = await this.prisma.$transaction(async (tx) => {
         const updated = await tx.microJobSubmission.update({
           where: { id: submissionId },
           data: {
@@ -855,6 +1103,27 @@ export class MicroJobsService {
 
         return updated;
       });
+
+      // Process Affiliate Referral Reward for worker referral (from task platform fee)
+      const affiliate = this.affiliateService;
+      if (affiliate && submission) {
+        const settings = await this.settingsService.getMicroJobSettings();
+        const platformFeePercent = Number(settings.platformFeePercent ?? 5);
+        const taskAdminFee = (reward * platformFeePercent) / 100;
+        if (taskAdminFee > 0) {
+          affiliate
+            .processReferralReward({
+              userId: submission.workerId,
+              sourceType: 'MICRO_JOB',
+              sourceId: submission.id,
+              adminFee: taskAdminFee,
+              notes: 'মাইক্রো জব কাজ সম্পন্ন (এডমিন অ্যাপ্রুভ)',
+            })
+            .catch((err) => this.logger.error('Failed to process admin worker affiliate reward:', err));
+        }
+      }
+
+      return approvedResult;
     } else {
       // REJECT
       return this.prisma.$transaction(async (tx) => {
@@ -1035,6 +1304,27 @@ export class MicroJobsService {
             },
           });
         });
+
+        // Process Affiliate Referral Reward for worker referral (from task platform fee)
+        const affiliate = this.affiliateService;
+        if (affiliate) {
+          const settings = await this.settingsService.getMicroJobSettings();
+          const platformFeePercent = Number(settings.platformFeePercent ?? 5);
+          const reward = Number(sub.job.rewardPerWorker);
+          const taskAdminFee = (reward * platformFeePercent) / 100;
+          if (taskAdminFee > 0) {
+            affiliate
+              .processReferralReward({
+                userId: sub.workerId,
+                sourceType: 'MICRO_JOB',
+                sourceId: sub.id,
+                adminFee: taskAdminFee,
+                notes: 'মাইক্রো জব কাজ সম্পন্ন (অটো-অ্যাপ্রুভ)',
+              })
+              .catch((err) => this.logger.error('Failed to process auto-approved worker affiliate reward:', err));
+          }
+        }
+
         processedCount++;
       } catch (err) {
         console.error(`Failed to auto-approve submission ${sub.id}:`, err);
