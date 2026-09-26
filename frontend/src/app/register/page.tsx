@@ -16,6 +16,13 @@ import {
   Eye,
   EyeOff,
   Gift,
+  Sparkles,
+  Phone,
+  Mail,
+  User,
+  Lock,
+  Building2,
+  MapPin,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -64,6 +71,35 @@ function RegisterContent() {
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Calculate password strength score (0 to 4)
+  const getPasswordStrength = (pwd: string) => {
+    if (!pwd) return 0;
+    let score = 0;
+    if (pwd.length >= 6) score += 1;
+    if (pwd.length >= 8) score += 1;
+    if (/[0-9]/.test(pwd)) score += 1;
+    if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) score += 1;
+    if (/[^A-Za-z0-9]/.test(pwd)) score += 1;
+    return Math.min(score, 4);
+  };
+
+  const pwdStrength = getPasswordStrength(formData.password);
+
+  const getStrengthLabel = (score: number) => {
+    if (!formData.password) return '';
+    if (score <= 1) return lang === 'bn' ? 'দুর্বল' : 'Weak';
+    if (score === 2) return lang === 'bn' ? 'মোটামুটি' : 'Fair';
+    if (score === 3) return lang === 'bn' ? 'ভালো' : 'Good';
+    return lang === 'bn' ? 'অত্যন্ত শক্তিশালী' : 'Very Strong';
+  };
+
+  const getStrengthColor = (score: number) => {
+    if (score <= 1) return 'bg-rose-500 text-rose-500';
+    if (score === 2) return 'bg-amber-500 text-amber-500';
+    if (score === 3) return 'bg-sky-500 text-sky-500';
+    return 'bg-emerald-500 text-emerald-500';
+  };
 
   // Handle avatar file selection & background upload
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -184,33 +220,68 @@ function RegisterContent() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-12rem)] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-8 shadow-xl space-y-6">
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-sky-600 text-white flex items-center justify-center mx-auto shadow-md shadow-sky-600/20">
-            <UserCheck className="w-7 h-7" />
+    <div className="relative min-h-[calc(100vh-12rem)] flex items-center justify-center px-3 sm:px-6 py-6 sm:py-12 overflow-hidden">
+      {/* Ambient background glow for high-end look */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 sm:w-96 h-80 sm:h-96 bg-gradient-to-tr from-sky-500/15 to-indigo-500/15 rounded-full blur-3xl pointer-events-none -z-10" />
+
+      <div className="w-full max-w-xl bg-white dark:bg-slate-900/95 backdrop-blur-md rounded-3xl border border-slate-200/90 dark:border-slate-800 p-5 sm:p-8 shadow-2xl shadow-slate-200/50 dark:shadow-none space-y-6 relative overflow-hidden">
+        {/* Top vibrant gradient accent line */}
+        <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-sky-500 via-indigo-600 to-emerald-500" />
+
+        {/* Header & Trust Highlights */}
+        <div className="text-center space-y-3 pt-1">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-sky-500/10 to-indigo-500/10 border border-sky-500/20 text-sky-700 dark:text-sky-300 text-[11px] sm:text-xs font-bold shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>{lang === 'bn' ? '১০০% ফ্রি অ্যাকাউন্ট • কোনো লুকানো চার্জ নেই' : '100% Free Account • Zero Hidden Fees'}</span>
           </div>
-          <h1 className="text-xl font-extrabold text-slate-900 dark:text-white">
-            {lang === 'bn' ? 'নতুন অ্যাকাউন্ট তৈরি করুন' : 'Create an Account'}
+
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            {lang === 'bn' ? (
+              <>
+                নতুন অ্যাকাউন্ট <span className="bg-gradient-to-r from-sky-600 to-indigo-600 bg-clip-text text-transparent">তৈরি করুন</span>
+              </>
+            ) : (
+              <>
+                Create Your <span className="bg-gradient-to-r from-sky-600 to-indigo-600 bg-clip-text text-transparent">Free Account</span>
+              </>
+            )}
           </h1>
-          <p className="text-xs text-slate-500">
+
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
             {lang === 'bn'
-              ? 'একটি অ্যাকাউন্ট থেকেই আপনি বায়ার, সেলার ও সার্ভিস প্রোভাইডার হিসেবে কাজ করতে পারবেন'
-              : 'Single account for Buyer, Seller, and Service Provider'}
+              ? 'নিরাপদ লেনদেন, মাইক্রো-টাস্ক ইনকাম ও বাই-সেল—সবকিছু এক অ্যাকাউন্টে!'
+              : 'One secure account for Escrow, Micro-Job Earning, Buying & Selling.'}
           </p>
+
+          {/* 3 Mobile-Optimized Trust Badges */}
+          <div className="grid grid-cols-3 gap-2 pt-1 text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300">
+            <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 flex items-center justify-center gap-1.5 shadow-2xs">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+              <span className="truncate">{lang === 'bn' ? '১০০% নিরাপদ' : '100% Safe'}</span>
+            </div>
+            <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 flex items-center justify-center gap-1.5 shadow-2xs">
+              <span className="text-amber-500 font-extrabold flex-shrink-0">⚡</span>
+              <span className="truncate">{lang === 'bn' ? 'দ্রুত পেমেন্ট' : 'Fast Payout'}</span>
+            </div>
+            <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 flex items-center justify-center gap-1.5 shadow-2xs">
+              <span className="text-sky-500 font-extrabold flex-shrink-0">💼</span>
+              <span className="truncate">{lang === 'bn' ? 'কাজ ও আয়' : 'Work & Earn'}</span>
+            </div>
+          </div>
         </div>
 
         {error && (
-          <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 text-xs font-medium">
-            {error}
+          <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-300 text-xs font-semibold flex items-center gap-2 animate-shake">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Profile Picture Upload Section */}
-          <div className="p-4 rounded-2xl bg-slate-50/90 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row items-center gap-4">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-b from-slate-50 to-slate-100/50 dark:from-slate-800/60 dark:to-slate-800/30 border border-slate-200/80 dark:border-slate-800 flex items-center gap-3.5 sm:gap-4">
             <div className="relative group flex-shrink-0">
-              <div className="w-20 h-20 rounded-full overflow-hidden border-3 border-white dark:border-slate-800 shadow-md bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-black relative">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-white dark:border-slate-700 shadow-md bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white text-xl font-black relative ring-4 ring-sky-500/10">
                 {avatarPreview ? (
                   <img
                     src={avatarPreview}
@@ -218,8 +289,8 @@ function RegisterContent() {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <span className="text-slate-200 text-xl font-bold">
-                    {formData.firstName ? formData.firstName.charAt(0).toUpperCase() : <Camera className="w-7 h-7 opacity-70" />}
+                  <span className="text-white text-lg sm:text-xl font-bold">
+                    {formData.firstName ? formData.firstName.charAt(0).toUpperCase() : <Camera className="w-6 h-6 sm:w-7 sm:h-7 opacity-80" />}
                   </span>
                 )}
 
@@ -235,21 +306,26 @@ function RegisterContent() {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingAvatar}
-                title={lang === 'bn' ? 'ছবি যুক্ত করুন' : 'Upload Avatar'}
-                className="absolute bottom-0 right-0 p-1.5 rounded-full bg-sky-600 hover:bg-sky-500 text-white shadow border-2 border-white dark:border-slate-900 transition hover:scale-105"
+                aria-label={lang === 'bn' ? 'ছবি যুক্ত করুন' : 'Upload Avatar'}
+                className="absolute -bottom-0.5 -right-0.5 p-1.5 rounded-full bg-sky-600 hover:bg-sky-500 text-white shadow-md border-2 border-white dark:border-slate-900 transition hover:scale-110 active:scale-95"
               >
                 <Camera className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="flex-1 text-center sm:text-left space-y-1.5">
-              <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center justify-center sm:justify-start gap-1.5">
-                <span>{lang === 'bn' ? 'প্রোফাইল ছবি (ঐচ্ছিক)' : 'Profile Picture (Optional)'}</span>
+            <div className="flex-1 min-w-0 space-y-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
+                  {lang === 'bn' ? 'প্রোফাইল ছবি' : 'Profile Picture'}
+                </span>
+                <span className="text-[10px] text-slate-400 uppercase font-semibold">
+                  {lang === 'bn' ? '(ঐচ্ছিক)' : '(Optional)'}
+                </span>
               </div>
-              <p className="text-slate-500 text-[11px]">
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-tight line-clamp-2">
                 {lang === 'bn'
-                  ? 'রেজিস্ট্রেশনের সময়ই ছবি যুক্ত করুন অথবা পরেও প্রোফাইল সেটিংসে পরিবর্তন করতে পারবেন।'
-                  : 'Add your photo now to build instant trust, or update later in settings.'}
+                  ? 'ছবি দিলে আপনার প্রোফাইল ভেরিফায়েড ও বিশ্বস্ত দেখাবে।'
+                  : 'Add a photo to boost credibility and trust.'}
               </p>
 
               {/* Hidden file input */}
@@ -261,15 +337,15 @@ function RegisterContent() {
                 className="hidden"
               />
 
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-0.5">
+              <div className="flex flex-wrap items-center gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingAvatar}
-                  className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold text-[11px] shadow-xs flex items-center gap-1.5 transition"
+                  className="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-[11px] shadow-sm flex items-center gap-1.5 transition active:scale-95"
                 >
                   <Upload className="w-3 h-3" />
-                  <span>{avatarPreview ? (lang === 'bn' ? 'ছবি পরিবর্তন' : 'Change') : (lang === 'bn' ? 'ছবি আপলোড' : 'Upload Photo')}</span>
+                  <span>{avatarPreview ? (lang === 'bn' ? 'পরিবর্তন' : 'Change') : (lang === 'bn' ? 'ছবি আপলোড' : 'Upload Photo')}</span>
                 </button>
 
                 {avatarPreview && (
@@ -277,7 +353,7 @@ function RegisterContent() {
                     type="button"
                     onClick={handleRemoveAvatar}
                     disabled={uploadingAvatar}
-                    className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-semibold text-[11px] border border-slate-200 dark:border-slate-700 transition flex items-center gap-1"
+                    className="px-2.5 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 font-bold text-[11px] border border-rose-200 dark:border-rose-900/50 transition flex items-center gap-1 active:scale-95"
                   >
                     <X className="w-3 h-3" />
                     <span>{lang === 'bn' ? 'মুছুন' : 'Remove'}</span>
@@ -287,10 +363,10 @@ function RegisterContent() {
 
               {avatarMessage && (
                 <div
-                  className={`p-2 rounded-lg text-[10.5px] flex items-center gap-1.5 mt-1 ${
+                  className={`p-1.5 rounded-lg text-[10.5px] font-semibold flex items-center gap-1.5 mt-1 ${
                     avatarMessage.type === 'success'
-                      ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                      : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
                   }`}
                 >
                   {avatarMessage.type === 'success' ? (
@@ -298,104 +374,148 @@ function RegisterContent() {
                   ) : (
                     <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                   )}
-                  <span>{avatarMessage.text}</span>
+                  <span className="truncate">{avatarMessage.text}</span>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          {/* First & Last Name: Responsive Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block font-bold text-xs text-slate-700 dark:text-slate-300 mb-1.5">
                 {lang === 'bn' ? 'ফার্স্ট নেম *' : 'First Name *'}
               </label>
-              <input
-                type="text"
-                required
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                placeholder="e.g. Rahim"
-                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-sky-500"
-              />
+              <div className="relative">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                  <User className="w-4 h-4" />
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  placeholder={lang === 'bn' ? 'যেমন: Rahim' : 'e.g. Rahim'}
+                  className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-slate-50/90 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 transition"
+                />
+              </div>
             </div>
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block font-bold text-xs text-slate-700 dark:text-slate-300 mb-1.5">
                 {lang === 'bn' ? 'লাস্ট নেম *' : 'Last Name *'}
               </label>
-              <input
-                type="text"
-                required
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                placeholder="e.g. Ahmed"
-                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-sky-500"
-              />
+              <div className="relative">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                  <User className="w-4 h-4" />
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  placeholder={lang === 'bn' ? 'যেমন: Ahmed' : 'e.g. Ahmed'}
+                  className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-slate-50/90 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 transition"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          {/* Mobile & Email: Stacked on small phone for full readability */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block font-bold text-xs text-slate-700 dark:text-slate-300 mb-1.5">
                 {lang === 'bn' ? 'মোবাইল নম্বর *' : 'Mobile Phone *'}
               </label>
-              <input
-                type="text"
-                required
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="e.g. 01712345678"
-                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-sky-500"
-              />
+              <div className="relative flex items-center">
+                <div className="absolute left-3.5 flex items-center gap-1 text-slate-500 dark:text-slate-400 font-bold text-xs border-r border-slate-200 dark:border-slate-700 pr-2 pointer-events-none">
+                  <span>🇧🇩 +88</span>
+                </div>
+                <input
+                  type="tel"
+                  required
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="017XXXXXXXX"
+                  className="w-full pl-24 pr-3.5 py-3 rounded-2xl bg-slate-50/90 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-sm font-mono text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 transition"
+                />
+              </div>
             </div>
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                {lang === 'bn' ? 'ইমেইল *' : 'Email Address *'}
-              </label>
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="you@example.com"
-                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-sky-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                {lang === 'bn' ? 'ব্যবসা / স্টোরের নাম (ঐচ্ছিক)' : 'Business / Store Name (Optional)'}
-              </label>
-              <input
-                type="text"
-                value={formData.businessName}
-                onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                placeholder="e.g. TrustTech BD"
-                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-sky-500"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                {lang === 'bn' ? 'ঠিকানা (Address)' : 'Address'}
-              </label>
-              <input
-                type="text"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="e.g. Mirpur, Dhaka"
-                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-sky-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                {lang === 'bn' ? 'পাসওয়ার্ড *' : 'Password *'}
+              <label className="block font-bold text-xs text-slate-700 dark:text-slate-300 mb-1.5">
+                {lang === 'bn' ? 'ইমেইল এড্রেস *' : 'Email Address *'}
               </label>
               <div className="relative">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="name@gmail.com"
+                  className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-slate-50/90 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 transition"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Business Name & Address (Optional) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block font-bold text-xs text-slate-700 dark:text-slate-300 mb-1.5">
+                {lang === 'bn' ? 'ব্যবসা / পেইজ এর নাম (ঐচ্ছিক)' : 'Business / Store Name (Optional)'}
+              </label>
+              <div className="relative">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <input
+                  type="text"
+                  value={formData.businessName}
+                  onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                  placeholder={lang === 'bn' ? 'যেমন: Safenex Shop' : 'e.g. TrustTech BD'}
+                  className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-slate-50/90 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 transition"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-xs text-slate-700 dark:text-slate-300 mb-1.5">
+                {lang === 'bn' ? 'ঠিকানা / জেলা (ঐচ্ছিক)' : 'Address / District (Optional)'}
+              </label>
+              <div className="relative">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <input
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder={lang === 'bn' ? 'যেমন: Mirpur, Dhaka' : 'e.g. Mirpur, Dhaka'}
+                  className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-slate-50/90 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 transition"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Password & Confirm Password */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block font-bold text-xs text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'পাসওয়ার্ড *' : 'Password *'}
+                </label>
+                {formData.password && (
+                  <span className={`text-[10px] font-bold ${getStrengthColor(pwdStrength).split(' ')[1]}`}>
+                    {getStrengthLabel(pwdStrength)}
+                  </span>
+                )}
+              </div>
+              <div className="relative">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                  <Lock className="w-4 h-4" />
+                </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
@@ -403,24 +523,44 @@ function RegisterContent() {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="••••••••"
-                  className="w-full p-2.5 pr-9 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-sky-500"
+                  className="w-full pl-10 pr-11 py-3 rounded-2xl bg-slate-50/90 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 transition"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex={-1}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition p-0.5"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
                 >
-                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+
+              {/* Password Strength Progress Bar */}
+              {formData.password && (
+                <div className="mt-2 space-y-1">
+                  <div className="grid grid-cols-4 gap-1 h-1.5">
+                    {[1, 2, 3, 4].map((step) => (
+                      <div
+                        key={step}
+                        className={`rounded-full transition-all duration-300 ${
+                          pwdStrength >= step ? getStrengthColor(pwdStrength).split(' ')[0] : 'bg-slate-200 dark:bg-slate-700'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
+
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block font-bold text-xs text-slate-700 dark:text-slate-300 mb-1.5">
                 {lang === 'bn' ? 'কনফার্ম পাসওয়ার্ড *' : 'Confirm Password *'}
               </label>
               <div className="relative">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                  <Lock className="w-4 h-4" />
+                </div>
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   required
@@ -428,31 +568,41 @@ function RegisterContent() {
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   placeholder="••••••••"
-                  className="w-full p-2.5 pr-9 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-sky-500"
+                  className={`w-full pl-10 pr-11 py-3 rounded-2xl bg-slate-50/90 dark:bg-slate-800/80 border text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 transition ${
+                    formData.confirmPassword && formData.password !== formData.confirmPassword
+                      ? 'border-rose-400 focus:ring-rose-500/30 focus:border-rose-500'
+                      : 'border-slate-200 dark:border-slate-700/80 focus:ring-sky-500/30 focus:border-sky-500'
+                  }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   tabIndex={-1}
                   aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition p-0.5"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
                 >
-                  {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                <p className="text-[10.5px] font-bold text-rose-500 mt-1">
+                  {lang === 'bn' ? 'পাসওয়ার্ড মিলছে না' : 'Passwords do not match'}
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Optional Referral Code Box */}
-          <div className="p-3 rounded-2xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 space-y-1.5">
+          {/* Referral Code Box with high visual appeal */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/8 via-amber-500/5 to-transparent border border-amber-500/30 dark:border-amber-500/20 space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-                <Gift className="w-3.5 h-3.5 text-amber-500" />
-                <span>{lang === 'bn' ? 'রেফারেল কোড (ঐচ্ছিক)' : 'Referral Code (Optional)'}</span>
+              <label className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                <Gift className="w-4 h-4 text-amber-500" />
+                <span>{lang === 'bn' ? 'রেফারেল কোড (ঐচ্ছিক / বোনাস কোড)' : 'Referral Code (Optional)'}</span>
               </label>
               {formData.referralCode && (
-                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                  {lang === 'bn' ? '✓ রেফারেল কোড যুক্ত হয়েছে' : '✓ Referral code applied'}
+                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <span>✓</span>
+                  <span>{lang === 'bn' ? 'কোড যুক্ত হয়েছে' : 'Applied'}</span>
                 </span>
               )}
             </div>
@@ -460,15 +610,16 @@ function RegisterContent() {
               type="text"
               value={formData.referralCode}
               onChange={(e) => setFormData({ ...formData, referralCode: e.target.value })}
-              placeholder={lang === 'bn' ? 'যেমন: Rahim2345 (যদি কেউ রেফার করে থাকে)' : 'e.g. Rahim2345'}
-              className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/30 text-xs font-mono text-slate-900 dark:text-white uppercase placeholder:normal-case placeholder-slate-400 focus:outline-none focus:border-amber-500"
+              placeholder={lang === 'bn' ? 'যেমন: Safenex77 (যদি কেউ রেফার করে থাকে)' : 'e.g. Safenex77'}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/30 text-xs font-mono text-slate-900 dark:text-white uppercase placeholder:normal-case placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition"
             />
           </div>
 
+          {/* High-Converting Gradient CTA Button */}
           <button
             type="submit"
             disabled={loading || uploadingAvatar}
-            className="w-full py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md shadow-sky-600/20 flex items-center justify-center gap-2 transition disabled:opacity-50"
+            className="w-full py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-sky-500 via-indigo-600 to-sky-600 hover:from-sky-600 hover:via-indigo-700 hover:to-sky-700 text-white font-black text-sm sm:text-base shadow-xl shadow-sky-600/25 flex items-center justify-center gap-2.5 transition-all duration-200 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
           >
             {uploadingAvatar ? (
               <span className="flex items-center gap-2">
@@ -476,21 +627,37 @@ function RegisterContent() {
                 <span>{lang === 'bn' ? 'ছবি আপলোড হচ্ছে...' : 'Uploading photo...'}</span>
               </span>
             ) : loading ? (
-              <span>{lang === 'bn' ? 'অ্যাকাউন্ট তৈরি হচ্ছে...' : 'Creating account...'}</span>
+              <span className="flex items-center gap-2">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>{lang === 'bn' ? 'অ্যাকাউন্ট তৈরি হচ্ছে...' : 'Creating account...'}</span>
+              </span>
             ) : (
               <>
-                <span>{lang === 'bn' ? 'রেজিস্ট্রেশন সম্পন্ন করুন' : 'Complete Registration'}</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>{lang === 'bn' ? 'ফ্রি রেজিস্ট্রেশন সম্পন্ন করুন' : 'Complete Free Registration'}</span>
+                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition" />
               </>
             )}
           </button>
         </form>
 
-        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 text-center text-xs text-slate-500">
-          <span>{lang === 'bn' ? 'ইতিমধ্যে অ্যাকাউন্ট আছে? ' : 'Already have an account? '}</span>
-          <Link href="/login" className="font-bold text-sky-600 hover:underline">
-            {t('login')}
-          </Link>
+        {/* Bottom Trust & Security Notice */}
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
+          <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 text-center">
+            <ShieldCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+            <span>
+              {lang === 'bn'
+                ? 'আপনার সকল তথ্য এবং লেনদেন সম্পূর্ণ এনক্রিপ্টেড ও সুরক্ষিত'
+                : 'All your data and transactions are 256-bit encrypted and safe'}
+            </span>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 text-center text-xs text-slate-600 dark:text-slate-400">
+            <span>{lang === 'bn' ? 'ইতিমধ্যে একটি অ্যাকাউন্ট আছে? ' : 'Already have an account? '}</span>
+            <Link href="/login" className="font-extrabold text-sky-600 dark:text-sky-400 hover:underline inline-flex items-center gap-1">
+              <span>{t('login')}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
       </div>
     </div>
