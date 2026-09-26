@@ -30,6 +30,9 @@ export default function MobileBottomNav() {
     return null;
   }
 
+  const isCheckerEnabled = settings?.system?.scammerCheckerEnabled !== false;
+  const isMicroJobsEnabled = settings?.microJob?.enabled !== false;
+
   const navItems = [
     {
       href: '/',
@@ -38,22 +41,30 @@ export default function MobileBottomNav() {
       icon: Home,
       isActive: pathname === '/',
     },
-    {
-      href: '/check',
-      labelBn: 'চেকার',
-      labelEn: 'Checker',
-      icon: ShieldAlert,
-      badge: 'নতুন',
-      isActive: pathname.startsWith('/check'),
-    },
-    {
-      href: '/micro-jobs',
-      labelBn: 'মাইক্রো জব',
-      labelEn: 'Jobs',
-      icon: Briefcase,
-      badge: 'হট',
-      isActive: pathname.startsWith('/micro-jobs'),
-    },
+    ...(isCheckerEnabled
+      ? [
+          {
+            href: '/check',
+            labelBn: 'চেকার',
+            labelEn: 'Checker',
+            icon: ShieldAlert,
+            badge: 'নতুন',
+            isActive: pathname.startsWith('/check'),
+          },
+        ]
+      : []),
+    ...(isMicroJobsEnabled
+      ? [
+          {
+            href: '/micro-jobs',
+            labelBn: 'মাইক্রো জব',
+            labelEn: 'Jobs',
+            icon: Briefcase,
+            badge: 'হট',
+            isActive: pathname.startsWith('/micro-jobs'),
+          },
+        ]
+      : []),
     {
       href: '/shop',
       labelBn: 'শপ',

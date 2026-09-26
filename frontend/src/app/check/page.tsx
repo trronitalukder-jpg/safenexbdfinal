@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useSettings } from '@/context/SettingsContext';
 import { api } from '@/lib/api';
 
 const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -45,6 +46,8 @@ interface ScammerMatch {
   scammerPhotoUrl: string | null;
   severity: string;
   searchHitCount: number;
+  warningOnly?: boolean;
+  customWarning?: string | null;
   createdAt: string;
 }
 
@@ -67,6 +70,7 @@ export default function ScammerCheckerPage() {
   const router = useRouter();
   const { lang } = useLanguage();
   const { user } = useAuthStore();
+  const { settings } = useSettings();
   const isBn = lang === 'bn';
 
   // Search State
@@ -223,6 +227,35 @@ export default function ScammerCheckerPage() {
     FAKE_SERVICE: 'ভুয়া সার্ভিস / প্রতিশ্রুতি ভঙ্গ',
     OTHER: 'অন্যান্য প্রতারণা',
   };
+
+  // If checker is globally disabled by Admin, show maintenance view
+  if (settings?.system?.scammerCheckerEnabled === false) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center p-4 bg-slate-950 text-slate-100">
+        <div className="max-w-md w-full p-8 rounded-3xl bg-slate-900 border border-slate-800 text-center space-y-4 shadow-2xl">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-white">
+            {isBn ? 'স্ক্যামার চেকার সাময়িকভাবে বন্ধ রয়েছে' : 'Trust Checker Currently Offline'}
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+            {isBn
+              ? 'সিস্টেম আপগ্রেড ও ডাটাবেজ রক্ষণাবেক্ষণের কাজের জন্য স্ক্যামার চেকার সিস্টেম সাময়িকভাবে বন্ধ রয়েছে। যেকোনো সহায়তার জন্য সাপোর্টে যোগাযোগ করুন।'
+              : 'The trust checker system is temporarily offline for maintenance. Please check back later.'}
+          </p>
+          <div className="pt-2">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition"
+            >
+              <span>{isBn ? 'হোম পেজে ফিরে যান' : 'Back to Home'}</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-amber-500 selection:text-black">
@@ -385,69 +418,105 @@ export default function ScammerCheckerPage() {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                      {record.scammerName && (
-                        <div>
-                          <span className="text-slate-400 text-xs">{isBn ? 'প্রতারকের নাম / ডাকনাম:' : 'Name / Alias:'}</span>
-                          <p className="font-semibold text-slate-200">{record.scammerName}</p>
+                    {/* IF WARNING-ONLY MODE: Do not display personal information, only warning banner */}
+                    {record.warningOnly ? (
+                      <div className="p-4 sm:p-5 rounded-2xl bg-red-950/40 border border-red-500/50 space-y-3">
+                        <div className="flex items-center gap-2 text-red-400 font-bold text-sm sm:text-base">
+                          <AlertTriangle className="w-5 h-5 shrink-0 text-red-400 animate-pulse" />
+                          <span>{isBn ? '⚠️ বিশেষ সতর্কমূলক নোটিশ জারি' : '⚠️ Official Fraud Caution Notice'}</span>
                         </div>
-                      )}
-                      {record.phone && (
-                        <div>
-                          <span className="text-slate-400 text-xs">{isBn ? 'মোবাইল নম্বর:' : 'Phone Number:'}</span>
-                          <p className="font-semibold font-mono text-amber-300">{record.phone}</p>
-                        </div>
-                      )}
-                      {record.facebookLink && (
-                        <div className="sm:col-span-2">
-                          <span className="text-slate-400 text-xs">{isBn ? 'ফেসবুক লিংক:' : 'Facebook Link:'}</span>
-                          <a
-                            href={record.facebookLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-sky-400 hover:underline break-all text-xs font-medium"
-                          >
-                            <FacebookIcon className="w-3.5 h-3.5 shrink-0" />
-                            <span>{record.facebookLink}</span>
-                            <ExternalLink className="w-3 h-3 shrink-0" />
-                          </a>
-                        </div>
-                      )}
-                      {record.amountLost && (
-                        <div>
-                          <span className="text-slate-400 text-xs">{isBn ? 'ক্ষতির পরিমাণ:' : 'Amount Lost:'}</span>
-                          <p className="font-bold text-red-400">৳{record.amountLost.toLocaleString()}</p>
-                        </div>
-                      )}
-                    </div>
 
-                    {/* Description */}
-                    <div className="pt-2 border-t border-slate-800">
-                      <span className="text-slate-400 text-xs">{isBn ? 'প্রতারণার বিবরণ:' : 'Details:'}</span>
-                      <p className="text-xs sm:text-sm text-slate-300 whitespace-pre-line mt-1 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
-                        {record.description}
-                      </p>
-                    </div>
+                        <p className="text-xs sm:text-sm text-red-200 leading-relaxed font-medium">
+                          {record.customWarning || (isBn
+                            ? 'এই মোবাইল নম্বর বা ফেসবুক প্রোফাইলের বিরুদ্ধে বিশ্বস্ত প্রতারণার রেকর্ড রয়েছে। নিরাপত্তা ও সুরক্ষার স্বার্থে এর সাথে যেকোনো প্রকার টাকা পাঠানো, পণ্য লেনদেন বা যোগাযোগ করা থেকে সম্পূর্ণ বিরত থাকুন।'
+                            : 'Verified fraud complaints are on record for this contact. Strictly avoid sending money or entering financial deals.')}
+                        </p>
 
-                    {/* Proof Images Gallery */}
-                    {record.proofImages && record.proofImages.length > 0 && (
-                      <div className="pt-2">
-                        <span className="text-slate-400 text-xs mb-2 block">{isBn ? 'অনুমোদিত প্রমাণ ও স্ক্রিনশট:' : 'Approved Proof Screenshots:'}</span>
-                        <div className="flex flex-wrap gap-2">
-                          {record.proofImages.map((imgUrl, imgIdx) => (
-                            <button
-                              key={imgIdx}
-                              onClick={() => setActiveProofImage(imgUrl)}
-                              className="relative w-16 h-16 rounded-lg overflow-hidden border border-slate-700 hover:border-amber-400 transition-all group shrink-0"
-                            >
-                              <img src={imgUrl} alt="Proof" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
-                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Eye className="w-4 h-4 text-white" />
-                              </div>
-                            </button>
-                          ))}
+                        <div className="p-3 rounded-xl bg-slate-950/80 border border-amber-500/30 text-xs text-amber-300 flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span>{isBn ? 'লেনদেনে শতভাগ আর্থিক নিশ্চয়তা পেতে সবসময় SafnexBD এসক্রো ব্যবহার করুন।' : 'Always use SafnexBD Escrow for 100% deal protection.'}</span>
                         </div>
                       </div>
+                    ) : (
+                      <>
+                        {/* Custom Warning Notice if defined by admin */}
+                        {record.customWarning && (
+                          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 leading-relaxed">
+                            <div className="flex items-center gap-1.5 font-bold text-amber-300 mb-0.5">
+                              <AlertCircle className="w-4 h-4 shrink-0" />
+                              <span>{isBn ? 'অ্যাডমিন বিশেষ সতর্কতা:' : 'Admin Security Notice:'}</span>
+                            </div>
+                            <p>{record.customWarning}</p>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                          {record.scammerName && (
+                            <div>
+                              <span className="text-slate-400 text-xs">{isBn ? 'প্রতারকের নাম / ডাকনাম:' : 'Name / Alias:'}</span>
+                              <p className="font-semibold text-slate-200">{record.scammerName}</p>
+                            </div>
+                          )}
+                          {record.phone && (
+                            <div>
+                              <span className="text-slate-400 text-xs">{isBn ? 'মোবাইল নম্বর:' : 'Phone Number:'}</span>
+                              <p className="font-semibold font-mono text-amber-300">{record.phone}</p>
+                            </div>
+                          )}
+                          {record.facebookLink && (
+                            <div className="sm:col-span-2">
+                              <span className="text-slate-400 text-xs">{isBn ? 'ফেসবুক লিংক:' : 'Facebook Link:'}</span>
+                              <a
+                                href={record.facebookLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-sky-400 hover:underline break-all text-xs font-medium"
+                              >
+                                <FacebookIcon className="w-3.5 h-3.5 shrink-0" />
+                                <span>{record.facebookLink}</span>
+                                <ExternalLink className="w-3 h-3 shrink-0" />
+                              </a>
+                            </div>
+                          )}
+                          {record.amountLost && (
+                            <div>
+                              <span className="text-slate-400 text-xs">{isBn ? 'ক্ষতির পরিমাণ:' : 'Amount Lost:'}</span>
+                              <p className="font-bold text-red-400">৳{record.amountLost.toLocaleString()}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Description */}
+                        {record.description && (
+                          <div className="pt-2 border-t border-slate-800">
+                            <span className="text-slate-400 text-xs">{isBn ? 'প্রতারণার বিবরণ:' : 'Details:'}</span>
+                            <p className="text-xs sm:text-sm text-slate-300 whitespace-pre-line mt-1 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                              {record.description}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Proof Images Gallery */}
+                        {record.proofImages && record.proofImages.length > 0 && (
+                          <div className="pt-2">
+                            <span className="text-slate-400 text-xs mb-2 block">{isBn ? 'অনুমোদিত প্রমাণ ও স্ক্রিনশট:' : 'Approved Proof Screenshots:'}</span>
+                            <div className="flex flex-wrap gap-2">
+                              {record.proofImages.map((imgUrl, imgIdx) => (
+                                <button
+                                  key={imgIdx}
+                                  onClick={() => setActiveProofImage(imgUrl)}
+                                  className="relative w-16 h-16 rounded-lg overflow-hidden border border-slate-700 hover:border-amber-400 transition-all group shrink-0"
+                                >
+                                  <img src={imgUrl} alt="Proof" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Eye className="w-4 h-4 text-white" />
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 ))}

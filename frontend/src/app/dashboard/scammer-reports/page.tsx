@@ -13,6 +13,8 @@ import {
   ExternalLink,
   AlertCircle,
   ArrowRight,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { api } from '@/lib/api';
@@ -39,6 +41,9 @@ export default function MyScammerReportsPage() {
   const [reports, setReports] = useState<MyReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [actionSuccessMsg, setActionSuccessMsg] = useState('');
 
   const fetchMyReports = async () => {
     setLoading(true);
@@ -51,6 +56,21 @@ export default function MyScammerReportsPage() {
       setError(err?.response?.data?.message || err?.message || 'Failed to load reports');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteReport = async (id: string) => {
+    setIsDeleting(true);
+    try {
+      await api.delete(`/scammer-reports/my/${id}`);
+      setReports((prev) => prev.filter((r) => r.id !== id));
+      setDeleteConfirmId(null);
+      setActionSuccessMsg(isBn ? 'আপনার রিপোর্টটি সফলভাবে প্রত্যাহার/মুছে ফেলা হয়েছে।' : 'Report deleted successfully.');
+      setTimeout(() => setActionSuccessMsg(''), 4000);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to delete report');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -68,6 +88,19 @@ export default function MyScammerReportsPage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
+      {/* Toast Alert */}
+      {actionSuccessMsg && (
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-semibold text-sm flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <span>{actionSuccessMsg}</span>
+          </div>
+          <button onClick={() => setActionSuccessMsg('')} className="text-emerald-400 hover:text-white">
+            <XCircle className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl">
         <div className="space-y-1">
@@ -224,8 +257,67 @@ export default function MyScammerReportsPage() {
                   <p>{report.rejectionReason}</p>
                 </div>
               )}
+
+              {/* Action Bar: Withdraw / Delete Report */}
+              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                <span className="text-[11px] text-slate-500">
+                  {isBn ? 'প্রয়োজনে আপনি যেকোনো সময় রিপোর্ট প্রত্যাহার করতে পারেন।' : 'You can withdraw this report at any time.'}
+                </span>
+
+                <button
+                  onClick={() => setDeleteConfirmId(report.id)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-semibold text-xs border border-red-500/20 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{isBn ? 'রিপোর্ট মুছে ফেলুন' : 'Delete / Withdraw'}</span>
+                </button>
+              </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-slate-900 border border-red-500/40 rounded-3xl p-6 space-y-4 shadow-2xl text-center">
+            <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-400">
+              <Trash2 className="w-7 h-7" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold text-white">
+                {isBn ? 'রিপোর্টটি প্রত্যাহার করতে চান?' : 'Withdraw / Delete Report?'}
+              </h3>
+              <p className="text-xs text-slate-400">
+                {isBn
+                  ? 'এই রিপোর্টটি ডাটাবেজ থেকে মুছে যাবে এবং পাবলিক সার্চেও আর পাওয়া যাবে না। আপনি কি নিশ্চিত?'
+                  : 'This report will be permanently removed from the public database.'}
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                disabled={isDeleting}
+                onClick={() => setDeleteConfirmId(null)}
+                className="px-5 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700 transition"
+              >
+                {isBn ? 'না, রাখুন' : 'Keep Report'}
+              </button>
+              <button
+                disabled={isDeleting}
+                onClick={() => handleDeleteReport(deleteConfirmId)}
+                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-lg shadow-red-600/30 transition flex items-center gap-1.5"
+              >
+                {isDeleting ? (
+                  <span>{isBn ? 'মুছে ফেলা হচ্ছে...' : 'Deleting...'}</span>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{isBn ? 'হ্যাঁ, মুছে ফেলুন' : 'Confirm Delete'}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

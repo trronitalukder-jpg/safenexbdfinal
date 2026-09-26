@@ -94,6 +94,7 @@ export interface WebsiteSystemSettings {
   newVisitorPopupCtaText?: string;
   newVisitorPopupCtaUrl?: string;
   scammerCheckerEnabled?: boolean;
+  scammerGlobalWarningOnly?: boolean;
   socialProofEnabled?: boolean;
   socialProofInitialDelaySeconds?: number;
   socialProofIntervalSeconds?: number;
@@ -204,6 +205,7 @@ export const DEFAULT_PUBLIC_SETTINGS: WebsiteSettings = {
     requireKycForWithdraw: false,
     mobileBottomNavEnabled: true,
     scammerCheckerEnabled: true,
+    scammerGlobalWarningOnly: false,
     socialProofEnabled: true,
     socialProofInitialDelaySeconds: 5,
     socialProofIntervalSeconds: 25,

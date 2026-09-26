@@ -55,6 +55,13 @@ interface ScammerItem {
   reporterPhone: string;
   reporterIp: string | null;
   searchHitCount: number;
+  warningOnlyMode?: boolean;
+  showScammerName?: boolean;
+  showPhonePublicly?: boolean;
+  showFacebookPublicly?: boolean;
+  showProofPublicly?: boolean;
+  showDescriptionPublicly?: boolean;
+  customWarning?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -105,9 +112,19 @@ export default function AdminScammersPage() {
   const [directProofUrl, setDirectProofUrl] = useState('');
   const [directProofList, setDirectProofList] = useState<string[]>([]);
   const [directAdminNotes, setDirectAdminNotes] = useState('');
+  const [directWarningOnly, setDirectWarningOnly] = useState(false);
+  const [directShowName, setDirectShowName] = useState(true);
+  const [directShowPhone, setDirectShowPhone] = useState(true);
+  const [directShowFacebook, setDirectShowFacebook] = useState(true);
+  const [directShowProof, setDirectShowProof] = useState(true);
+  const [directShowDescription, setDirectShowDescription] = useState(true);
+  const [directCustomWarning, setDirectCustomWarning] = useState('');
   const [directSubmitting, setDirectSubmitting] = useState(false);
 
-  // Social Proof Settings State
+  // Global & Social Proof Settings State
+  const [globalWarningOnly, setGlobalWarningOnly] = useState(
+    settings?.system?.scammerGlobalWarningOnly === true,
+  );
   const [socialProofEnabled, setSocialProofEnabled] = useState(
     settings?.system?.socialProofEnabled !== false,
   );
@@ -242,6 +259,13 @@ export default function AdminScammersPage() {
         amountLost: editItem.amountLost ? Number(editItem.amountLost) : undefined,
         severity: editItem.severity,
         adminNotes: editItem.adminNotes,
+        warningOnlyMode: editItem.warningOnlyMode ?? false,
+        showScammerName: editItem.showScammerName ?? true,
+        showPhonePublicly: editItem.showPhonePublicly ?? true,
+        showFacebookPublicly: editItem.showFacebookPublicly ?? true,
+        showProofPublicly: editItem.showProofPublicly ?? true,
+        showDescriptionPublicly: editItem.showDescriptionPublicly ?? true,
+        customWarning: editItem.customWarning?.trim() || null,
       });
       setEditItem(null);
       setActionSuccessMsg(isBn ? 'তথ্য সফলভাবে আপডেট করা হয়েছে।' : 'Record updated successfully.');
@@ -281,6 +305,13 @@ export default function AdminScammersPage() {
         description: directDescription.trim(),
         proofImages: directProofList,
         adminNotes: directAdminNotes.trim() || undefined,
+        warningOnlyMode: directWarningOnly,
+        showScammerName: directShowName,
+        showPhonePublicly: directShowPhone,
+        showFacebookPublicly: directShowFacebook,
+        showProofPublicly: directShowProof,
+        showDescriptionPublicly: directShowDescription,
+        customWarning: directCustomWarning.trim() || undefined,
       });
 
       setActionSuccessMsg(isBn ? 'স্ক্যামার রেকর্ডটি সফলভাবে তৈরি করা হয়েছে এবং লাইভ ডাটাবেজে যুক্ত হয়েছে!' : 'Scammer record created & live!');
@@ -292,6 +323,13 @@ export default function AdminScammersPage() {
       setDirectDescription('');
       setDirectProofList([]);
       setDirectAdminNotes('');
+      setDirectWarningOnly(false);
+      setDirectShowName(true);
+      setDirectShowPhone(true);
+      setDirectShowFacebook(true);
+      setDirectShowProof(true);
+      setDirectShowDescription(true);
+      setDirectCustomWarning('');
       setActiveTab('APPROVED');
       setTimeout(() => setActionSuccessMsg(''), 4000);
     } catch (err: any) {
@@ -305,7 +343,7 @@ export default function AdminScammersPage() {
   const handleSaveSocialProofSettings = async () => {
     setSavingSettings(true);
     try {
-      await api.post('/settings', {
+      await api.post('/settings/admin', {
         category: 'system',
         data: {
           ...settings?.system,
@@ -313,10 +351,11 @@ export default function AdminScammersPage() {
           socialProofInitialDelaySeconds: Number(socialInitialDelay),
           socialProofIntervalSeconds: Number(socialInterval),
           socialProofDurationSeconds: Number(socialDuration),
+          scammerGlobalWarningOnly: globalWarningOnly,
         },
       });
       refreshSettings();
-      setActionSuccessMsg(isBn ? 'সোশ্যাল প্রুফ ও টাইমার সেটিংস সংরক্ষিত হয়েছে!' : 'Social proof settings saved!');
+      setActionSuccessMsg(isBn ? 'সোশ্যাল প্রুফ ও সিস্টেম সেটিংস সফলভাবে সংরক্ষিত হয়েছে!' : 'Settings successfully saved!');
       setTimeout(() => setActionSuccessMsg(''), 4000);
     } catch (err: any) {
       setActionErrorMsg(err?.response?.data?.message || 'Failed to save settings');
@@ -361,16 +400,16 @@ export default function AdminScammersPage() {
       )}
 
       {/* Header & Master Kill-Switch Card */}
-      <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold">
-            <ShieldAlert className="w-4 h-4 text-amber-400" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-semibold">
+            <ShieldAlert className="w-4 h-4 text-amber-500" />
             <span>{isBn ? 'অ্যাডমিন প্রতারক ও ট্রাস্ট কনসোল' : 'Admin Scammer & Trust Console'}</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
             {isBn ? 'স্ক্যামার ও ট্রাস্ট চেকার ম্যানেজমেন্ট' : 'Scammer & Trust Management'}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             {isBn
               ? 'ইউজারদের দাখিলকৃত রিপোর্ট যাচাই করুন, সরাসরি এন্ট্রি দিন এবং প্রয়োজন অনুযায়ী যেকোনো রেকর্ড স্থায়ীভাবে মুছুন।'
               : 'Audit user scam reports, approve records, add direct entries, and manage system status.'}
@@ -378,10 +417,10 @@ export default function AdminScammersPage() {
         </div>
 
         {/* Master ON/OFF Switch Button */}
-        <div className="flex items-center gap-4 p-3 rounded-2xl bg-slate-950 border border-slate-800 shrink-0">
+        <div className="flex items-center gap-4 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shrink-0">
           <div className="text-right">
-            <span className="text-xs font-medium text-slate-400 block">{isBn ? 'সিস্টেম স্ট্যাটাস:' : 'Checker System:'}</span>
-            <span className={`text-sm font-bold ${isCheckerEnabled ? 'text-emerald-400' : 'text-red-400'}`}>
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">{isBn ? 'সিস্টেম স্ট্যাটাস:' : 'Checker System:'}</span>
+            <span className={`text-sm font-bold ${isCheckerEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
               {isCheckerEnabled ? (isBn ? 'সক্রিয় (ON)' : 'ACTIVE (ON)') : (isBn ? 'নিষ্ক্রিয় (OFF)' : 'DISABLED (OFF)')}
             </span>
           </div>
@@ -390,7 +429,7 @@ export default function AdminScammersPage() {
             onClick={handleToggleMaster}
             disabled={togglingMaster}
             className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-              isCheckerEnabled ? 'bg-emerald-500' : 'bg-slate-700'
+              isCheckerEnabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
             }`}
           >
             <span
@@ -409,14 +448,14 @@ export default function AdminScammersPage() {
           className={`p-4 rounded-2xl border cursor-pointer transition-all ${
             activeTab === 'PENDING'
               ? 'bg-amber-500/10 border-amber-500/50 shadow-md shadow-amber-500/10'
-              : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-amber-400'
           }`}
         >
-          <div className="flex items-center justify-between text-xs text-amber-400 font-semibold mb-1">
+          <div className="flex items-center justify-between text-xs text-amber-600 dark:text-amber-400 font-semibold mb-1">
             <span>{isBn ? 'পেন্ডিং রিভিউ' : 'Pending Review'}</span>
             <Clock className="w-4 h-4" />
           </div>
-          <span className="text-2xl sm:text-3xl font-black text-white">{stats.pending}</span>
+          <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{stats.pending}</span>
         </div>
 
         <div
@@ -424,14 +463,14 @@ export default function AdminScammersPage() {
           className={`p-4 rounded-2xl border cursor-pointer transition-all ${
             activeTab === 'APPROVED'
               ? 'bg-emerald-500/10 border-emerald-500/50 shadow-md shadow-emerald-500/10'
-              : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-emerald-400'
           }`}
         >
-          <div className="flex items-center justify-between text-xs text-emerald-400 font-semibold mb-1">
+          <div className="flex items-center justify-between text-xs text-emerald-600 dark:text-emerald-400 font-semibold mb-1">
             <span>{isBn ? 'অনুমোদিত ও লাইভ' : 'Approved & Live'}</span>
             <CheckCircle2 className="w-4 h-4" />
           </div>
-          <span className="text-2xl sm:text-3xl font-black text-white">{stats.approved}</span>
+          <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{stats.approved}</span>
         </div>
 
         <div
@@ -439,34 +478,34 @@ export default function AdminScammersPage() {
           className={`p-4 rounded-2xl border cursor-pointer transition-all ${
             activeTab === 'REJECTED'
               ? 'bg-red-500/10 border-red-500/50 shadow-md shadow-red-500/10'
-              : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-red-400'
           }`}
         >
-          <div className="flex items-center justify-between text-xs text-red-400 font-semibold mb-1">
+          <div className="flex items-center justify-between text-xs text-red-600 dark:text-red-400 font-semibold mb-1">
             <span>{isBn ? 'বাতিলকৃত তালিকা' : 'Rejected Reports'}</span>
             <XCircle className="w-4 h-4" />
           </div>
-          <span className="text-2xl sm:text-3xl font-black text-white">{stats.rejected}</span>
+          <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{stats.rejected}</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
-          <div className="flex items-center justify-between text-xs text-sky-400 font-semibold mb-1">
+        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between text-xs text-sky-600 dark:text-sky-400 font-semibold mb-1">
             <span>{isBn ? 'সর্বমোট রেকর্ড' : 'Total Records'}</span>
             <ShieldCheck className="w-4 h-4" />
           </div>
-          <span className="text-2xl sm:text-3xl font-black text-white">{stats.totalAll}</span>
+          <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{stats.totalAll}</span>
         </div>
       </div>
 
       {/* Tabs Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setActiveTab('PENDING')}
             className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${
               activeTab === 'PENDING'
                 ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                : 'bg-slate-900 text-slate-400 hover:text-white'
+                : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
             }`}
           >
             {isBn ? `পেন্ডিং রিপোর্ট (${stats.pending})` : `Pending (${stats.pending})`}
@@ -477,7 +516,7 @@ export default function AdminScammersPage() {
             className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${
               activeTab === 'APPROVED'
                 ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                : 'bg-slate-900 text-slate-400 hover:text-white'
+                : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
             }`}
           >
             {isBn ? `অনুমোদিত ডাটাবেজ (${stats.approved})` : `Approved (${stats.approved})`}
@@ -488,7 +527,7 @@ export default function AdminScammersPage() {
             className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${
               activeTab === 'REJECTED'
                 ? 'bg-red-500 text-white shadow-md shadow-red-500/20'
-                : 'bg-slate-900 text-slate-400 hover:text-white'
+                : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
             }`}
           >
             {isBn ? `বাতিলকৃত (${stats.rejected})` : `Rejected (${stats.rejected})`}
@@ -499,7 +538,7 @@ export default function AdminScammersPage() {
             className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 ${
               activeTab === 'DIRECT_ADD'
                 ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-                : 'bg-slate-900 text-slate-400 hover:text-white'
+                : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
             }`}
           >
             <PlusCircle className="w-4 h-4" />
@@ -511,11 +550,11 @@ export default function AdminScammersPage() {
             className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 ${
               activeTab === 'SETTINGS'
                 ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20'
-                : 'bg-slate-900 text-slate-400 hover:text-white'
+                : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
             }`}
           >
             <Sliders className="w-4 h-4" />
-            <span>{isBn ? 'সোশ্যাল প্রুফ ও টাইমার' : 'Social Proof'}</span>
+            <span>{isBn ? 'সেটিংস ও সোশ্যাল প্রুফ' : 'Settings'}</span>
           </button>
         </div>
 
@@ -523,19 +562,19 @@ export default function AdminScammersPage() {
         {activeTab !== 'DIRECT_ADD' && activeTab !== 'SETTINGS' && (
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
                 type="text"
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && fetchQueue()}
                 placeholder={isBn ? 'নম্বর বা নাম দিয়ে খুঁজুন...' : 'Search phone or name...'}
-                className="pl-9 pr-3 py-1.5 text-xs rounded-xl bg-slate-900 border border-slate-800 text-white outline-none focus:border-amber-400"
+                className="pl-9 pr-3 py-1.5 text-xs rounded-xl bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-amber-400"
               />
             </div>
             <button
               onClick={fetchQueue}
-              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+              className="px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold"
             >
               {isBn ? 'ফিল্টার' : 'Filter'}
             </button>
@@ -552,9 +591,9 @@ export default function AdminScammersPage() {
               <p className="text-xs">{isBn ? 'ডাটা লোড হচ্ছে...' : 'Loading records...'}</p>
             </div>
           ) : items.length === 0 ? (
-            <div className="p-12 text-center rounded-3xl bg-slate-900/40 border border-slate-800/80 space-y-2">
-              <CheckCircle2 className="w-10 h-10 text-slate-600 mx-auto" />
-              <p className="text-sm font-semibold text-slate-400">
+            <div className="p-12 text-center rounded-3xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 space-y-2">
+              <CheckCircle2 className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto" />
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
                 {isBn ? 'এই ক্যাটাগরিতে কোনো রেকর্ড পাওয়া যায়নি।' : 'No records found in this view.'}
               </p>
             </div>
@@ -563,49 +602,59 @@ export default function AdminScammersPage() {
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 space-y-4 transition-all"
+                  className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 space-y-4 shadow-sm transition-all"
                 >
                   {/* Top Bar: Reporter Info (CONFIDENTIAL AUDIT) */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-950/80 border border-amber-500/20 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-amber-500/20 text-xs">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                      <span className="text-slate-400 font-semibold">{isBn ? 'অভিযোগকারী (গোপন অডিট):' : 'Reporter Audit:'}</span>
-                      <span className="font-bold text-white">{item.reporterName}</span>
-                      <span className="font-mono text-amber-300">({item.reporterPhone})</span>
+                      <span className="text-slate-500 dark:text-slate-400 font-semibold">{isBn ? 'অভিযোগকারী (গোপন অডিট):' : 'Reporter Audit:'}</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{item.reporterName}</span>
+                      <span className="font-mono text-amber-600 dark:text-amber-300">({item.reporterPhone})</span>
                       {item.reporterIp && (
-                        <span className="text-slate-500 font-mono">IP: {item.reporterIp}</span>
+                        <span className="text-slate-400 font-mono">IP: {item.reporterIp}</span>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 text-slate-400">
+                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
                       <span>{new Date(item.createdAt).toLocaleString(isBn ? 'bn-BD' : 'en-US')}</span>
-                      <span className="text-slate-600">•</span>
-                      <span className="font-mono text-amber-400">
+                      <span className="text-slate-300 dark:text-slate-600">•</span>
+                      <span className="font-mono text-amber-600 dark:text-amber-400">
                         {isBn ? `সার্চ হিট: ${item.searchHitCount} বার` : `Hits: ${item.searchHitCount}`}
                       </span>
                     </div>
                   </div>
 
+                  {/* Mode & Privacy Badges if Warning Only or customized */}
+                  {item.warningOnlyMode && (
+                    <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-600 dark:text-red-400 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 font-bold">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        <span>{isBn ? '⚠️ এই রেকর্ডটি শুধুমাত্র সতর্কবার্তা মোডে রয়েছে (সার্চে নাম ও নম্বর লুকানো থাকবে)' : '⚠️ Warning-Only Mode Active (Name & phone hidden publicly)'}</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Target Scammer Details Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs sm:text-sm">
                     <div className="space-y-1">
                       <span className="text-slate-500 text-xs">{isBn ? 'প্রতারকের নাম / ডাকনাম:' : 'Scammer Name:'}</span>
-                      <p className="font-bold text-base text-white">{item.scammerName || (isBn ? 'নামহীন' : 'N/A')}</p>
+                      <p className="font-bold text-base text-slate-900 dark:text-white">{item.scammerName || (isBn ? 'নামহীন' : 'N/A')}</p>
                     </div>
 
                     <div className="space-y-1">
                       <span className="text-slate-500 text-xs">{isBn ? 'মোবাইল / বিকাশ নম্বর:' : 'Target Phone:'}</span>
-                      <p className="font-mono text-base font-bold text-amber-400">{item.phone || (isBn ? 'নেই' : 'N/A')}</p>
+                      <p className="font-mono text-base font-bold text-amber-600 dark:text-amber-400">{item.phone || (isBn ? 'নেই' : 'N/A')}</p>
                     </div>
 
                     <div className="space-y-1">
                       <span className="text-slate-500 text-xs">{isBn ? 'ক্যাটাগরি ও ক্ষতি:' : 'Category & Loss:'}</span>
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-lg bg-red-500/20 text-red-300 font-semibold text-xs">
+                        <span className="px-2 py-0.5 rounded-lg bg-red-500/15 text-red-600 dark:text-red-300 font-semibold text-xs">
                           {isBn ? categoryLabelsBn[item.category] || item.category : item.category}
                         </span>
                         {item.amountLost && (
-                          <span className="font-bold text-red-400">৳{item.amountLost.toLocaleString()}</span>
+                          <span className="font-bold text-red-500">৳{item.amountLost.toLocaleString()}</span>
                         )}
                       </div>
                     </div>
@@ -617,7 +666,7 @@ export default function AdminScammersPage() {
                           href={item.facebookLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 text-sky-400 hover:underline break-all font-mono text-xs"
+                          className="flex items-center gap-1.5 text-sky-600 dark:text-sky-400 hover:underline break-all font-mono text-xs"
                         >
                           <FacebookIcon className="w-3.5 h-3.5 shrink-0" />
                           <span>{item.facebookLink}</span>
@@ -628,10 +677,17 @@ export default function AdminScammersPage() {
                   </div>
 
                   {/* Description Box */}
-                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 text-xs sm:text-sm text-slate-300">
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
                     <span className="text-slate-500 font-bold block mb-1">{isBn ? 'প্রতারণার বিস্তারিত বিবরণ:' : 'Incident Description:'}</span>
                     <p className="whitespace-pre-line leading-relaxed">{item.description}</p>
                   </div>
+
+                  {/* Custom Warning Notice if defined */}
+                  {item.customWarning && (
+                    <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-300 dark:border-amber-500/30 text-xs text-amber-800 dark:text-amber-300">
+                      <span className="font-bold">{isBn ? 'কাস্টম সতর্কবার্তা:' : 'Custom Warning:'}</span> {item.customWarning}
+                    </div>
+                  )}
 
                   {/* Proof Screenshots Gallery */}
                   {item.proofImages && item.proofImages.length > 0 && (
@@ -645,7 +701,7 @@ export default function AdminScammersPage() {
                             key={imgIdx}
                             type="button"
                             onClick={() => setActiveProofZoom(imgUrl)}
-                            className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-700 hover:border-amber-400 transition-all group shrink-0"
+                            className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 hover:border-amber-400 transition-all group shrink-0"
                           >
                             <img src={imgUrl} alt="Proof" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -659,19 +715,19 @@ export default function AdminScammersPage() {
 
                   {/* Admin Notes & Rejection Reason if any */}
                   {item.adminNotes && (
-                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-amber-300">
+                    <div className="p-3 rounded-xl bg-amber-50 dark:bg-slate-950 border border-amber-200 dark:border-slate-800 text-xs text-amber-800 dark:text-amber-300">
                       <span className="font-bold">{isBn ? 'অ্যাডমিন নোট:' : 'Admin Notes:'}</span> {item.adminNotes}
                     </div>
                   )}
 
                   {item.rejectionReason && (
-                    <div className="p-3 rounded-xl bg-red-950/40 border border-red-500/30 text-xs text-red-300">
+                    <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-500/30 text-xs text-red-700 dark:text-red-300">
                       <span className="font-bold">{isBn ? 'বাতিলের কারণ:' : 'Rejection Reason:'}</span> {item.rejectionReason}
                     </div>
                   )}
 
                   {/* Action Buttons Bar */}
-                  <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                  <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       {/* Approve button (if pending or rejected) */}
                       {item.status !== 'APPROVED' && (
@@ -688,7 +744,7 @@ export default function AdminScammersPage() {
                       {item.status === 'PENDING' && (
                         <button
                           onClick={() => setRejectModalItem(item)}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-semibold text-xs active:scale-95 transition-all"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-600 dark:text-red-400 font-semibold text-xs active:scale-95 transition-all"
                         >
                           <XCircle className="w-4 h-4" />
                           <span>{isBn ? 'বাতিল করুন (Reject)' : 'Reject'}</span>
@@ -698,17 +754,17 @@ export default function AdminScammersPage() {
                       {/* Edit Button */}
                       <button
                         onClick={() => setEditItem(item)}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
-                        <span>{isBn ? 'এডিট' : 'Edit'}</span>
+                        <span>{isBn ? 'এডিট ও ডিসপ্লে সেটিংস' : 'Edit & Display'}</span>
                       </button>
                     </div>
 
                     {/* Permanent Delete Button */}
                     <button
                       onClick={() => setDeleteConfirmId(item.id)}
-                      className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 font-semibold text-xs transition-colors ml-auto"
+                      className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-xs transition-colors ml-auto"
                       title={isBn ? 'স্থায়ীভাবে ডিলিট' : 'Permanent Delete'}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -724,16 +780,16 @@ export default function AdminScammersPage() {
 
       {/* TAB CONTENT 4: DIRECT SCAMMER ENTRY FORM */}
       {activeTab === 'DIRECT_ADD' && (
-        <div className="max-w-2xl mx-auto p-6 sm:p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-6">
-          <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
-            <div className="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
+        <div className="max-w-3xl mx-auto p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl space-y-6 text-slate-900 dark:text-white">
+          <div className="flex items-center gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
+            <div className="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-500 dark:text-sky-400">
               <PlusCircle className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                 {isBn ? 'সরাসরি স্ক্যামার ডাটা এন্ট্রি' : 'Direct Scammer Entry'}
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {isBn
                   ? 'অ্যাডমিন নিজে কোনো প্রতারককে সরাসরি ডাটাবেজে যুক্ত করতে পারবেন (তাৎক্ষণিক লাইভ হবে)।'
                   : 'Add verified fraudster records directly to the public registry.'}
@@ -743,7 +799,7 @@ export default function AdminScammersPage() {
 
           <form onSubmit={handleDirectAddSubmit} className="space-y-4 text-xs sm:text-sm">
             <div>
-              <label className="block text-slate-300 font-medium mb-1">
+              <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">
                 {isBn ? 'প্রতারকের মোবাইল / বিকাশ নম্বর' : 'Phone / bKash / Nagad Number'}
               </label>
               <input
@@ -751,12 +807,12 @@ export default function AdminScammersPage() {
                 value={directPhone}
                 onChange={(e) => setDirectPhone(e.target.value)}
                 placeholder="e.g. 01712345678"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:border-amber-400 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-amber-400 outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-slate-300 font-medium mb-1">
+              <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">
                 {isBn ? 'প্রতারকের ফেসবুক প্রোফাইল বা পেজ লিংক' : 'Facebook Profile or Page URL'}
               </label>
               <input
@@ -764,13 +820,13 @@ export default function AdminScammersPage() {
                 value={directFacebook}
                 onChange={(e) => setDirectFacebook(e.target.value)}
                 placeholder="e.g. https://facebook.com/scammer.official"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:border-amber-400 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-amber-400 outline-none"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-slate-300 font-medium mb-1">
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">
                   {isBn ? 'প্রতারকের নাম / ডাকনাম' : 'Scammer Name'} *
                 </label>
                 <input
@@ -779,12 +835,12 @@ export default function AdminScammersPage() {
                   value={directName}
                   onChange={(e) => setDirectName(e.target.value)}
                   placeholder="e.g. Rahim Scam"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:border-amber-400 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-amber-400 outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-medium mb-1">
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">
                   {isBn ? 'টাকার পরিমাণ (যদি থাকে)' : 'Amount Lost (BDT)'}
                 </label>
                 <input
@@ -792,19 +848,19 @@ export default function AdminScammersPage() {
                   value={directAmount}
                   onChange={(e) => setDirectAmount(e.target.value)}
                   placeholder="e.g. 2500"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:border-amber-400 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-amber-400 outline-none"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-slate-300 font-medium mb-1">
+              <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">
                 {isBn ? 'প্রতারণার ধরন' : 'Category'}
               </label>
               <select
                 value={directCategory}
                 onChange={(e) => setDirectCategory(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white focus:border-amber-400 outline-none"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white focus:border-amber-400 outline-none"
               >
                 <option value="TRANSACTION_FRAUD">{isBn ? 'লেনদেন সংক্রান্ত প্রতারণা (টাকা নিয়ে ব্লক)' : 'Transaction Fraud'}</option>
                 <option value="FAKE_PRODUCT">{isBn ? 'নকল বা পণ্য না দিয়ে যোগাযোগ বিচ্ছিন্ন' : 'Fake Product'}</option>
@@ -815,7 +871,7 @@ export default function AdminScammersPage() {
             </div>
 
             <div>
-              <label className="block text-slate-300 font-medium mb-1">
+              <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">
                 {isBn ? 'প্রতারণার বিস্তারিত বিবরণ' : 'Description'} *
               </label>
               <textarea
@@ -824,12 +880,56 @@ export default function AdminScammersPage() {
                 value={directDescription}
                 onChange={(e) => setDirectDescription(e.target.value)}
                 placeholder={isBn ? 'প্রতারণার বিবরণ বিস্তারিত লিখুন...' : 'Enter details...'}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:border-amber-400 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-amber-400 outline-none"
               />
             </div>
 
+            {/* Proof Image URL list */}
             <div>
-              <label className="block text-slate-300 font-medium mb-1">
+              <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">
+                {isBn ? 'প্রমাণ / স্ক্রিনশট ইমেজ URL (ঐচ্ছিক)' : 'Proof Image URL (Optional)'}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={directProofUrl}
+                  onChange={(e) => setDirectProofUrl(e.target.value)}
+                  placeholder="https://example.com/proof.jpg"
+                  className="flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-amber-400 outline-none text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (directProofUrl.trim()) {
+                      setDirectProofList([...directProofList, directProofUrl.trim()]);
+                      setDirectProofUrl('');
+                    }
+                  }}
+                  className="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                >
+                  {isBn ? 'যুক্ত করুন' : 'Add'}
+                </button>
+              </div>
+              {directProofList.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {directProofList.map((url, i) => (
+                    <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs border border-slate-300 dark:border-slate-700 font-mono">
+                      <span className="truncate max-w-[200px]">{url}</span>
+                      <button
+                        type="button"
+                        onClick={() => setDirectProofList(directProofList.filter((_, idx) => idx !== i))}
+                        className="text-red-500 hover:text-red-400"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">
                 {isBn ? 'অ্যাডমিন ইন্টারনাল নোট (ঐচ্ছিক)' : 'Admin Internal Notes'}
               </label>
               <input
@@ -837,8 +937,107 @@ export default function AdminScammersPage() {
                 value={directAdminNotes}
                 onChange={(e) => setDirectAdminNotes(e.target.value)}
                 placeholder="e.g. Verified via WhatsApp screenshot"
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:border-amber-400 outline-none"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-amber-400 outline-none"
               />
+            </div>
+
+            {/* Display & Warning Customization Box */}
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-slate-900 dark:text-white text-sm block">
+                    {isBn ? '⚠️ সতর্কবার্তা-অনলি মোড (Warning-Only Mode)' : 'Warning-Only Mode'}
+                  </span>
+                  <span className="text-xs text-slate-600 dark:text-slate-400">
+                    {isBn
+                      ? 'চালু করলে সার্চে প্রতারকের নাম, নম্বর ও ছবি গোপন থাকবে—শুধুমাত্র সতর্কবার্তা প্রদর্শিত হবে।'
+                      : 'If enabled, hide scammer details publicly and show a high-alert warning.'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDirectWarningOnly(!directWarningOnly)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                    directWarningOnly ? 'bg-red-500' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                      directWarningOnly ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Granular Visibility Checkboxes (if not Warning-Only) */}
+              {!directWarningOnly && (
+                <div className="pt-2 border-t border-amber-500/20 space-y-2">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                    {isBn ? 'পাবলিক সার্চে কি কি তথ্য দৃশ্যমান থাকবে নির্বাচন করুন:' : 'Select what information is visible in public search:'}
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={directShowName}
+                        onChange={(e) => setDirectShowName(e.target.checked)}
+                        className="rounded text-amber-500 focus:ring-0"
+                      />
+                      <span>{isBn ? 'প্রতারকের নাম' : 'Scammer Name'}</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={directShowPhone}
+                        onChange={(e) => setDirectShowPhone(e.target.checked)}
+                        className="rounded text-amber-500 focus:ring-0"
+                      />
+                      <span>{isBn ? 'মোবাইল নম্বর' : 'Phone Number'}</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={directShowFacebook}
+                        onChange={(e) => setDirectShowFacebook(e.target.checked)}
+                        className="rounded text-amber-500 focus:ring-0"
+                      />
+                      <span>{isBn ? 'ফেসবুক লিংক' : 'Facebook Link'}</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={directShowProof}
+                        onChange={(e) => setDirectShowProof(e.target.checked)}
+                        className="rounded text-amber-500 focus:ring-0"
+                      />
+                      <span>{isBn ? 'স্ক্রিনশট / প্রমাণ' : 'Proofs'}</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={directShowDescription}
+                        onChange={(e) => setDirectShowDescription(e.target.checked)}
+                        className="rounded text-amber-500 focus:ring-0"
+                      />
+                      <span>{isBn ? 'অভিযোগের বিবরণ' : 'Description'}</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Custom Warning Message Input */}
+              <div className="pt-2 border-t border-amber-500/20 space-y-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {isBn ? 'কাস্টম সতর্কবার্তা (ঐচ্ছিক - ডিফল্টের বদলে এটি শো করবে):' : 'Custom Warning Notice (Optional):'}
+                </label>
+                <input
+                  type="text"
+                  value={directCustomWarning}
+                  onChange={(e) => setDirectCustomWarning(e.target.value)}
+                  placeholder={isBn ? 'যেমন: এই ব্যক্তির সাথে লেনদেন থেকে বিরত থাকুন।' : 'e.g. Do not transact with this individual.'}
+                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs outline-none focus:border-amber-400"
+                />
+              </div>
             </div>
 
             <button
@@ -854,39 +1053,66 @@ export default function AdminScammersPage() {
 
       {/* TAB CONTENT 5: SOCIAL PROOF SETTINGS */}
       {activeTab === 'SETTINGS' && (
-        <div className="max-w-2xl mx-auto p-6 sm:p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-6">
-          <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
-            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+        <div className="max-w-2xl mx-auto p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl space-y-6 text-slate-900 dark:text-white">
+          <div className="flex items-center gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
+            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-500 dark:text-purple-400">
               <Sliders className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">
-                {isBn ? 'সোশ্যাল প্রুফ ও টাইমার সেটিংস' : 'Social Proof & Timer Settings'}
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                {isBn ? 'গ্লোবাল চেকার ও সোশ্যাল প্রুফ সেটিংস' : 'Global Checker & Social Proof Settings'}
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {isBn
-                  ? 'লাইভ অ্যাক্টিভিটি পপআপ অন/অফ এবং কত সেকেন্ড পর পর উঠবে তা নিয়ন্ত্রণ করুন।'
-                  : 'Configure floating notification timings and master switch.'}
+                  ? 'গ্লোবাল ওয়ার্নিং মোড, সোশ্যাল প্রুফ পপআপ এবং টাইমার সেটিংস নিয়ন্ত্রণ করুন।'
+                  : 'Configure global warning mode, live social proof timings and popup settings.'}
               </p>
             </div>
           </div>
 
           <div className="space-y-5 text-xs sm:text-sm">
-            {/* Master Toggle */}
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800">
+            {/* Global Warning-Only Toggle */}
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-red-500/10 border border-red-500/30">
               <div>
-                <span className="font-bold text-white block">
+                <span className="font-bold text-slate-900 dark:text-white block">
+                  {isBn ? '🛡️ গ্লোবাল সতর্কবার্তা মোড (Global Warning-Only)' : 'Global Warning-Only Mode'}
+                </span>
+                <span className="text-xs text-slate-600 dark:text-slate-400">
+                  {isBn
+                    ? 'এটি চালু রাখলে পুরো সাইটে যে কোনো স্ক্যামার সার্চে কারো ব্যক্তিগত তথ্য/নাম/নম্বর দেখাবে না, শুধুই উচ্চ সতর্কবার্তা দেবে।'
+                    : 'When enabled, all public searches hide personal identities and show only security warnings.'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setGlobalWarningOnly(!globalWarningOnly)}
+                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  globalWarningOnly ? 'bg-red-500' : 'bg-slate-300 dark:bg-slate-700'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                    globalWarningOnly ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Social Proof Master Toggle */}
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+              <div>
+                <span className="font-bold text-slate-900 dark:text-white block">
                   {isBn ? 'সোশ্যাল প্রুফ পপআপ চালু রাখুন' : 'Enable Social Proof Popup'}
                 </span>
-                <span className="text-xs text-slate-400">
-                  {isBn ? 'স্ক্রিনের কোণায় লাইভ ট্রানজেকশন নোটিফিকেশন প্রদর্শন করবে।' : 'Show live dynamic cashout & escrow popups.'}
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  {isBn ? 'স্ক্রিনের কোণায় লাইভ ট্রানজেকশন ও ক্যাশআউট নোটিফিকেশন প্রদর্শন করবে।' : 'Show live dynamic cashout & escrow popups.'}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setSocialProofEnabled(!socialProofEnabled)}
                 className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  socialProofEnabled ? 'bg-purple-500' : 'bg-slate-700'
+                  socialProofEnabled ? 'bg-purple-500' : 'bg-slate-300 dark:bg-slate-700'
                 }`}
               >
                 <span
@@ -900,7 +1126,7 @@ export default function AdminScammersPage() {
             {/* Timers Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1">
-                <label className="block text-slate-300 font-medium">
+                <label className="block text-slate-700 dark:text-slate-300 font-medium">
                   {isBn ? 'শুরুর সময় (Initial Delay)' : 'Initial Delay (Sec)'}
                 </label>
                 <input
@@ -908,13 +1134,13 @@ export default function AdminScammersPage() {
                   min={1}
                   value={socialInitialDelay}
                   onChange={(e) => setSocialInitialDelay(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono outline-none focus:border-purple-400"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white font-mono outline-none focus:border-purple-400"
                 />
                 <span className="text-[10px] text-slate-500">{isBn ? 'পেজ লোডের পর প্রথম পপআপ' : 'Delay before 1st popup'}</span>
               </div>
 
               <div className="space-y-1">
-                <label className="block text-slate-300 font-medium">
+                <label className="block text-slate-700 dark:text-slate-300 font-medium">
                   {isBn ? 'ইন্টারভাল (Interval)' : 'Interval (Sec)'}
                 </label>
                 <input
@@ -922,13 +1148,13 @@ export default function AdminScammersPage() {
                   min={5}
                   value={socialInterval}
                   onChange={(e) => setSocialInterval(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono outline-none focus:border-purple-400"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white font-mono outline-none focus:border-purple-400"
                 />
                 <span className="text-[10px] text-slate-500">{isBn ? 'প্রতিটি পপআপের মধ্যবর্তী বিরতি' : 'Gap between popups'}</span>
               </div>
 
               <div className="space-y-1">
-                <label className="block text-slate-300 font-medium">
+                <label className="block text-slate-700 dark:text-slate-300 font-medium">
                   {isBn ? 'স্থায়িত্ব (Duration)' : 'Duration (Sec)'}
                 </label>
                 <input
@@ -936,7 +1162,7 @@ export default function AdminScammersPage() {
                   min={3}
                   value={socialDuration}
                   onChange={(e) => setSocialDuration(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono outline-none focus:border-purple-400"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white font-mono outline-none focus:border-purple-400"
                 />
                 <span className="text-[10px] text-slate-500">{isBn ? 'স্ক্রিনে কত সেকেন্ড ভাসবে' : 'Display duration'}</span>
               </div>
@@ -957,11 +1183,11 @@ export default function AdminScammersPage() {
       {/* REJECT REASON MODAL */}
       {rejectModalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-slate-900 border border-red-500/40 rounded-3xl p-6 space-y-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-white">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-red-500/40 rounded-3xl p-6 space-y-4 shadow-2xl text-slate-900 dark:text-white">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
               {isBn ? 'রিপোর্টটি বাতিল করার কারণ লিখুন' : 'Reject Scammer Report'}
             </h3>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               {isBn ? 'এই কারণটি ব্যবহারকারী তার ড্যাশবোর্ডে দেখতে পারবে।' : 'This reason will be visible to the reporter.'}
             </p>
             <textarea
@@ -969,12 +1195,12 @@ export default function AdminScammersPage() {
               value={rejectionReasonInput}
               onChange={(e) => setRejectionReasonInput(e.target.value)}
               placeholder={isBn ? 'যেমন: যথাযথ প্রমাণের অভাব বা অসত্য তথ্য...' : 'e.g. Insufficient chat evidence...'}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs sm:text-sm outline-none focus:border-red-400"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm outline-none focus:border-red-400"
             />
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 onClick={() => setRejectModalItem(null)}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold"
+                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold"
               >
                 {isBn ? 'বাতিল' : 'Cancel'}
               </button>
@@ -992,15 +1218,15 @@ export default function AdminScammersPage() {
       {/* PERMANENT DELETE CONFIRM MODAL */}
       {deleteConfirmId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-slate-900 border border-red-500/50 rounded-3xl p-6 space-y-4 shadow-2xl text-center">
-            <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-400">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-red-500/50 rounded-3xl p-6 space-y-4 shadow-2xl text-center text-slate-900 dark:text-white">
+            <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-500 dark:text-red-400">
               <Trash2 className="w-7 h-7" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-white">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                 {isBn ? 'স্থায়ীভাবে ডিলিট করতে চান?' : 'Permanent Deletion'}
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {isBn
                   ? 'এই রেকর্ডটি ডাটাবেজ থেকে চিরতরে মুছে যাবে এবং পাবলিক সার্চেও আর পাওয়া যাবে না। এটি পুনরুদ্ধার করা সম্ভব নয়।'
                   : 'This record will be permanently purged from the database.'}
@@ -1009,7 +1235,7 @@ export default function AdminScammersPage() {
             <div className="flex items-center justify-center gap-3 pt-2">
               <button
                 onClick={() => setDeleteConfirmId(null)}
-                className="px-5 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold"
+                className="px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold"
               >
                 {isBn ? 'না, রাখুন' : 'Keep'}
               </button>
@@ -1027,72 +1253,167 @@ export default function AdminScammersPage() {
       {/* EDIT MODAL */}
       {editItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-700 rounded-3xl p-6 space-y-4 shadow-2xl my-8 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-lg font-bold text-white">{isBn ? 'রেকর্ড এডিট করুন' : 'Edit Scammer Record'}</h3>
-              <button onClick={() => setEditItem(null)} className="p-1 rounded-full text-slate-400 hover:text-white">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 space-y-4 shadow-2xl my-8 max-h-[90vh] overflow-y-auto text-slate-900 dark:text-white">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isBn ? 'রেকর্ড ও ডিসপ্লে এডিট করুন' : 'Edit Scammer Record'}</h3>
+              <button onClick={() => setEditItem(null)} className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleEditSubmit} className="space-y-3 text-xs sm:text-sm">
               <div>
-                <label className="block text-slate-300 font-medium mb-1">{isBn ? 'মোবাইল নম্বর:' : 'Phone:'}</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">{isBn ? 'মোবাইল নম্বর:' : 'Phone:'}</label>
                 <input
                   type="text"
                   value={editItem.phone || ''}
                   onChange={(e) => setEditItem({ ...editItem, phone: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-amber-400"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-amber-400"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-medium mb-1">{isBn ? 'ফেসবুক লিংক:' : 'Facebook Link:'}</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">{isBn ? 'ফেসবুক লিংক:' : 'Facebook Link:'}</label>
                 <input
                   type="text"
                   value={editItem.facebookLink || ''}
                   onChange={(e) => setEditItem({ ...editItem, facebookLink: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-amber-400"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-amber-400"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-medium mb-1">{isBn ? 'প্রতারকের নাম:' : 'Name:'}</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">{isBn ? 'প্রতারকের নাম:' : 'Name:'}</label>
                 <input
                   type="text"
                   value={editItem.scammerName || ''}
                   onChange={(e) => setEditItem({ ...editItem, scammerName: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-amber-400"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-amber-400"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-medium mb-1">{isBn ? 'ক্ষতির পরিমাণ:' : 'Amount:'}</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">{isBn ? 'ক্ষতির পরিমাণ:' : 'Amount:'}</label>
                 <input
                   type="number"
                   value={editItem.amountLost || ''}
                   onChange={(e) => setEditItem({ ...editItem, amountLost: e.target.value ? Number(e.target.value) : null })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-amber-400"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-amber-400"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-medium mb-1">{isBn ? 'বিবরণ:' : 'Description:'}</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">{isBn ? 'বিবরণ:' : 'Description:'}</label>
                 <textarea
                   rows={3}
                   value={editItem.description || ''}
                   onChange={(e) => setEditItem({ ...editItem, description: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-amber-400"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-amber-400"
                 />
               </div>
 
+              {/* Display & Warning Settings for this record */}
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-slate-900 dark:text-white text-xs block">
+                      {isBn ? '⚠️ সতর্কবার্তা-অনলি মোড' : 'Warning-Only Mode'}
+                    </span>
+                    <span className="text-[11px] text-slate-600 dark:text-slate-400">
+                      {isBn ? 'ব্যক্তিগত তথ্য লুকিয়ে শুধু সতর্কতা দেখাবে।' : 'Hide scammer info and show only warning.'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditItem({ ...editItem, warningOnlyMode: !editItem.warningOnlyMode })}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                      editItem.warningOnlyMode ? 'bg-red-500' : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        editItem.warningOnlyMode ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {!editItem.warningOnlyMode && (
+                  <div className="pt-2 border-t border-amber-500/20 space-y-1.5">
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">
+                      {isBn ? 'পাবলিক ডিসপ্লে ফিল্টার:' : 'Public Display Filters:'}
+                    </span>
+                    <div className="grid grid-cols-2 gap-1.5 text-xs">
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={editItem.showScammerName ?? true}
+                          onChange={(e) => setEditItem({ ...editItem, showScammerName: e.target.checked })}
+                          className="rounded text-amber-500 focus:ring-0"
+                        />
+                        <span>{isBn ? 'নাম দেখান' : 'Show Name'}</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={editItem.showPhonePublicly ?? true}
+                          onChange={(e) => setEditItem({ ...editItem, showPhonePublicly: e.target.checked })}
+                          className="rounded text-amber-500 focus:ring-0"
+                        />
+                        <span>{isBn ? 'নম্বর দেখান' : 'Show Phone'}</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={editItem.showFacebookPublicly ?? true}
+                          onChange={(e) => setEditItem({ ...editItem, showFacebookPublicly: e.target.checked })}
+                          className="rounded text-amber-500 focus:ring-0"
+                        />
+                        <span>{isBn ? 'ফেসবুক লিংক' : 'Show FB'}</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={editItem.showProofPublicly ?? true}
+                          onChange={(e) => setEditItem({ ...editItem, showProofPublicly: e.target.checked })}
+                          className="rounded text-amber-500 focus:ring-0"
+                        />
+                        <span>{isBn ? 'স্ক্রিনশট প্রুফ' : 'Show Proofs'}</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={editItem.showDescriptionPublicly ?? true}
+                          onChange={(e) => setEditItem({ ...editItem, showDescriptionPublicly: e.target.checked })}
+                          className="rounded text-amber-500 focus:ring-0"
+                        />
+                        <span>{isBn ? 'বিবরণ দেখান' : 'Show Desc'}</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-2 border-t border-amber-500/20">
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    {isBn ? 'কাস্টম সতর্কবার্তা:' : 'Custom Warning:'}
+                  </label>
+                  <input
+                    type="text"
+                    value={editItem.customWarning || ''}
+                    onChange={(e) => setEditItem({ ...editItem, customWarning: e.target.value })}
+                    placeholder={isBn ? 'যেমন: লেনদেন করা থেকে বিরত থাকুন।' : 'Custom alert message...'}
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs outline-none focus:border-amber-400"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-slate-300 font-medium mb-1">{isBn ? 'অ্যাডমিন নোট:' : 'Admin Notes:'}</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">{isBn ? 'অ্যাডমিন নোট:' : 'Admin Notes:'}</label>
                 <input
                   type="text"
                   value={editItem.adminNotes || ''}
                   onChange={(e) => setEditItem({ ...editItem, adminNotes: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white outline-none focus:border-amber-400"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-amber-400"
                 />
               </div>
 
@@ -1100,7 +1421,7 @@ export default function AdminScammersPage() {
                 <button
                   type="button"
                   onClick={() => setEditItem(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold"
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold"
                 >
                   {isBn ? 'বাতিল' : 'Cancel'}
                 </button>
