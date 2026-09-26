@@ -136,14 +136,18 @@ export default function DashboardLayout({
         <DashboardSidebar />
       </div>
 
-      {/* 2. Mobile Drawer Navigation Overlay */}
+      {/* 2. Mobile Drawer Navigation Overlay (Opens from Right) */}
       {mobileDrawerOpen && (
         <div
           className="fixed inset-0 z-50 md:hidden bg-slate-950/70 backdrop-blur-xs flex justify-end"
           onClick={() => setMobileDrawerOpen(false)}
         >
+          {/* Backdrop Tap Area on Left */}
+          <div className="flex-1 h-full cursor-pointer" onClick={() => setMobileDrawerOpen(false)} />
+
+          {/* Drawer Anchored to Right */}
           <div
-            className="w-72 max-w-[85vw] bg-white dark:bg-slate-900 h-[100dvh] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right"
+            className="w-72 max-w-[85vw] bg-white dark:bg-slate-900 h-[100dvh] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-300 shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Top Fixed Header with Brand & Close Button */}
@@ -303,7 +307,6 @@ export default function DashboardLayout({
               </button>
             </div>
           </div>
-          <div className="flex-1" onClick={() => setMobileDrawerOpen(false)} />
         </div>
       )}
 
