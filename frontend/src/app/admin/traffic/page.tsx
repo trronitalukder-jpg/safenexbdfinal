@@ -32,10 +32,12 @@ import {
   Zap,
 } from 'lucide-react';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
+import { useLanguage } from '@/context/LanguageContext';
 
 const unwrap = (res: any) => (res && res.data !== undefined ? res.data : res);
 
 export default function AdminTrafficPage() {
+  const { lang, setLang } = useLanguage();
   const [activeTab, setActiveTab] = useState<
     'radar' | 'new_vs_repeat' | 'ips' | 'engagement' | 'sources' | 'funnel' | 'reports'
   >('radar');
@@ -270,13 +272,15 @@ export default function AdminTrafficPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                ট্রাফিক ও ভিজিটর ইন্টেলিজেন্স
+                {lang === 'bn' ? 'ট্রাফিক ও ভিজিটর ইন্টেলিজেন্স' : 'Traffic & Visitor Intelligence'}
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30">
                   Real-Time Engine
                 </span>
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
-                লাইভ ভিজিটর রাডার, অবস্থানকাল (Dwell Time), আইপি অডিট এবং কনভার্শন ফানেল
+                {lang === 'bn'
+                  ? 'লাইভ ভিজিটর রাডার, অবস্থানকাল (Dwell Time), আইপি অডিট এবং কনভার্শন ফানেল'
+                  : 'Live visitor radar, dwell time analytics, IP fraud audit, and conversion funnel'}
               </p>
             </div>
           </div>
@@ -284,6 +288,34 @@ export default function AdminTrafficPage() {
 
         {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Explicit Language Switcher: Bangla | English */}
+          <div className="flex items-center bg-slate-900/80 p-1 rounded-xl border border-slate-700 text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => setLang('bn')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                lang === 'bn'
+                  ? 'bg-sky-500 text-white shadow-md font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="বাংলায় দেখুন"
+            >
+              বাংলা
+            </button>
+            <button
+              type="button"
+              onClick={() => setLang('en')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                lang === 'en'
+                  ? 'bg-sky-500 text-white shadow-md font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="View in English"
+            >
+              English
+            </button>
+          </div>
+
           {/* Date Range Selector */}
           <div className="flex items-center bg-slate-900/80 p-1 rounded-xl border border-slate-700">
             {(['today', 'yesterday', '7d', '30d'] as const).map((r) => (
@@ -297,12 +329,12 @@ export default function AdminTrafficPage() {
                 }`}
               >
                 {r === 'today'
-                  ? 'আজ'
+                  ? (lang === 'bn' ? 'আজ' : 'Today')
                   : r === 'yesterday'
-                  ? 'গতকাল'
+                  ? (lang === 'bn' ? 'গতকাল' : 'Yesterday')
                   : r === '7d'
-                  ? '৭ দিন'
-                  : '৩০ দিন'}
+                  ? (lang === 'bn' ? '৭ দিন' : '7 Days')
+                  : (lang === 'bn' ? '৩০ দিন' : '30 Days')}
               </button>
             ))}
           </div>
@@ -318,7 +350,7 @@ export default function AdminTrafficPage() {
               }`}
             >
               <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-emerald-400 animate-ping' : 'bg-slate-500'}`} />
-              {autoRefresh ? 'Auto Live (10s)' : 'Paused'}
+              {autoRefresh ? (lang === 'bn' ? 'অটো লাইভ (১০ সে)' : 'Auto Live (10s)') : (lang === 'bn' ? 'স্থগিত' : 'Paused')}
             </button>
           )}
 
@@ -327,7 +359,7 @@ export default function AdminTrafficPage() {
             onClick={() => fetchCurrentTabData()}
             disabled={loading}
             className="p-2.5 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-200 transition-all border border-slate-600 disabled:opacity-50"
-            title="Refresh"
+            title={lang === 'bn' ? 'রিফ্রেশ করুন' : 'Refresh'}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-sky-400' : ''}`} />
           </button>
@@ -339,10 +371,20 @@ export default function AdminTrafficPage() {
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
             <Share2 className="w-3.5 h-3.5 text-sky-400" />
-            <span>শীর্ষ ট্রাফিক উৎস এক নজরে (Traffic Acquisition Channels)</span>
+            <span>
+              {lang === 'bn'
+                ? 'শীর্ষ ট্রাফিক উৎস এক নজরে (Traffic Acquisition Channels)'
+                : 'Top Traffic Acquisition Channels Overview'}
+            </span>
           </h2>
           <span className="text-[11px] text-slate-500 font-mono">
-            {dateRange === 'today' ? 'আজকের ট্রাফিক' : dateRange === 'yesterday' ? 'গতকালের ট্রাফিক' : dateRange === '7d' ? 'গত ৭ দিনের ট্রাফিক' : 'গত ৩০ দিনের ট্রাফিক'}
+            {dateRange === 'today'
+              ? (lang === 'bn' ? 'আজকের ট্রাফিক' : "Today's Traffic")
+              : dateRange === 'yesterday'
+              ? (lang === 'bn' ? 'গতকালের ট্রাফিক' : "Yesterday's Traffic")
+              : dateRange === '7d'
+              ? (lang === 'bn' ? 'গত ৭ দিনের ট্রাফিক' : 'Last 7 Days')
+              : (lang === 'bn' ? 'গত ৩০ দিনের ট্রাফিক' : 'Last 30 Days')}
           </span>
         </div>
 
@@ -362,7 +404,7 @@ export default function AdminTrafficPage() {
             </div>
             <div className="text-xs font-semibold text-slate-300">Facebook</div>
             <div className="text-xl font-extrabold text-white mt-1">
-              {fbMetric.count} <span className="text-[10px] font-normal text-slate-400">জন</span>
+              {fbMetric.count} <span className="text-[10px] font-normal text-slate-400">{lang === 'bn' ? 'জন' : 'visits'}</span>
             </div>
             <div className="text-[10px] text-blue-400/80 mt-1 flex items-center gap-1 truncate">
               <Clock className="w-3 h-3" /> {formatSeconds(fbMetric.avgDwellSeconds)}
@@ -382,9 +424,11 @@ export default function AdminTrafficPage() {
                 {directMetric.percentage}%
               </span>
             </div>
-            <div className="text-xs font-semibold text-slate-300">Direct Visit</div>
+            <div className="text-xs font-semibold text-slate-300">
+              {lang === 'bn' ? 'সরাসরি (Direct)' : 'Direct Visits'}
+            </div>
             <div className="text-xl font-extrabold text-white mt-1">
-              {directMetric.count} <span className="text-[10px] font-normal text-slate-400">জন</span>
+              {directMetric.count} <span className="text-[10px] font-normal text-slate-400">{lang === 'bn' ? 'জন' : 'visits'}</span>
             </div>
             <div className="text-[10px] text-sky-400/80 mt-1 flex items-center gap-1 truncate">
               <Clock className="w-3 h-3" /> {formatSeconds(directMetric.avgDwellSeconds)}
@@ -406,7 +450,7 @@ export default function AdminTrafficPage() {
             </div>
             <div className="text-xs font-semibold text-slate-300">Telegram</div>
             <div className="text-xl font-extrabold text-white mt-1">
-              {tgMetric.count} <span className="text-[10px] font-normal text-slate-400">জন</span>
+              {tgMetric.count} <span className="text-[10px] font-normal text-slate-400">{lang === 'bn' ? 'জন' : 'visits'}</span>
             </div>
             <div className="text-[10px] text-cyan-400/80 mt-1 flex items-center gap-1 truncate">
               <Clock className="w-3 h-3" /> {formatSeconds(tgMetric.avgDwellSeconds)}
@@ -428,7 +472,7 @@ export default function AdminTrafficPage() {
             </div>
             <div className="text-xs font-semibold text-slate-300">WhatsApp</div>
             <div className="text-xl font-extrabold text-white mt-1">
-              {waMetric.count} <span className="text-[10px] font-normal text-slate-400">জন</span>
+              {waMetric.count} <span className="text-[10px] font-normal text-slate-400">{lang === 'bn' ? 'জন' : 'visits'}</span>
             </div>
             <div className="text-[10px] text-emerald-400/80 mt-1 flex items-center gap-1 truncate">
               <Clock className="w-3 h-3" /> {formatSeconds(waMetric.avgDwellSeconds)}
@@ -448,9 +492,11 @@ export default function AdminTrafficPage() {
                 {googleMetric.percentage}%
               </span>
             </div>
-            <div className="text-xs font-semibold text-slate-300">Google Search</div>
+            <div className="text-xs font-semibold text-slate-300">
+              {lang === 'bn' ? 'গুগল সার্চ' : 'Google Search'}
+            </div>
             <div className="text-xl font-extrabold text-white mt-1">
-              {googleMetric.count} <span className="text-[10px] font-normal text-slate-400">জন</span>
+              {googleMetric.count} <span className="text-[10px] font-normal text-slate-400">{lang === 'bn' ? 'জন' : 'visits'}</span>
             </div>
             <div className="text-[10px] text-amber-400/80 mt-1 flex items-center gap-1 truncate">
               <Clock className="w-3 h-3" /> {formatSeconds(googleMetric.avgDwellSeconds)}
@@ -470,9 +516,11 @@ export default function AdminTrafficPage() {
                 {affiliateMetric.percentage}%
               </span>
             </div>
-            <div className="text-xs font-semibold text-slate-300">রেফারেল / অন্যান্য</div>
+            <div className="text-xs font-semibold text-slate-300">
+              {lang === 'bn' ? 'রেফারেল / অন্যান্য' : 'Referral / Others'}
+            </div>
             <div className="text-xl font-extrabold text-white mt-1">
-              {affiliateMetric.count} <span className="text-[10px] font-normal text-slate-400">জন</span>
+              {affiliateMetric.count} <span className="text-[10px] font-normal text-slate-400">{lang === 'bn' ? 'জন' : 'visits'}</span>
             </div>
             <div className="text-[10px] text-purple-400/80 mt-1 flex items-center gap-1 truncate">
               <Clock className="w-3 h-3" /> {formatSeconds(affiliateMetric.avgDwellSeconds)}
@@ -487,7 +535,7 @@ export default function AdminTrafficPage() {
         <button
           onClick={() => scrollTabs('left')}
           className="shrink-0 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition shadow border border-slate-700 hidden sm:flex items-center justify-center"
-          title="Scroll Left"
+          title={lang === 'bn' ? 'বামে স্ক্রল' : 'Scroll Left'}
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -499,13 +547,13 @@ export default function AdminTrafficPage() {
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {[
-            { id: 'radar', label: '🔴 লাইভ রাডার (Live Radar)', icon: Activity },
-            { id: 'new_vs_repeat', label: '👥 নতুন বনাম রিপিট (New vs Repeat)', icon: Users },
-            { id: 'ips', label: '🌐 আইপি অডিট ও ফ্রড (IP Intelligence)', icon: ShieldAlert },
-            { id: 'engagement', label: '⏱️ অবস্থানকাল ও বাউন্স (Dwell Time)', icon: Clock },
-            { id: 'sources', label: '🧭 ট্রাফিক উৎস ও চ্যানেল (Sources & UTM)', icon: Compass },
-            { id: 'funnel', label: '🎯 আচরণ ও কনভার্শন ফানেল (Funnel)', icon: TrendingUp },
-            { id: 'reports', label: '📊 এক্সপোর্ট ও টেলিগ্রাম (Reports)', icon: FileSpreadsheet },
+            { id: 'radar', label: lang === 'bn' ? '🔴 লাইভ রাডার (Live Radar)' : '🔴 Live Radar', icon: Activity },
+            { id: 'new_vs_repeat', label: lang === 'bn' ? '👥 নতুন বনাম রিপিট (New vs Repeat)' : '👥 New vs Repeat', icon: Users },
+            { id: 'ips', label: lang === 'bn' ? '🌐 আইপি অডিট ও ফ্রড (IP Intelligence)' : '🌐 IP Intelligence & Fraud', icon: ShieldAlert },
+            { id: 'engagement', label: lang === 'bn' ? '⏱️ অবস্থানকাল ও বাউন্স (Dwell Time)' : '⏱️ Dwell Time & Bounce', icon: Clock },
+            { id: 'sources', label: lang === 'bn' ? '🧭 ট্রাফিক উৎস ও চ্যানেল (Sources & UTM)' : '🧭 Sources & UTM Channels', icon: Compass },
+            { id: 'funnel', label: lang === 'bn' ? '🎯 আচরণ ও কনভার্শন ফানেল (Funnel)' : '🎯 Conversion Funnel', icon: TrendingUp },
+            { id: 'reports', label: lang === 'bn' ? '📊 এক্সপোর্ট ও টেলিগ্রাম (Reports)' : '📊 Reports & Export', icon: FileSpreadsheet },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -530,7 +578,7 @@ export default function AdminTrafficPage() {
         <button
           onClick={() => scrollTabs('right')}
           className="shrink-0 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition shadow border border-slate-700 hidden sm:flex items-center justify-center"
-          title="Scroll Right"
+          title={lang === 'bn' ? 'ডানে স্ক্রল' : 'Scroll Right'}
         >
           <ChevronRight className="w-4 h-4" />
         </button>
@@ -549,34 +597,38 @@ export default function AdminTrafficPage() {
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping inline-block" />
-                  বর্তমানে লাইভ সক্রিয়
+                  {lang === 'bn' ? 'বর্তমানে লাইভ সক্রিয়' : 'Currently Active'}
                 </span>
                 <Users className="w-5 h-5 text-emerald-400 opacity-80" />
               </div>
               <div className="mt-3 text-3xl font-extrabold text-white">
                 {radarData?.activeCount ?? 0}
-                <span className="text-sm font-normal text-slate-400 ml-2">জন ভিজিটর</span>
+                <span className="text-sm font-normal text-slate-400 ml-2">
+                  {lang === 'bn' ? 'জন ভিজিটর' : 'visitors'}
+                </span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">গত ৩ মিনিটে সাইটে সক্রিয় আছেন</p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                {lang === 'bn' ? 'গত ৩ মিনিটে সাইটে সক্রিয় আছেন' : 'Active on site in last 3 minutes'}
+              </p>
             </div>
 
             <div className="bg-slate-800/60 border border-slate-700/60 p-5 rounded-2xl">
               <span className="text-xs font-semibold text-sky-400 flex items-center gap-1.5">
                 <Clock className="w-4 h-4" />
-                শীর্ষ সক্রিয় পেজ
+                {lang === 'bn' ? 'শীর্ষ সক্রিয় পেজ' : 'Top Active Page'}
               </span>
               <div className="mt-3 text-lg font-bold text-white truncate">
-                {radarData?.pageDistribution?.[0]?.path || 'হোমপেজ (/)'}
+                {radarData?.pageDistribution?.[0]?.path || (lang === 'bn' ? 'হোমপেজ (/)' : 'Homepage (/)')}
               </div>
               <p className="text-[11px] text-slate-400 mt-1">
-                {radarData?.pageDistribution?.[0]?.count || 0} জন ব্রাউজ করছেন
+                {radarData?.pageDistribution?.[0]?.count || 0} {lang === 'bn' ? 'জন ব্রাউজ করছেন' : 'browsing now'}
               </p>
             </div>
 
             <div className="bg-slate-800/60 border border-slate-700/60 p-5 rounded-2xl">
               <span className="text-xs font-semibold text-purple-400 flex items-center gap-1.5">
                 <Smartphone className="w-4 h-4" />
-                মোবাইল ইউজার
+                {lang === 'bn' ? 'মোবাইল ইউজার' : 'Mobile Users'}
               </span>
               <div className="mt-3 text-2xl font-bold text-white">
                 {radarData?.activeSessions
@@ -588,21 +640,27 @@ export default function AdminTrafficPage() {
                   : 0}
                 %
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">স্মার্টফোন দিয়ে ব্রাউজ করছেন</p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                {lang === 'bn' ? 'স্মার্টফোন দিয়ে ব্রাউজ করছেন' : 'Browsing via smartphone'}
+              </p>
             </div>
 
             <div className="bg-slate-800/60 border border-slate-700/60 p-5 rounded-2xl">
               <span className="text-xs font-semibold text-amber-400 flex items-center gap-1.5">
                 <Zap className="w-4 h-4" />
-                রিটার্নিং ভিজিটর
+                {lang === 'bn' ? 'রিটার্নিং ভিজিটর' : 'Returning Visitors'}
               </span>
               <div className="mt-3 text-2xl font-bold text-white">
                 {radarData?.activeSessions
                   ? radarData.activeSessions.filter((s: any) => s.isRepeat).length
                   : 0}
-                <span className="text-sm font-normal text-slate-400 ml-2">জন</span>
+                <span className="text-sm font-normal text-slate-400 ml-2">
+                  {lang === 'bn' ? 'জন' : 'visitors'}
+                </span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">পূর্বে ভিজিট করেছেন এমন ইউজার</p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                {lang === 'bn' ? 'পূর্বে ভিজিট করেছেন এমন ইউজার' : 'Users who visited previously'}
+              </p>
             </div>
           </div>
 
@@ -610,7 +668,7 @@ export default function AdminTrafficPage() {
           {radarData?.pageDistribution && radarData.pageDistribution.length > 0 && (
             <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/50">
               <h3 className="text-xs font-semibold text-slate-400 mb-2">
-                রিয়েল-টাইম পেজ অনুযায়ী ট্রাফিক ভাগ:
+                {lang === 'bn' ? 'রিয়েল-টাইম পেজ অনুযায়ী ট্রাফিক ভাগ:' : 'Real-time Traffic by Page:'}
               </h3>
               <div className="flex flex-wrap gap-2">
                 {radarData.pageDistribution.map((p: any) => (
@@ -633,7 +691,7 @@ export default function AdminTrafficPage() {
             <div className="p-4 border-b border-slate-700/60 flex items-center justify-between">
               <h2 className="text-sm font-bold text-white flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                লাইভ ভিজিটর স্ট্রিম (Real-Time Active Visitors)
+                {lang === 'bn' ? 'লাইভ ভিজিটর স্ট্রিম (Real-Time Active Visitors)' : 'Live Visitor Stream (Real-Time)'}
               </h2>
               <span className="text-xs text-slate-400 font-mono">
                 {radarData?.activeSessions?.length || 0} active now
@@ -644,13 +702,13 @@ export default function AdminTrafficPage() {
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-900/60 text-slate-400 font-semibold uppercase tracking-wider border-b border-slate-700/60">
                   <tr>
-                    <th className="p-3.5">ভিজিটর / একাউন্ট</th>
-                    <th className="p-3.5">আইপি ও নেটওয়ার্ক (ISP)</th>
-                    <th className="p-3.5">ডিভাইস ও ব্রাউজার</th>
-                    <th className="p-3.5">বর্তমান পেজ</th>
-                    <th className="p-3.5">অবস্থানকাল (Dwell)</th>
-                    <th className="p-3.5">উৎস (Source)</th>
-                    <th className="p-3.5 text-right">অ্যাকশন</th>
+                    <th className="p-3.5">{lang === 'bn' ? 'ভিজিটর / একাউন্ট' : 'Visitor / User'}</th>
+                    <th className="p-3.5">{lang === 'bn' ? 'আইপি ও নেটওয়ার্ক (ISP)' : 'IP & Network (ISP)'}</th>
+                    <th className="p-3.5">{lang === 'bn' ? 'ডিভাইস ও ব্রাউজার' : 'Device & Browser'}</th>
+                    <th className="p-3.5">{lang === 'bn' ? 'বর্তমান পেজ' : 'Current Page'}</th>
+                    <th className="p-3.5">{lang === 'bn' ? 'অবস্থানকাল (Dwell)' : 'Dwell Time'}</th>
+                    <th className="p-3.5">{lang === 'bn' ? 'উৎস (Source)' : 'Source'}</th>
+                    <th className="p-3.5 text-right">{lang === 'bn' ? 'অ্যাকশন' : 'Action'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/40">
@@ -734,7 +792,7 @@ export default function AdminTrafficPage() {
                             onClick={() => openDrawer(s.ipAddress)}
                             className="px-2.5 py-1 text-xs bg-sky-600/80 hover:bg-sky-600 text-white rounded-lg transition-all shadow"
                           >
-                            ৩৬০° প্রোফাইল
+                            {lang === 'bn' ? '৩৬০° প্রোফাইল' : '360° Profile'}
                           </button>
                         </td>
                       </tr>
@@ -742,7 +800,9 @@ export default function AdminTrafficPage() {
                   ) : (
                     <tr>
                       <td colSpan={7} className="p-8 text-center text-slate-400">
-                        বর্তমানে কোনো সক্রিয় ভিজিটর নেই অথবা ডাটা রিফ্রেশ হচ্ছে...
+                        {lang === 'bn'
+                          ? 'বর্তমানে কোনো সক্রিয় ভিজিটর নেই অথবা ডাটা রিফ্রেশ হচ্ছে...'
+                          : 'No active visitors right now or data is updating...'}
                       </td>
                     </tr>
                   )}
@@ -764,7 +824,7 @@ export default function AdminTrafficPage() {
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-emerald-400 flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-emerald-400" />
-                  নতুন ভিজিটর (New Visitors)
+                  {lang === 'bn' ? 'নতুন ভিজিটর (New Visitors)' : 'New Visitors'}
                 </h3>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">
                   {newVsRepeatData?.newRatio ?? 0}%
@@ -772,10 +832,13 @@ export default function AdminTrafficPage() {
               </div>
               <div className="mt-4 text-3xl font-extrabold text-white">
                 {newVsRepeatData?.newSessions ?? 0}
-                <span className="text-sm font-normal text-slate-400 ml-2">টি সেশন</span>
+                <span className="text-sm font-normal text-slate-400 ml-2">
+                  {lang === 'bn' ? 'টি সেশন' : 'sessions'}
+                </span>
               </div>
               <p className="text-xs text-slate-400 mt-2">
-                গড় অবস্থানকাল: <strong>{formatSeconds(newVsRepeatData?.avgNewDwellSeconds)}</strong>
+                {lang === 'bn' ? 'গড় অবস্থানকাল:' : 'Avg Dwell Time:'}{' '}
+                <strong>{formatSeconds(newVsRepeatData?.avgNewDwellSeconds)}</strong>
               </p>
             </div>
 
@@ -784,7 +847,7 @@ export default function AdminTrafficPage() {
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-purple-400 flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-purple-400" />
-                  রিপিট ভিজিটর (Repeat Visitors)
+                  {lang === 'bn' ? 'রিপিট ভিজিটর (Repeat Visitors)' : 'Repeat Visitors'}
                 </h3>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono">
                   {newVsRepeatData?.repeatRatio ?? 0}%
@@ -792,32 +855,56 @@ export default function AdminTrafficPage() {
               </div>
               <div className="mt-4 text-3xl font-extrabold text-white">
                 {newVsRepeatData?.repeatSessions ?? 0}
-                <span className="text-sm font-normal text-slate-400 ml-2">টি সেশন</span>
+                <span className="text-sm font-normal text-slate-400 ml-2">
+                  {lang === 'bn' ? 'টি সেশন' : 'sessions'}
+                </span>
               </div>
               <p className="text-xs text-slate-400 mt-2">
-                গড় অবস্থানকাল: <strong>{formatSeconds(newVsRepeatData?.avgRepeatDwellSeconds)}</strong>
+                {lang === 'bn' ? 'গড় অবস্থানকাল:' : 'Avg Dwell Time:'}{' '}
+                <strong>{formatSeconds(newVsRepeatData?.avgRepeatDwellSeconds)}</strong>
               </p>
             </div>
 
             {/* Total Aggregate */}
             <div className="bg-slate-800/60 border border-slate-700/60 p-6 rounded-2xl">
-              <h3 className="text-sm font-semibold text-slate-300">মোট সেশন হিসেব</h3>
+              <h3 className="text-sm font-semibold text-slate-300">
+                {lang === 'bn' ? 'মোট সেশন হিসেব' : 'Total Session Count'}
+              </h3>
               <div className="mt-4 text-3xl font-extrabold text-white">
                 {newVsRepeatData?.totalSessions ?? 0}
               </div>
               <p className="text-xs text-slate-400 mt-2">
-                রিটার্নিং ইউজাররা নতুনদের তুলনায় গড়ে{' '}
-                <strong className="text-sky-400">
-                  {newVsRepeatData?.avgRepeatDwellSeconds && newVsRepeatData?.avgNewDwellSeconds
-                    ? Math.round(
-                        (newVsRepeatData.avgRepeatDwellSeconds /
-                          (newVsRepeatData.avgNewDwellSeconds || 1)) *
-                          10
-                      ) / 10
-                    : 1}
-                  x
-                </strong>{' '}
-                বেশি সময় ওয়েবসাইটে থাকেন।
+                {lang === 'bn' ? (
+                  <>
+                    রিটার্নিং ইউজাররা নতুনদের তুলনায় গড়ে{' '}
+                    <strong className="text-sky-400">
+                      {newVsRepeatData?.avgRepeatDwellSeconds && newVsRepeatData?.avgNewDwellSeconds
+                        ? Math.round(
+                            (newVsRepeatData.avgRepeatDwellSeconds /
+                              (newVsRepeatData.avgNewDwellSeconds || 1)) *
+                              10
+                          ) / 10
+                        : 1}
+                      x
+                    </strong>{' '}
+                    বেশি সময় ওয়েবসাইটে থাকেন।
+                  </>
+                ) : (
+                  <>
+                    Returning visitors spend on average{' '}
+                    <strong className="text-sky-400">
+                      {newVsRepeatData?.avgRepeatDwellSeconds && newVsRepeatData?.avgNewDwellSeconds
+                        ? Math.round(
+                            (newVsRepeatData.avgRepeatDwellSeconds /
+                              (newVsRepeatData.avgNewDwellSeconds || 1)) *
+                              10
+                          ) / 10
+                        : 1}
+                      x
+                    </strong>{' '}
+                    more time on site compared to new users.
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -825,36 +912,52 @@ export default function AdminTrafficPage() {
           {/* Frequency Breakdown */}
           <div className="bg-slate-800/80 border border-slate-700/60 p-6 rounded-2xl">
             <h3 className="text-base font-bold text-white mb-4">
-              ভিজিটরের আগমনের ফ্রিকোয়েন্সি (Frequency of Visits)
+              {lang === 'bn' ? 'ভিজিটরের আগমনের ফ্রিকোয়েন্সি (Frequency of Visits)' : 'Visitor Frequency Distribution'}
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-700/40">
-                <div className="text-xs text-slate-400">১ বার ভিজিট করেছে</div>
+                <div className="text-xs text-slate-400">
+                  {lang === 'bn' ? '১ বার ভিজিট করেছে' : 'Visited 1 Time'}
+                </div>
                 <div className="text-2xl font-bold text-white mt-1">
                   {newVsRepeatData?.frequencyBreakdown?.once ?? 0}
                 </div>
-                <div className="text-[10px] text-slate-500 mt-1">প্রথমবারের ভিজিটর</div>
+                <div className="text-[10px] text-slate-500 mt-1">
+                  {lang === 'bn' ? 'প্রথমবারের ভিজিটর' : 'First-time visitors'}
+                </div>
               </div>
               <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-700/40">
-                <div className="text-xs text-slate-400">২ থেকে ৫ বার</div>
+                <div className="text-xs text-slate-400">
+                  {lang === 'bn' ? '২ থেকে ৫ বার' : '2 to 5 Times'}
+                </div>
                 <div className="text-2xl font-bold text-sky-400 mt-1">
                   {newVsRepeatData?.frequencyBreakdown?.twoToFive ?? 0}
                 </div>
-                <div className="text-[10px] text-slate-500 mt-1">আগ্রহী রিটার্নিং ট্রাফিক</div>
+                <div className="text-[10px] text-slate-500 mt-1">
+                  {lang === 'bn' ? 'আগ্রহী রিটার্নিং ট্রাফিক' : 'Engaged return traffic'}
+                </div>
               </div>
               <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-700/40">
-                <div className="text-xs text-slate-400">৬ থেকে ১০ বার</div>
+                <div className="text-xs text-slate-400">
+                  {lang === 'bn' ? '৬ থেকে ১০ বার' : '6 to 10 Times'}
+                </div>
                 <div className="text-2xl font-bold text-purple-400 mt-1">
                   {newVsRepeatData?.frequencyBreakdown?.sixToTen ?? 0}
                 </div>
-                <div className="text-[10px] text-slate-500 mt-1">সক্রিয় নিয়মিত গ্রাহক</div>
+                <div className="text-[10px] text-slate-500 mt-1">
+                  {lang === 'bn' ? 'সক্রিয় নিয়মিত গ্রাহক' : 'Regular active users'}
+                </div>
               </div>
               <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-700/40">
-                <div className="text-xs text-slate-400">১১+ বার ভিজিট</div>
+                <div className="text-xs text-slate-400">
+                  {lang === 'bn' ? '১১+ বার ভিজিট' : '11+ Visits'}
+                </div>
                 <div className="text-2xl font-bold text-emerald-400 mt-1">
                   {newVsRepeatData?.frequencyBreakdown?.elevenPlus ?? 0}
                 </div>
-                <div className="text-[10px] text-slate-500 mt-1">লয়াল পাওয়ার ইউজার</div>
+                <div className="text-[10px] text-slate-500 mt-1">
+                  {lang === 'bn' ? 'লয়াল পাওয়ার ইউজার' : 'Loyal power users'}
+                </div>
               </div>
             </div>
           </div>
@@ -871,7 +974,9 @@ export default function AdminTrafficPage() {
             <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl flex items-center gap-3">
               <Globe className="w-8 h-8 text-sky-400" />
               <div>
-                <div className="text-xs text-slate-400">মোট ইউনিক আইপি (Unique IPs)</div>
+                <div className="text-xs text-slate-400">
+                  {lang === 'bn' ? 'মোট ইউনিক আইপি (Unique IPs)' : 'Total Unique IPs'}
+                </div>
                 <div className="text-2xl font-bold text-white">
                   {ipData?.totalUniqueIps ?? 0}
                 </div>
@@ -881,22 +986,30 @@ export default function AdminTrafficPage() {
             <div className="bg-amber-950/20 border border-amber-500/30 p-4 rounded-xl flex items-center gap-3">
               <AlertTriangle className="w-8 h-8 text-amber-400" />
               <div>
-                <div className="text-xs text-amber-300">মাল্টি-অ্যাকাউন্ট আইপি (Multi-Account)</div>
+                <div className="text-xs text-amber-300">
+                  {lang === 'bn' ? 'মাল্টি-অ্যাকাউন্ট আইপি (Multi-Account)' : 'Multi-Account IPs'}
+                </div>
                 <div className="text-2xl font-bold text-amber-400">
                   {ipData?.multiAccountIpsCount ?? 0}
                 </div>
-                <div className="text-[10px] text-amber-200/70">একই আইপি থেকে ২+ একাউন্ট</div>
+                <div className="text-[10px] text-amber-200/70">
+                  {lang === 'bn' ? 'একই আইপি থেকে ২+ একাউন্ট' : '2+ accounts from same IP'}
+                </div>
               </div>
             </div>
 
             <div className="bg-rose-950/20 border border-rose-500/30 p-4 rounded-xl flex items-center gap-3">
               <Ban className="w-8 h-8 text-rose-400" />
               <div>
-                <div className="text-xs text-rose-300">ব্লকড আইপি (Blocked Blacklist)</div>
+                <div className="text-xs text-rose-300">
+                  {lang === 'bn' ? 'ব্লকড আইপি (Blocked Blacklist)' : 'Blocked IPs (Blacklist)'}
+                </div>
                 <div className="text-2xl font-bold text-rose-400">
                   {ipData?.blockedIpsCount ?? 0}
                 </div>
-                <div className="text-[10px] text-rose-200/70">সাইট এক্সেস নিষিদ্ধ করা হয়েছে</div>
+                <div className="text-[10px] text-rose-200/70">
+                  {lang === 'bn' ? 'সাইট এক্সেস নিষিদ্ধ করা হয়েছে' : 'Site access denied'}
+                </div>
               </div>
             </div>
           </div>
@@ -908,7 +1021,11 @@ export default function AdminTrafficPage() {
               type="text"
               value={ipSearch}
               onChange={(e) => setIpSearch(e.target.value)}
-              placeholder="আইপি অ্যাড্রেস, ISP বা শহর লিখে সার্চ করুন (যেমনঃ 103.204..., Grameenphone, Dhaka)..."
+              placeholder={
+                lang === 'bn'
+                  ? 'আইপি অ্যাড্রেস, ISP বা শহর লিখে সার্চ করুন (যেমনঃ 103.204..., Grameenphone, Dhaka)...'
+                  : 'Search by IP address, ISP, or city (e.g. 103.204..., Grameenphone, Dhaka)...'
+              }
               className="bg-transparent border-none text-white text-sm focus:outline-none w-full placeholder:text-slate-500"
             />
             {ipSearch && (
@@ -924,14 +1041,14 @@ export default function AdminTrafficPage() {
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-900/60 text-slate-400 font-semibold uppercase tracking-wider border-b border-slate-700/60">
                   <tr>
-                    <th className="p-3.5">আইপি অ্যাড্রেস</th>
-                    <th className="p-3.5">অপারেটর / ISP ও শহর</th>
-                    <th className="p-3.5">মোট সেশন</th>
-                    <th className="p-3.5">মোট অবস্থানকাল (Lifetime)</th>
-                    <th className="p-3.5">গড় সেশন সময়</th>
-                    <th className="p-3.5">লিংকড ইউজার একাউন্ট</th>
-                    <th className="p-3.5">স্ট্যাটাস</th>
-                    <th className="p-3.5 text-right">অ্যাকশন</th>
+                    <th className="p-3.5">{lang === 'bn' ? 'আইপি অ্যাড্রেস' : 'IP Address'}</th>
+                    <th className="p-3.5">{lang === 'bn' ? 'অপারেটর / ISP ও শহর' : 'Operator / ISP & City'}</th>
+                    <th className="p-3.5">{lang === 'bn' ? 'মোট সেশন' : 'Total Sessions'}</th>
+                    <th className="p-3.5">{lang === 'bn' ? 'মোট অবস্থানকাল (Lifetime)' : 'Lifetime Dwell Time'}</th>
+                    <th className="p-3.5">{lang === 'bn' ? 'গড় সেশন সময়' : 'Avg Session Time'}</th>
+                    <th className="p-3.5">{lang === 'bn' ? 'লিংকড ইউজার একাউন্ট' : 'Linked User Accounts'}</th>
+                    <th className="p-3.5">{lang === 'bn' ? 'স্ট্যাটাস' : 'Status'}</th>
+                    <th className="p-3.5 text-right">{lang === 'bn' ? 'অ্যাকশন' : 'Action'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/40">
@@ -955,7 +1072,9 @@ export default function AdminTrafficPage() {
                         </td>
 
                         {/* Sessions */}
-                        <td className="p-3.5 font-bold text-white">{item.sessionCount} বার</td>
+                        <td className="p-3.5 font-bold text-white">
+                          {item.sessionCount} {lang === 'bn' ? 'বার' : 'sessions'}
+                        </td>
 
                         {/* Total Duration */}
                         <td className="p-3.5 text-emerald-400 font-semibold">
@@ -986,7 +1105,9 @@ export default function AdminTrafficPage() {
                               )}
                             </div>
                           ) : (
-                            <span className="text-slate-500 italic">Guest (লগইন করেনি)</span>
+                            <span className="text-slate-500 italic">
+                              {lang === 'bn' ? 'Guest (লগইন করেনি)' : 'Guest (Not logged in)'}
+                            </span>
                           )}
                         </td>
 
@@ -1009,14 +1130,14 @@ export default function AdminTrafficPage() {
                             onClick={() => openDrawer(item.ipAddress)}
                             className="px-2.5 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition-all"
                           >
-                            ডিটেইলস
+                            {lang === 'bn' ? 'ডিটেইলস' : 'Details'}
                           </button>
                           {item.isBlocked ? (
                             <button
                               onClick={() => handleUnblockIp(item.ipAddress)}
                               className="px-2.5 py-1 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-all font-semibold"
                             >
-                              আনব্লক
+                              {lang === 'bn' ? 'আনব্লক' : 'Unblock'}
                             </button>
                           ) : (
                             <button
@@ -1026,7 +1147,7 @@ export default function AdminTrafficPage() {
                               }}
                               className="px-2.5 py-1 text-xs bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg transition-all"
                             >
-                              ব্লক করুন
+                              {lang === 'bn' ? 'ব্লক করুন' : 'Block'}
                             </button>
                           )}
                         </td>
@@ -1035,7 +1156,7 @@ export default function AdminTrafficPage() {
                   ) : (
                     <tr>
                       <td colSpan={8} className="p-8 text-center text-slate-400">
-                        কোনো আইপি পাওয়া যায়নি...
+                        {lang === 'bn' ? 'কোনো আইপি পাওয়া যায়নি...' : 'No IP records found...'}
                       </td>
                     </tr>
                   )}
@@ -1055,45 +1176,48 @@ export default function AdminTrafficPage() {
             <div className="bg-slate-800/60 border border-slate-700/60 p-6 rounded-2xl">
               <span className="text-xs font-semibold text-emerald-400 flex items-center gap-2">
                 <Clock className="w-4 h-4" />
-                গড় অবস্থানকাল (Average Dwell Time)
+                {lang === 'bn' ? 'গড় অবস্থানকাল (Average Dwell Time)' : 'Average Dwell Time'}
               </span>
               <div className="mt-3 text-3xl font-extrabold text-white">
                 {formatSeconds(engagementData?.avgDurationSeconds)}
               </div>
               <p className="text-xs text-slate-400 mt-2">
-                প্রকৃত সক্রিয় সময়: <strong>{formatSeconds(engagementData?.avgActiveSeconds)}</strong>
+                {lang === 'bn' ? 'প্রকৃত সক্রিয় সময়:' : 'Actual Active Time:'}{' '}
+                <strong>{formatSeconds(engagementData?.avgActiveSeconds)}</strong>
               </p>
             </div>
 
             <div className="bg-slate-800/60 border border-slate-700/60 p-6 rounded-2xl">
               <span className="text-xs font-semibold text-rose-400 flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" />
-                বাউন্স রেট (Bounce Rate)
+                {lang === 'bn' ? 'বাউন্স রেট (Bounce Rate)' : 'Bounce Rate'}
               </span>
               <div className="mt-3 text-3xl font-extrabold text-white">
                 {engagementData?.bounceRate ?? 0}%
               </div>
               <p className="text-xs text-slate-400 mt-2">
-                মাত্র ১ পেজ দেখে দ্রুত বের হয়ে গেছে এমন ট্রাফিক
+                {lang === 'bn'
+                  ? 'মাত্র ১ পেজ দেখে দ্রুত বের হয়ে গেছে এমন ট্রাফিক'
+                  : 'Traffic that exited after viewing only 1 page'}
               </p>
             </div>
 
             <div className="bg-slate-800/60 border border-slate-700/60 p-6 rounded-2xl">
               <span className="text-xs font-semibold text-sky-400 flex items-center gap-2">
                 <Monitor className="w-4 h-4" />
-                ডিভাইস ভাগাভাগি (Device Matrix)
+                {lang === 'bn' ? 'ডিভাইস ভাগাভাগি (Device Matrix)' : 'Device Matrix'}
               </span>
               <div className="mt-3 space-y-1.5 text-xs">
                 <div className="flex justify-between text-slate-300">
-                  <span>📱 মোবাইল:</span>
+                  <span>{lang === 'bn' ? '📱 মোবাইল:' : '📱 Mobile:'}</span>
                   <span className="font-bold">{engagementData?.deviceBreakdown?.MOBILE ?? 0}</span>
                 </div>
                 <div className="flex justify-between text-slate-300">
-                  <span>💻 ডেক্সটপ:</span>
+                  <span>{lang === 'bn' ? '💻 ডেক্সটপ:' : '💻 Desktop:'}</span>
                   <span className="font-bold">{engagementData?.deviceBreakdown?.DESKTOP ?? 0}</span>
                 </div>
                 <div className="flex justify-between text-slate-300">
-                  <span>📟 ট্যাবলেট:</span>
+                  <span>{lang === 'bn' ? '📟 ট্যাবলেট:' : '📟 Tablet:'}</span>
                   <span className="font-bold">{engagementData?.deviceBreakdown?.TABLET ?? 0}</span>
                 </div>
               </div>
@@ -1103,16 +1227,16 @@ export default function AdminTrafficPage() {
           {/* Top Read / Visited Pages Table */}
           <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-6 shadow-xl">
             <h3 className="text-base font-bold text-white mb-4">
-              শীর্ষ পঠিত পেজ ও অবস্থানকাল (Top Pages by Dwell Time)
+              {lang === 'bn' ? 'শীর্ষ পঠিত পেজ ও অবস্থানকাল (Top Pages by Dwell Time)' : 'Top Pages by Dwell Time'}
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-900/60 text-slate-400 font-semibold uppercase tracking-wider border-b border-slate-700/60">
                   <tr>
-                    <th className="p-3">র‍্যাংক</th>
-                    <th className="p-3">পেজ ইউআরএল (Page Path)</th>
-                    <th className="p-3">মোট ভিউ</th>
-                    <th className="p-3">গড় সময় (Avg Time Spent)</th>
+                    <th className="p-3">{lang === 'bn' ? 'র‍্যাংক' : 'Rank'}</th>
+                    <th className="p-3">{lang === 'bn' ? 'পেজ ইউআরএল (Page Path)' : 'Page URL (Path)'}</th>
+                    <th className="p-3">{lang === 'bn' ? 'মোট ভিউ' : 'Total Views'}</th>
+                    <th className="p-3">{lang === 'bn' ? 'গড় সময় (Avg Time Spent)' : 'Avg Time Spent'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/40">
@@ -1121,7 +1245,9 @@ export default function AdminTrafficPage() {
                       <tr key={page.path} className="hover:bg-slate-700/20">
                         <td className="p-3 font-bold text-slate-400">#{idx + 1}</td>
                         <td className="p-3 font-mono text-sky-400">{page.path}</td>
-                        <td className="p-3 font-bold text-white">{page.views} ভিউ</td>
+                        <td className="p-3 font-bold text-white">
+                          {page.views} {lang === 'bn' ? 'ভিউ' : 'views'}
+                        </td>
                         <td className="p-3 font-semibold text-emerald-400">
                           {formatSeconds(page.avgDwellSeconds)}
                         </td>
@@ -1130,7 +1256,7 @@ export default function AdminTrafficPage() {
                   ) : (
                     <tr>
                       <td colSpan={4} className="p-6 text-center text-slate-400">
-                        কোনো পেজ ভিউ ডাটা পাওয়া যায়নি...
+                        {lang === 'bn' ? 'কোনো পেজ ভিউ ডাটা পাওয়া যায়নি...' : 'No page view data found...'}
                       </td>
                     </tr>
                   )}
@@ -1148,16 +1274,18 @@ export default function AdminTrafficPage() {
         <div className="space-y-6">
           <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-6 shadow-xl">
             <h3 className="text-base font-bold text-white mb-4">
-              ট্রাফিক চ্যানেল অনুযায়ী উৎস (Acquisition Channels)
+              {lang === 'bn'
+                ? 'ট্রাফিক চ্যানেল অনুযায়ী উৎস (Acquisition Channels)'
+                : 'Traffic Acquisition Channels'}
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-900/60 text-slate-400 font-semibold uppercase tracking-wider border-b border-slate-700/60">
                   <tr>
-                    <th className="p-3">চ্যানেল / উৎস</th>
-                    <th className="p-3">ভিজিটর সেশন</th>
-                    <th className="p-3">শতাংশ (%)</th>
-                    <th className="p-3">গড় অবস্থানকাল</th>
+                    <th className="p-3">{lang === 'bn' ? 'চ্যানেল / উৎস' : 'Channel / Source'}</th>
+                    <th className="p-3">{lang === 'bn' ? 'ভিজিটর সেশন' : 'Visitor Sessions'}</th>
+                    <th className="p-3">{lang === 'bn' ? 'শতাংশ (%)' : 'Percentage (%)'}</th>
+                    <th className="p-3">{lang === 'bn' ? 'গড় অবস্থানকাল' : 'Avg Dwell Time'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/40">
@@ -1188,7 +1316,7 @@ export default function AdminTrafficPage() {
                   ) : (
                     <tr>
                       <td colSpan={4} className="p-6 text-center text-slate-400">
-                        কোনো ট্রাফিক সোর্স ডাটা পাওয়া যায়নি...
+                        {lang === 'bn' ? 'কোনো ট্রাফিক সোর্স ডাটা পাওয়া যায়নি...' : 'No traffic source data found...'}
                       </td>
                     </tr>
                   )}
@@ -1201,7 +1329,9 @@ export default function AdminTrafficPage() {
           {sourcesData?.utmCampaigns && sourcesData.utmCampaigns.length > 0 && (
             <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-6 shadow-xl">
               <h3 className="text-base font-bold text-white mb-4">
-                বিজ্ঞাপন ও ক্যাম্পেইন ট্র্যাকিং (UTM Campaigns)
+                {lang === 'bn'
+                  ? 'বিজ্ঞাপন ও ক্যাম্পেইন ট্র্যাকিং (UTM Campaigns)'
+                  : 'Ad Campaign Tracking (UTM Campaigns)'}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {sourcesData.utmCampaigns.map((c: any) => (
@@ -1212,7 +1342,9 @@ export default function AdminTrafficPage() {
                     <span className="font-mono text-sky-400 text-xs truncate max-w-[200px]">
                       {c.campaign}
                     </span>
-                    <span className="font-bold text-white text-sm">{c.count} ভিজিট</span>
+                    <span className="font-bold text-white text-sm">
+                      {c.count} {lang === 'bn' ? 'ভিজিট' : 'visits'}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -1228,11 +1360,14 @@ export default function AdminTrafficPage() {
         <div className="space-y-6">
           <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-6 shadow-xl">
             <h3 className="text-base font-bold text-white mb-2">
-              ৫-স্টেপ কনভার্শন ফানেল (5-Step User Journey Pipeline)
+              {lang === 'bn'
+                ? '৫-স্টেপ কনভার্শন ফানেল (5-Step User Journey Pipeline)'
+                : '5-Step Conversion Funnel Pipeline'}
             </h3>
             <p className="text-xs text-slate-400 mb-6">
-              ভিজিটরের প্রথম আগমন থেকে শুরু করে একাউন্ট তৈরি ও কাজ সম্পন্ন করা পর্যন্ত প্রতিটি ধাপের
-              ড্রপ-অফ ও সাফল্য হার
+              {lang === 'bn'
+                ? 'ভিজিটরের প্রথম আগমন থেকে শুরু করে একাউন্ট তৈরি ও কাজ সম্পন্ন করা পর্যন্ত প্রতিটি ধাপের ড্রপ-অফ ও সাফল্য হার'
+                : 'Drop-off and completion rates from first visitor touchpoint to account creation and task completion'}
             </p>
 
             <div className="space-y-4">
@@ -1243,7 +1378,7 @@ export default function AdminTrafficPage() {
                       <span className="text-sm font-bold text-white">{step.name}</span>
                       <div className="text-right">
                         <span className="text-sm font-extrabold text-sky-400 font-mono mr-2">
-                          {step.count} জন
+                          {step.count} {lang === 'bn' ? 'জন' : 'users'}
                         </span>
                         <span className="text-xs px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold">
                           {step.rate}%
@@ -1266,7 +1401,9 @@ export default function AdminTrafficPage() {
           {funnelData?.ctaClicks && funnelData.ctaClicks.length > 0 && (
             <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-6 shadow-xl">
               <h3 className="text-base font-bold text-white mb-4">
-                জনপ্রিয় বাটন ও অ্যাকশন ক্লিক (CTA Heatmap Clicks)
+                {lang === 'bn'
+                  ? 'জনপ্রিয় বাটন ও অ্যাকশন ক্লিক (CTA Heatmap Clicks)'
+                  : 'Popular Action & Button Clicks (CTA Heatmap)'}
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {funnelData.ctaClicks.map((c: any) => (
@@ -1275,7 +1412,9 @@ export default function AdminTrafficPage() {
                     className="bg-slate-900/80 p-3 rounded-xl border border-slate-700"
                   >
                     <div className="text-[11px] text-slate-400 truncate">{c.eventName}</div>
-                    <div className="text-xl font-bold text-white mt-1">{c.clicks} ক্লিক</div>
+                    <div className="text-xl font-bold text-white mt-1">
+                      {c.clicks} {lang === 'bn' ? 'ক্লিক' : 'clicks'}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1291,10 +1430,13 @@ export default function AdminTrafficPage() {
         <div className="space-y-6">
           <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-6 shadow-xl space-y-6">
             <div>
-              <h3 className="text-base font-bold text-white">অটোমেটেড টেলিগ্রাম ট্রাফিক ডাইজেস্ট</h3>
+              <h3 className="text-base font-bold text-white">
+                {lang === 'bn' ? 'অটোমেটেড টেলিগ্রাম ট্রাফিক ডাইজেস্ট' : 'Automated Telegram Traffic Digest'}
+              </h3>
               <p className="text-xs text-slate-400 mt-1">
-                প্রতিদিন রাত ১২:০০ টায় স্বয়ংক্রিয়ভাবে সুপার অ্যাডমিনের টেলিগ্রামে আজকের ট্রাফিকের
-                সম্পূর্ণ সামারি মেসেজ চলে যায়। আপনি এখনই তাৎক্ষণিক টেস্ট রিপোর্ট পাঠাতে পারেন।
+                {lang === 'bn'
+                  ? 'প্রতিদিন রাত ১২:০০ টায় স্বয়ংক্রিয়ভাবে সুপার অ্যাডমিনের টেলিগ্রামে আজকের ট্রাফিকের সম্পূর্ণ সামারি মেসেজ চলে যায়। আপনি এখনই তাৎক্ষণিক টেস্ট রিপোর্ট পাঠাতে পারেন।'
+                  : "Every night at 12:00 AM, a complete summary digest of today's traffic is automatically sent to Super Admin's Telegram. You can send an instant test report now."}
               </p>
             </div>
 
@@ -1305,7 +1447,9 @@ export default function AdminTrafficPage() {
                 className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-sky-500/20 transition-all disabled:opacity-50"
               >
                 <Send className="w-4 h-4" />
-                {telegramLoading ? 'রিপোর্ট পাঠানো হচ্ছে...' : 'টেলিগ্রামে এখনই রিপোর্ট পাঠান'}
+                {telegramLoading
+                  ? (lang === 'bn' ? 'রিপোর্ট পাঠানো হচ্ছে...' : 'Sending report...')
+                  : (lang === 'bn' ? 'টেলিগ্রামে এখনই রিপোর্ট পাঠান' : 'Send Report to Telegram Now')}
               </button>
 
               {telegramStatus && (
@@ -1318,10 +1462,13 @@ export default function AdminTrafficPage() {
             <hr className="border-slate-700/60" />
 
             <div>
-              <h3 className="text-base font-bold text-white">ডাটা এক্সপোর্ট (Export Traffic Logs)</h3>
+              <h3 className="text-base font-bold text-white">
+                {lang === 'bn' ? 'ডাটা এক্সপোর্ট (Export Traffic Logs)' : 'Data Export (Export Traffic Logs)'}
+              </h3>
               <p className="text-xs text-slate-400 mt-1">
-                আইপি লগ, সেশন হিস্ট্রি এবং অবস্থানকালের সমস্ত ডাটা এক্সেল বা সিএসভি ফরম্যাটে সেভ করে
-                রাখার সুবিধা।
+                {lang === 'bn'
+                  ? 'আইপি লগ, সেশন হিস্ট্রি এবং অবস্থানকালের সমস্ত ডাটা এক্সেল বা সিএসভি ফরম্যাটে সেভ করে রাখার সুবিধা।'
+                  : 'Download IP logs, session history, and dwell time data as structured JSON files.'}
               </p>
               <div className="flex gap-3 mt-4">
                 <button
@@ -1337,7 +1484,7 @@ export default function AdminTrafficPage() {
                   className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-xl transition-all"
                 >
                   <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                  JSON ডাটা ডাম্প ডাউনলোড
+                  {lang === 'bn' ? 'JSON ডাটা ডাম্প ডাউনলোড' : 'Download JSON Data Dump'}
                 </button>
               </div>
             </div>
@@ -1355,7 +1502,7 @@ export default function AdminTrafficPage() {
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div>
                 <span className="text-xs font-semibold text-sky-400 uppercase tracking-wider">
-                  ৩৬০° ভিজিটর ও আইপি ইন্টেলিজেন্স
+                  {lang === 'bn' ? '৩৬০° ভিজিটর ও আইপি ইন্টেলিজেন্স' : '360° Visitor & IP Intelligence'}
                 </span>
                 <h2 className="text-xl font-bold text-white font-mono mt-0.5">
                   {drawerIdentifier}
@@ -1372,30 +1519,30 @@ export default function AdminTrafficPage() {
             {drawerLoading ? (
               <div className="py-20 text-center text-slate-400">
                 <RefreshCw className="w-6 h-6 animate-spin mx-auto text-sky-400 mb-2" />
-                ভিজিটর ডাটা লোড হচ্ছে...
+                {lang === 'bn' ? 'ভিজিটর ডাটা লোড হচ্ছে...' : 'Loading visitor data...'}
               </div>
             ) : drawerProfile ? (
               <div className="space-y-6 text-xs">
                 {/* Network & Device Info Grid */}
                 <div className="grid grid-cols-2 gap-3 bg-slate-800/60 p-4 rounded-xl border border-slate-700/60">
                   <div>
-                    <span className="text-slate-400">অপারেটর / ISP:</span>
+                    <span className="text-slate-400">{lang === 'bn' ? 'অপারেটর / ISP:' : 'Operator / ISP:'}</span>
                     <div className="font-semibold text-white mt-0.5">{drawerProfile.isp}</div>
                   </div>
                   <div>
-                    <span className="text-slate-400">অবস্থান (Location):</span>
+                    <span className="text-slate-400">{lang === 'bn' ? 'অবস্থান (Location):' : 'Location:'}</span>
                     <div className="font-semibold text-white mt-0.5">
                       {drawerProfile.city}, {drawerProfile.country}
                     </div>
                   </div>
                   <div>
-                    <span className="text-slate-400">ডিভাইস ও ওএস:</span>
+                    <span className="text-slate-400">{lang === 'bn' ? 'ডিভাইস ও ওএস:' : 'Device & OS:'}</span>
                     <div className="font-semibold text-white mt-0.5">
                       {drawerProfile.deviceType} • {drawerProfile.os}
                     </div>
                   </div>
                   <div>
-                    <span className="text-slate-400">ব্রাউজার:</span>
+                    <span className="text-slate-400">{lang === 'bn' ? 'ব্রাউজার:' : 'Browser:'}</span>
                     <div className="font-semibold text-white mt-0.5">{drawerProfile.browser}</div>
                   </div>
                 </div>
@@ -1403,19 +1550,19 @@ export default function AdminTrafficPage() {
                 {/* Lifetime Time & Visits */}
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-slate-800/40 p-3 rounded-xl border border-slate-700/40 text-center">
-                    <span className="text-slate-400 text-[10px]">মোট আগমন</span>
+                    <span className="text-slate-400 text-[10px]">{lang === 'bn' ? 'মোট আগমন' : 'Total Visits'}</span>
                     <div className="text-lg font-bold text-white mt-0.5">
-                      {drawerProfile.totalVisits} বার
+                      {drawerProfile.totalVisits} {lang === 'bn' ? 'বার' : 'times'}
                     </div>
                   </div>
                   <div className="bg-slate-800/40 p-3 rounded-xl border border-slate-700/40 text-center">
-                    <span className="text-slate-400 text-[10px]">মোট কাটানো সময়</span>
+                    <span className="text-slate-400 text-[10px]">{lang === 'bn' ? 'মোট কাটানো সময়' : 'Total Dwell Time'}</span>
                     <div className="text-lg font-bold text-emerald-400 mt-0.5">
                       {formatSeconds(drawerProfile.totalDurationSeconds)}
                     </div>
                   </div>
                   <div className="bg-slate-800/40 p-3 rounded-xl border border-slate-700/40 text-center">
-                    <span className="text-slate-400 text-[10px]">ভিজিটর ধরন</span>
+                    <span className="text-slate-400 text-[10px]">{lang === 'bn' ? 'ভিজিটর ধরন' : 'Visitor Type'}</span>
                     <div className="text-sm font-bold text-purple-400 mt-1">
                       {drawerProfile.isRepeat ? '🔁 Repeat' : '🆕 New'}
                     </div>
@@ -1428,7 +1575,7 @@ export default function AdminTrafficPage() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-bold text-white flex items-center gap-1.5">
                         <UserCheck className="w-4 h-4 text-emerald-400" />
-                        সংযুক্ত ইউজার অ্যাকাউন্ট ({drawerProfile.linkedUsers.length})
+                        {lang === 'bn' ? 'সংযুক্ত ইউজার অ্যাকাউন্ট' : 'Linked User Accounts'} ({drawerProfile.linkedUsers.length})
                       </span>
                       {drawerProfile.isMultiAccount && (
                         <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">
@@ -1464,7 +1611,7 @@ export default function AdminTrafficPage() {
                       onClick={() => handleUnblockIp(drawerProfile.ipAddress)}
                       className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-all shadow"
                     >
-                      এই আইপি আনব্লক করুন
+                      {lang === 'bn' ? 'এই আইপি আনব্লক করুন' : 'Unblock This IP'}
                     </button>
                   ) : (
                     <button
@@ -1474,14 +1621,16 @@ export default function AdminTrafficPage() {
                       }}
                       className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl transition-all shadow"
                     >
-                      ⛔ এই আইপি ব্লক করুন (Block IP)
+                      {lang === 'bn' ? '⛔ এই আইপি ব্লক করুন (Block IP)' : '⛔ Block This IP'}
                     </button>
                   )}
                 </div>
 
                 {/* Sessions & Journey Timeline */}
                 <div>
-                  <h4 className="font-bold text-white text-sm mb-3">ভিজিট সেশন ও জার্নি হিস্ট্রি</h4>
+                  <h4 className="font-bold text-white text-sm mb-3">
+                    {lang === 'bn' ? 'ভিজিট সেশন ও জার্নি হিস্ট্রি' : 'Visit Sessions & Journey History'}
+                  </h4>
                   <div className="space-y-3">
                     {drawerProfile.sessions &&
                       drawerProfile.sessions.map((sess: any, idx: number) => (
@@ -1491,7 +1640,7 @@ export default function AdminTrafficPage() {
                         >
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="text-slate-400">
-                              সেশন #{drawerProfile.sessions.length - idx} •{' '}
+                              {lang === 'bn' ? 'সেশন' : 'Session'} #{drawerProfile.sessions.length - idx} •{' '}
                               {new Date(sess.createdAt).toLocaleTimeString()}
                             </span>
                             <span className="font-semibold text-emerald-400">
@@ -1500,7 +1649,7 @@ export default function AdminTrafficPage() {
                           </div>
 
                           <div className="text-[11px] text-slate-300">
-                            উৎস: <span className="font-mono text-sky-400">{sess.trafficSource}</span>
+                            {lang === 'bn' ? 'উৎস:' : 'Source:'} <span className="font-mono text-sky-400">{sess.trafficSource}</span>
                           </div>
 
                           {/* Page Views in this session */}
@@ -1525,7 +1674,9 @@ export default function AdminTrafficPage() {
                 </div>
               </div>
             ) : (
-              <div className="py-20 text-center text-slate-400">কোনো তথ্য পাওয়া যায়নি...</div>
+              <div className="py-20 text-center text-slate-400">
+                {lang === 'bn' ? 'কোনো তথ্য পাওয়া যায়নি...' : 'No data found...'}
+              </div>
             )}
           </div>
         </div>
@@ -1542,19 +1693,25 @@ export default function AdminTrafficPage() {
                 <Ban className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">আইপি ব্লক নিশ্চিতকরণ</h3>
+                <h3 className="text-base font-bold text-white">
+                  {lang === 'bn' ? 'আইপি ব্লক নিশ্চিতকরণ' : 'Confirm IP Block'}
+                </h3>
                 <p className="text-xs text-slate-400 font-mono">{blockingIp}</p>
               </div>
             </div>
 
             <div>
               <label className="text-xs text-slate-300 font-semibold block mb-1.5">
-                ব্লক করার কারণ (Reason):
+                {lang === 'bn' ? 'ব্লক করার কারণ (Reason):' : 'Reason for Blocking:'}
               </label>
               <textarea
                 value={blockReason}
                 onChange={(e) => setBlockReason(e.target.value)}
-                placeholder="যেমনঃ মাল্টি-অ্যাকাউন্ট রেফারেল স্প্যাম বা সন্দেহজনক বট..."
+                placeholder={
+                  lang === 'bn'
+                    ? 'যেমনঃ মাল্টি-অ্যাকাউন্ট রেফারেল স্প্যাম বা সন্দেহজনক বট...'
+                    : 'e.g. Multi-account referral spam or suspicious bot...'
+                }
                 rows={3}
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-rose-500"
               />
@@ -1565,14 +1722,16 @@ export default function AdminTrafficPage() {
                 onClick={() => setBlockingIp(null)}
                 className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white rounded-xl bg-slate-800 hover:bg-slate-700 transition-all"
               >
-                বাতিল
+                {lang === 'bn' ? 'বাতিল' : 'Cancel'}
               </button>
               <button
                 onClick={handleBlockIp}
                 disabled={blockSubmitting}
                 className="px-5 py-2 text-xs font-bold text-white rounded-xl bg-rose-600 hover:bg-rose-500 transition-all disabled:opacity-50"
               >
-                {blockSubmitting ? 'ব্লক হচ্ছে...' : 'হ্যাঁ, ব্লক করুন'}
+                {blockSubmitting
+                  ? (lang === 'bn' ? 'ব্লক হচ্ছে...' : 'Blocking...')
+                  : (lang === 'bn' ? 'হ্যাঁ, ব্লক করুন' : 'Yes, Block IP')}
               </button>
             </div>
           </div>
