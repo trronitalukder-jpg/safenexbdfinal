@@ -29,8 +29,6 @@ import {
   Ban,
   ArrowRight,
   ExternalLink,
-  Pause,
-  Play,
 } from 'lucide-react';
 
 export default function MicroJobsDashboardPage() {
@@ -218,50 +216,6 @@ export default function MicroJobsDashboardPage() {
     } finally {
       setCancelling(false);
       setCancellingJobId(null);
-    }
-  };
-
-  const [togglingJobId, setTogglingJobId] = useState<string | null>(null);
-  const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
-
-  const handleToggleJobStatus = async (jobId: string) => {
-    setTogglingJobId(jobId);
-    try {
-      const res: any = await api.patch(`/micro-jobs/${jobId}/toggle-status`, {});
-      const data = res?.data || res;
-      alert(data?.message || (lang === 'bn' ? 'স্ট্যাটাস আপডেট করা হয়েছে' : 'Status updated successfully'));
-      fetchMyPostedJobs();
-    } catch (err: any) {
-      console.error('Toggle status failed:', err);
-      alert(err?.response?.data?.message || (lang === 'bn' ? 'স্ট্যাটাস পরিবর্তন করা সম্ভব হয়নি' : 'Failed to change status'));
-    } finally {
-      setTogglingJobId(null);
-    }
-  };
-
-  const handleDeleteJob = async (jobId: string) => {
-    if (
-      !confirm(
-        lang === 'bn'
-          ? 'আপনি কি নিশ্চিত যে এই কাজটি সম্পূর্ণরূপে ডিলিট করতে চান? যদি কাজটি চলমান বা পজ করা থাকে, তবে বাকি স্লটের টাকা আপনার ওয়ালেটে রিফান্ড করা হবে।'
-          : 'Are you sure you want to delete this job? Any unfulfilled budget will be refunded to your wallet.',
-      )
-    ) {
-      return;
-    }
-
-    setDeletingJobId(jobId);
-    try {
-      const res: any = await api.delete(`/micro-jobs/${jobId}`);
-      const data = res?.data || res;
-      alert(data?.message || (lang === 'bn' ? 'কাজটি সফলভাবে ডিলিট করা হয়েছে' : 'Job deleted successfully'));
-      if (refreshMe) refreshMe();
-      fetchMyPostedJobs();
-    } catch (err: any) {
-      console.error('Delete job failed:', err);
-      alert(err?.response?.data?.message || (lang === 'bn' ? 'কাজটি ডিলিট করা সম্ভব হয়নি' : 'Failed to delete job'));
-    } finally {
-      setDeletingJobId(null);
     }
   };
 
@@ -504,20 +458,12 @@ export default function MicroJobsDashboardPage() {
                           className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
                             job.status === 'ACTIVE'
                               ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                              : job.status === 'PAUSED'
-                              ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
                               : job.status === 'COMPLETED'
                               ? 'bg-sky-500/10 text-sky-500 border-sky-500/20'
                               : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
                           }`}
                         >
-                          {job.status === 'ACTIVE'
-                            ? (lang === 'bn' ? 'সক্রিয়' : 'ACTIVE')
-                            : job.status === 'PAUSED'
-                            ? (lang === 'bn' ? 'নিষ্ক্রিয় (পজ)' : 'PAUSED')
-                            : job.status === 'COMPLETED'
-                            ? (lang === 'bn' ? 'সম্পন্ন' : 'COMPLETED')
-                            : (lang === 'bn' ? 'বাতিল' : 'CANCELLED')}
+                          {job.status}
                         </span>
                       </div>
 
@@ -567,37 +513,17 @@ export default function MicroJobsDashboardPage() {
                         <ExternalLink className="w-4 h-4" />
                       </Link>
 
-                      {/* Active / Inactive (Pause/Play) Toggle */}
-                      {(job.status === 'ACTIVE' || job.status === 'PAUSED') && (
+                      {job.status === 'ACTIVE' && (
                         <button
                           type="button"
-                          onClick={() => handleToggleJobStatus(job.id)}
-                          disabled={togglingJobId === job.id}
-                          title={
-                            job.status === 'ACTIVE'
-                              ? (lang === 'bn' ? 'কাজটি সাময়িকভাবে বন্ধ রাখুন (Inactive)' : 'Pause Job')
-                              : (lang === 'bn' ? 'কাজটি পুনরায় চালু করুন (Active)' : 'Resume Job')
-                          }
-                          className={`p-2 rounded-xl border transition text-xs font-bold ${
-                            job.status === 'ACTIVE'
-                              ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 hover:bg-amber-100 border-amber-200 dark:border-amber-900/50'
-                              : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 border-emerald-200 dark:border-emerald-900/50'
-                          }`}
+                          onClick={() => handleCancelJob(job.id)}
+                          disabled={cancelling}
+                          title="কাজ বাতিল ও রিফান্ড নিন"
+                          className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 border border-rose-200 dark:border-rose-900/50 transition text-xs font-bold"
                         >
-                          {job.status === 'ACTIVE' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                          <Ban className="w-4 h-4" />
                         </button>
                       )}
-
-                      {/* Delete Job Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteJob(job.id)}
-                        disabled={deletingJobId === job.id}
-                        title={lang === 'bn' ? 'কাজটি ডিলিট করুন (বাকি স্লটের টাকা ওয়ালেটে ফেরত আসবে)' : 'Delete Job (Refund unused slots)'}
-                        className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 border border-rose-200 dark:border-rose-900/50 transition text-xs font-bold"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
                     </div>
                   </div>
                 );
