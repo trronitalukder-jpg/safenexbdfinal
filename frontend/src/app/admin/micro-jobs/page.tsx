@@ -35,6 +35,7 @@ import {
   Play,
   Trash2,
 } from 'lucide-react';
+import ImageLightbox from '@/components/common/ImageLightbox';
 
 const unwrap = (res: any) => (res && res.data !== undefined ? res.data : res);
 
@@ -1457,22 +1458,12 @@ export default function AdminMicroJobsPage() {
       {/* ========================================================================= */}
       {/* FULLSCREEN LIGHTBOX ZOOM                                                  */}
       {/* ========================================================================= */}
-      {zoomedImage && (
-        <div
-          onClick={() => setZoomedImage(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm cursor-zoom-out animate-in fade-in"
-        >
-          <div className="relative max-w-5xl max-h-[92vh] overflow-hidden rounded-2xl">
-            <img src={zoomedImage} alt="Zoomed proof" className="max-w-full max-h-[90vh] object-contain rounded-xl" />
-            <button
-              onClick={() => setZoomedImage(null)}
-              className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      )}
+      <ImageLightbox
+        images={zoomedImage ? [zoomedImage] : []}
+        isOpen={Boolean(zoomedImage)}
+        onClose={() => setZoomedImage(null)}
+        title="এডমিন প্রুফ ভেরিফিকেশন (Admin Proof Inspector)"
+      />
     </div>
   );
 }

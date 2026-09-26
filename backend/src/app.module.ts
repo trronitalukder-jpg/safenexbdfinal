@@ -26,6 +26,7 @@ import { AiModule } from './ai/ai.module';
 import { ComplaintsModule } from './complaints/complaints.module';
 import { AffiliateModule } from './affiliate/affiliate.module';
 import { MicroJobsModule } from './micro-jobs/micro-jobs.module';
+import { LeaderboardModule } from './leaderboard/leaderboard.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { MicroJobsModule } from './micro-jobs/micro-jobs.module';
     ComplaintsModule,
     AffiliateModule,
     MicroJobsModule,
+    LeaderboardModule,
   ],
   providers: [
     {

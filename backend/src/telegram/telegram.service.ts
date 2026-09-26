@@ -452,6 +452,121 @@ export class TelegramService implements OnModuleInit {
   }
 
   /**
+   * Send Alert to Employer when a Worker submits proof for their Micro Job
+   */
+  async notifyMicroJobSubmitted(
+    employerId: string,
+    jobTitle: string,
+    workerName: string,
+    jobId: string,
+  ): Promise<boolean> {
+    try {
+      const settings = await this.getSettings();
+      if (!settings.isEnabled || !settings.botToken) return false;
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: employerId },
+        select: { telegramChatId: true, telegramNotifications: true },
+      });
+      if (!user?.telegramChatId || user.telegramNotifications === false) return false;
+
+      const base = (settings.miniAppUrl || 'https://safnexbd.com').replace(/\/$/, '');
+      const message = `💼 <b>[SafnexBD] নতুন ওয়ার্কার কাজ জমা দিয়েছেন!</b>\n\n📋 <b>জব:</b> ${jobTitle}\n👤 <b>ওয়ার্কার:</b> ${workerName}\n\nপ্রুফ যাচাই ও অনুমোদনের জন্য নিচে ক্লিক করুন:`;
+
+      await this.callApi(settings.botToken, 'sendMessage', {
+        chat_id: user.telegramChatId,
+        text: message,
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '📋 রিভিউ করুন (Review Proof)', url: `${base}/dashboard/micro-jobs` }],
+          ],
+        },
+      });
+      return true;
+    } catch (err) {
+      this.logger.error('Failed to send micro-job submitted alert:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Send Alert to Worker when their Micro Job Submission is Approved & Paid
+   */
+  async notifyMicroJobApproved(
+    workerId: string,
+    jobTitle: string,
+    amount: number,
+  ): Promise<boolean> {
+    try {
+      const settings = await this.getSettings();
+      if (!settings.isEnabled || !settings.botToken) return false;
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: workerId },
+        select: { telegramChatId: true, telegramNotifications: true },
+      });
+      if (!user?.telegramChatId || user.telegramNotifications === false) return false;
+
+      const base = (settings.miniAppUrl || 'https://safnexbd.com').replace(/\/$/, '');
+      const message = `🎉 <b>[SafnexBD] অভিনন্দন! কাজ অনুমোদিত হয়েছে!</b>\n\n📋 <b>জব:</b> ${jobTitle}\n💰 <b>আয়:</b> ৳${amount.toFixed(2)} আপনার ওয়ালেটে জমা হয়েছে!\n\nSafnexBD এর সাথে থাকার জন্য ধন্যবাদ।`;
+
+      await this.callApi(settings.botToken, 'sendMessage', {
+        chat_id: user.telegramChatId,
+        text: message,
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '💰 ওয়ালেট ব্যালেন্স দেখুন', url: `${base}/dashboard/wallet` }],
+          ],
+        },
+      });
+      return true;
+    } catch (err) {
+      this.logger.error('Failed to send micro-job approved alert:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Send Alert to Worker when their Micro Job Submission is Rejected
+   */
+  async notifyMicroJobRejected(
+    workerId: string,
+    jobTitle: string,
+    reason: string,
+  ): Promise<boolean> {
+    try {
+      const settings = await this.getSettings();
+      if (!settings.isEnabled || !settings.botToken) return false;
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: workerId },
+        select: { telegramChatId: true, telegramNotifications: true },
+      });
+      if (!user?.telegramChatId || user.telegramNotifications === false) return false;
+
+      const base = (settings.miniAppUrl || 'https://safnexbd.com').replace(/\/$/, '');
+      const message = `⚠️ <b>[SafnexBD] কাজ প্রত্যাখ্যাত হয়েছে</b>\n\n📋 <b>জব:</b> ${jobTitle}\n📝 <b>কারণ:</b> ${reason || 'প্রমাণপত্র নিয়মানুযায়ী জমা দেওয়া হয়নি'}`;
+
+      await this.callApi(settings.botToken, 'sendMessage', {
+        chat_id: user.telegramChatId,
+        text: message,
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '💼 অন্যান্য কাজ দেখুন', url: `${base}/micro-jobs` }],
+          ],
+        },
+      });
+      return true;
+    } catch (err) {
+      this.logger.error('Failed to send micro-job rejected alert:', err);
+      return false;
+    }
+  }
+
+  /**
    * Broadcast message to all connected Telegram users
    */
   async broadcast(

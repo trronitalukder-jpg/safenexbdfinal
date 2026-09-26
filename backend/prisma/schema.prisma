@@ -1421,6 +1421,8 @@ model MicroJob {
   totalBudget        Decimal              @db.Decimal(18, 4)
   platformFee        Decimal              @default(0.0000) @db.Decimal(18, 4)
   status             MicroJobStatus       @default(ACTIVE)
+  isPinned           Boolean              @default(false)
+  pinnedUntil        DateTime?
   minKycRequired     Boolean              @default(false)
   autoApproveHours   Int                  @default(48)
   createdAt          DateTime             @default(now())
@@ -1433,6 +1435,7 @@ model MicroJob {
   @@index([employerId])
   @@index([categoryId])
   @@index([status])
+  @@index([isPinned])
   @@map("micro_jobs")
 }
 

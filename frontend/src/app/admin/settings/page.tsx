@@ -46,6 +46,7 @@ import {
   AlertTriangle,
   Flame,
   Plus,
+  Smartphone,
 } from 'lucide-react';
 
 const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -2807,6 +2808,36 @@ export default function AdminSettingsPage() {
                   className="w-4 h-4 rounded text-amber-500 focus:ring-amber-400"
                 />
               </div>
+            </div>
+
+            {/* Mobile Bottom Navigation Bar Toggle */}
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <div>
+                <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Smartphone className="w-4 h-4 text-amber-500" />
+                  <span>{lang === 'bn' ? 'মোবাইল বটম নেভিগেশন বার (Mobile App Bottom Bar)' : 'Mobile App Bottom Navigation Bar'}</span>
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">
+                  {lang === 'bn'
+                    ? 'স্মার্টফোনে স্ক্রিনের নিচে ৫-বাটন মোবাইল অ্যাপ স্টাইল ফিক্সড নেভিগেশন বার চালু/বন্ধ করুন।'
+                    : 'Show mobile app-like bottom navigation dock on phone screens.'}
+                </div>
+              </div>
+
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={settings.system.mobileBottomNavEnabled !== false}
+                  onChange={(e) =>
+                    setSettings((p: any) => ({
+                      ...p,
+                      system: { ...p.system, mobileBottomNavEnabled: e.target.checked },
+                    }))
+                  }
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+              </label>
             </div>
           </div>
         </div>
@@ -6130,7 +6161,7 @@ export default function AdminSettingsPage() {
             </div>
 
             {/* Micro Job Operational Parameters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
               {/* Platform Fee */}
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
@@ -6194,7 +6225,7 @@ export default function AdminSettingsPage() {
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>{lang === 'bn' ? 'সর্বনিম্ন কাজের পারিশ্রমিক (BDT)' : 'Min Worker Reward (BDT)'}</span>
+                  <span>{lang === 'bn' ? 'সর্বনিম্ন পারিশ্রমিক (BDT)' : 'Min Worker Reward (BDT)'}</span>
                 </label>
                 <div className="relative">
                   <input
@@ -6216,6 +6247,35 @@ export default function AdminSettingsPage() {
                   {lang === 'bn'
                     ? 'কোনো নিয়োগকর্তা এর চেয়ে কম টাকা দিয়ে কাজ পোস্ট করতে পারবেন না।'
                     : 'Minimum reward per worker per task.'}
+                </p>
+              </div>
+
+              {/* Featured / Pin Job Extra Fee */}
+              <div className="p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 space-y-2">
+                <label className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                  <Flame className="w-3.5 h-3.5 text-amber-500" />
+                  <span>{lang === 'bn' ? '🔥 পিন / ফিচার্ড জব ফি (BDT)' : '🔥 Featured Job Fee (BDT)'}</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={settings.microJob?.featuredJobFee ?? 20}
+                    onChange={(e) =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        microJob: { ...prev.microJob, featuredJobFee: Number(e.target.value) },
+                      }))
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-700 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <span className="absolute right-3.5 top-2.5 text-xs text-slate-400 font-bold">৳</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  {lang === 'bn'
+                    ? 'নিয়োগকর্তা কাজ পিন করে সবার শীর্ষে রাখতে চাইলে এই অতিরিক্ত ফি কর্তন হবে।'
+                    : 'Extra fee paid by employer to pin their job to the top.'}
                 </p>
               </div>
             </div>

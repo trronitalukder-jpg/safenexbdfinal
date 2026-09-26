@@ -34,4 +34,8 @@ export class CreateMicroJobDto {
   @IsOptional()
   @IsNumber()
   autoApproveHours?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isPinned?: boolean;
 }

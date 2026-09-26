@@ -83,6 +83,7 @@ export interface WebsiteSystemSettings {
   maintenanceMessage: string;
   allowRegistration: boolean;
   requireKycForWithdraw?: boolean;
+  mobileBottomNavEnabled?: boolean;
 }
 
 export interface WebsiteMicroJobSettings {
@@ -92,6 +93,7 @@ export interface WebsiteMicroJobSettings {
   minJobReward: number;
   requireKycToPost: boolean;
   requireKycToWork: boolean;
+  featuredJobFee?: number;
 }
 
 export interface WebsiteSettings {
@@ -186,6 +188,7 @@ export const DEFAULT_PUBLIC_SETTINGS: WebsiteSettings = {
       'We are currently upgrading our platform to serve you better. We will be back shortly.',
     allowRegistration: true,
     requireKycForWithdraw: false,
+    mobileBottomNavEnabled: true,
   },
   microJob: {
     enabled: true,
@@ -194,6 +197,7 @@ export const DEFAULT_PUBLIC_SETTINGS: WebsiteSettings = {
     minJobReward: 1,
     requireKycToPost: false,
     requireKycToWork: false,
+    featuredJobFee: 20,
   },
 };
 

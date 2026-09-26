@@ -83,6 +83,7 @@ export const DEFAULT_SETTINGS = {
       'We are currently upgrading our platform to serve you better. We will be back shortly.',
     allowRegistration: true,
     requireKycForWithdraw: false,
+    mobileBottomNavEnabled: true,
   },
   withdrawal: {
     requirePasswordForPayoutAccount: true,
@@ -144,6 +145,7 @@ export const DEFAULT_SETTINGS = {
     minJobReward: 1,
     requireKycToPost: false,
     requireKycToWork: false,
+    featuredJobFee: 20,
   },
 };
 
@@ -360,6 +362,7 @@ export class SettingsService {
         maintenanceMode: all.system.maintenanceMode,
         maintenanceMessage: all.system.maintenanceMessage,
         allowRegistration: all.system.allowRegistration,
+        mobileBottomNavEnabled: Boolean(all.system?.mobileBottomNavEnabled !== false),
       },
       withdrawal: all.withdrawal,
       operations: {
@@ -386,6 +389,7 @@ export class SettingsService {
         minJobReward: Number(all.microJob?.minJobReward || 1),
         requireKycToPost: Boolean(all.microJob?.requireKycToPost),
         requireKycToWork: Boolean(all.microJob?.requireKycToWork),
+        featuredJobFee: Number(all.microJob?.featuredJobFee ?? 20),
       },
     };
 

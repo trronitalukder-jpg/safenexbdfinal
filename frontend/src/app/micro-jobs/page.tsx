@@ -21,6 +21,7 @@ import {
   Check,
   ShieldCheck,
 } from 'lucide-react';
+import VerifiedBadge from '@/components/common/VerifiedBadge';
 
 export default function MicroJobsPublicPage() {
   const { lang, t } = useLanguage();
@@ -374,14 +375,25 @@ export default function MicroJobsPublicPage() {
                 return (
                   <div
                     key={job.id}
-                    className="group flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-500/60 p-4 transition-all duration-200 shadow-xs hover:shadow-md"
+                    className={`group flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-900 border transition-all duration-200 p-4 ${
+                      job.isPinned
+                        ? 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/30 shadow-md shadow-amber-500/10'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-500/60 shadow-xs hover:shadow-md'
+                    }`}
                   >
                     <div className="space-y-3">
                       {/* Category & Status */}
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 truncate">
-                          {job.category?.name || 'General'}
-                        </span>
+                        <div className="flex items-center gap-1.5 truncate">
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 truncate">
+                            {job.category?.name || 'General'}
+                          </span>
+                          {job.isPinned && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-xs">
+                              🔥 FEATURED
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20 flex-shrink-0">
                           ৳ {Number(job.rewardPerWorker).toFixed(2)}
                         </span>
@@ -400,9 +412,7 @@ export default function MicroJobsPublicPage() {
                           {job.employer?.firstName?.[0] || 'U'}
                         </div>
                         <span className="truncate">{job.employer?.firstName} {job.employer?.lastName}</span>
-                        {job.employer?.isVerified && (
-                          <ShieldCheck className="w-3.5 h-3.5 text-sky-500 flex-shrink-0" />
-                        )}
+                        <VerifiedBadge isVerified={job.employer?.isVerified} status={job.employer?.verificationStatus} size="xs" />
                       </div>
                     </div>
 

@@ -35,6 +35,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
+import VerifiedBadge from '@/components/common/VerifiedBadge';
 
 export default function UserPublicProfilePage() {
   const params = useParams();
@@ -262,8 +263,9 @@ export default function UserPublicProfilePage() {
               {/* Title & Headline */}
               <div className="space-y-1.5 pb-1">
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
-                  <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                    {profile.fullName}
+                  <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                    <span>{profile.fullName}</span>
+                    <VerifiedBadge isVerified={profile.isVerified} status={profile.verificationStatus} size="md" />
                   </h1>
                 </div>
 

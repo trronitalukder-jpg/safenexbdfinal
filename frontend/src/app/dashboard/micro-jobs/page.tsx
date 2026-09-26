@@ -32,6 +32,8 @@ import {
   Pause,
   Play,
 } from 'lucide-react';
+import ImageLightbox from '@/components/common/ImageLightbox';
+import VerifiedBadge from '@/components/common/VerifiedBadge';
 
 export default function MicroJobsDashboardPage() {
   const searchParams = useSearchParams();
@@ -68,6 +70,8 @@ export default function MicroJobsDashboardPage() {
 
   // Screenshot Zoom Modal (Lightbox)
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   // Job Creation Form State
   const [createForm, setCreateForm] = useState({
@@ -79,6 +83,7 @@ export default function MicroJobsDashboardPage() {
     rewardPerWorker: settings.microJob?.minJobReward || 2,
     totalWorkersNeeded: 10,
     minKycRequired: false,
+    isPinned: false,
   });
   const [creatingJob, setCreatingJob] = useState(false);
   const [createError, setCreateError] = useState('');
@@ -291,7 +296,8 @@ export default function MicroJobsDashboardPage() {
   const workerBudget = workerReward * workersCount;
   const platformFeePercent = Number(settings.microJob?.platformFeePercent ?? 5);
   const platformFee = (workerBudget * platformFeePercent) / 100;
-  const totalCost = workerBudget + platformFee;
+  const featuredFee = createForm.isPinned ? Number(settings.microJob?.featuredJobFee ?? 20) : 0;
+  const totalCost = workerBudget + platformFee + featuredFee;
   const userBalance = Number(user?.wallet?.availableBalance || 0);
   const isBalanceSufficient = userBalance >= totalCost;
 
@@ -322,6 +328,7 @@ export default function MicroJobsDashboardPage() {
         rewardPerWorker: workerReward,
         totalWorkersNeeded: workersCount,
         minKycRequired: createForm.minKycRequired,
+        isPinned: createForm.isPinned,
       });
 
       const newJob = res?.data || res;
@@ -340,6 +347,7 @@ export default function MicroJobsDashboardPage() {
         rewardPerWorker: settings.microJob?.minJobReward || 2,
         totalWorkersNeeded: 10,
         minKycRequired: false,
+        isPinned: false,
       });
     } catch (err: any) {
       console.error('Job creation failed:', err);
@@ -497,9 +505,16 @@ export default function MicroJobsDashboardPage() {
                   >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                          {job.category?.name}
-                        </span>
+                        <div className="flex items-center gap-1.5 truncate">
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                            {job.category?.name}
+                          </span>
+                          {job.isPinned && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-xs">
+                              🔥 FEATURED
+                            </span>
+                          )}
+                        </div>
                         <span
                           className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
                             job.status === 'ACTIVE'
@@ -815,6 +830,36 @@ export default function MicroJobsDashboardPage() {
             </div>
           </div>
 
+          {/* 🔥 Featured / Pinned Job Option */}
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <span className="text-xl">🔥</span>
+              <div>
+                <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <span>{lang === 'bn' ? 'এই কাজটি সবার শীর্ষে পিন ও ফিচার্ড করুন' : 'Pin this job to the top (Featured)'}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px]">
+                    +৳{settings.microJob?.featuredJobFee ?? 20}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  {lang === 'bn'
+                    ? 'ফিচার্ড কাজের সাথে জ্বলন্ত আগুন ব্যাজ থাকবে এবং এটি জব লিস্টের সবার উপরে অগ্রাধিকার পাবে।'
+                    : 'Pinned jobs display a 🔥 badge and stay at the very top of all listings for maximum workers.'}
+                </p>
+              </div>
+            </div>
+
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={createForm.isPinned === true}
+                onChange={(e) => setCreateForm({ ...createForm, isPinned: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+            </label>
+          </div>
+
           {/* Live Cost & Balance Summary */}
           <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-3">
             <h4 className="text-xs font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider">
@@ -832,6 +877,12 @@ export default function MicroJobsDashboardPage() {
                 <span>প্ল্যাটফর্ম সার্ভিস ফি ({platformFeePercent}%):</span>
                 <span>৳ {platformFee.toFixed(2)}</span>
               </div>
+              {createForm.isPinned && (
+                <div className="flex justify-between text-amber-600 dark:text-amber-400 font-semibold">
+                  <span>🔥 ফিচার্ড/পিন জব ফি:</span>
+                  <span>৳ {featuredFee.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between pt-2 border-t border-amber-500/20 text-sm font-black text-slate-900 dark:text-white">
                 <span>সর্বমোট খরচ (Total Payable):</span>
                 <span className="text-amber-600 dark:text-amber-400">৳ {totalCost.toFixed(2)}</span>
@@ -1066,7 +1117,11 @@ export default function MicroJobsDashboardPage() {
                           {sub.proofScreenshots.map((url: string, idx: number) => (
                             <div
                               key={idx}
-                              onClick={() => setZoomedImage(url)}
+                              onClick={() => {
+                                setLightboxImages(sub.proofScreenshots);
+                                setLightboxIndex(idx);
+                                setZoomedImage(url);
+                              }}
                               className="relative w-20 h-20 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden cursor-zoom-in group"
                             >
                               <img src={url} alt={`Screenshot ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition" />
@@ -1149,22 +1204,17 @@ export default function MicroJobsDashboardPage() {
       {/* ========================================================================= */}
       {/* FULLSCREEN LIGHTBOX / ZOOM MODAL                                          */}
       {/* ========================================================================= */}
-      {zoomedImage && (
-        <div
-          onClick={() => setZoomedImage(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm cursor-zoom-out animate-in fade-in duration-150"
-        >
-          <div className="relative max-w-5xl max-h-[92vh] overflow-hidden rounded-2xl">
-            <img src={zoomedImage} alt="Zoomed proof" className="max-w-full max-h-[90vh] object-contain rounded-xl" />
-            <button
-              onClick={() => setZoomedImage(null)}
-              className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      )}
+      <ImageLightbox
+        images={lightboxImages.length > 0 ? lightboxImages : zoomedImage ? [zoomedImage] : []}
+        initialIndex={lightboxIndex}
+        isOpen={Boolean(zoomedImage || lightboxImages.length > 0)}
+        onClose={() => {
+          setZoomedImage(null);
+          setLightboxImages([]);
+          setLightboxIndex(0);
+        }}
+        title={lang === 'bn' ? 'কাজের স্ক্রিনশট ও প্রমাণ পরিদর্শন (Proof Inspector)' : 'Proof Screenshot Inspector'}
+      />
       {/* ========================================================================= */}
       {/* JOB CREATION SUCCESS MODAL                                                */}
       {/* ========================================================================= */}

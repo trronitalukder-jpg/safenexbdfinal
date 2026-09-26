@@ -13,6 +13,7 @@ import { SubmitMicroJobDto } from './dto/submit-micro-job.dto';
 import { ReviewSubmissionDto } from './dto/review-submission.dto';
 import { Decimal } from '@prisma/client/runtime/library';
 import { AffiliateService } from '../affiliate/affiliate.service';
+import { TelegramService } from '../telegram/telegram.service';
 
 @Injectable()
 export class MicroJobsService {
@@ -22,6 +23,7 @@ export class MicroJobsService {
     private prisma: PrismaService,
     private settingsService: SettingsService,
     @Optional() private affiliateService?: AffiliateService,
+    @Optional() private telegramService?: TelegramService,
   ) {}
 
   /**
@@ -106,7 +108,11 @@ export class MicroJobsService {
     const workerBudget = Number(dto.rewardPerWorker) * Number(dto.totalWorkersNeeded);
     const platformFeePercent = Number(settings.platformFeePercent ?? 5);
     const platformFee = (workerBudget * platformFeePercent) / 100;
-    const totalCost = workerBudget + platformFee;
+
+    // Featured / Pin Job Fee configured by admin
+    const isPinned = Boolean(dto.isPinned);
+    const featuredJobFee = isPinned ? Number(settings.featuredJobFee ?? 20) : 0;
+    const totalCost = workerBudget + platformFee + featuredJobFee;
 
     const autoApproveHours = dto.autoApproveHours || Number(settings.autoApproveHours || 48);
 
@@ -123,7 +129,7 @@ export class MicroJobsService {
       const availableBalance = Number(wallet.availableBalance);
       if (availableBalance < totalCost) {
         throw new BadRequestException(
-          `আপনার ওয়ালেটে পর্যাপ্ত ব্যালেন্স নেই। মোট খরচ: ৳${totalCost.toFixed(2)} | বর্তমান ব্যালেন্স: ৳${availableBalance.toFixed(2)}`,
+          `আপনার ওয়ালেটে পর্যাপ্ত ব্যালেন্স নেই। মোট খরচ: ৳${totalCost.toFixed(2)}${featuredJobFee > 0 ? ` (জব পিন ফি সহ)` : ''} | বর্তমান ব্যালেন্স: ৳${availableBalance.toFixed(2)}`,
         );
       }
 
@@ -146,12 +152,12 @@ export class MicroJobsService {
           userId: employerId,
           type: 'MICROJOB_ESCROW',
           amount: totalCost,
-          commission: platformFee,
+          commission: platformFee + featuredJobFee,
           balanceBefore,
           balanceAfter,
           holdBefore: Number(wallet.holdBalance),
           holdAfter: Number(wallet.holdBalance),
-          notes: `Micro Job Escrow: ${dto.title} (${dto.totalWorkersNeeded} workers x ৳${dto.rewardPerWorker} + ৳${platformFee.toFixed(2)} fee)`,
+          notes: `Micro Job Escrow: ${dto.title} (${dto.totalWorkersNeeded} workers x ৳${dto.rewardPerWorker} + ৳${platformFee.toFixed(2)} fee${featuredJobFee > 0 ? ` + ৳${featuredJobFee} pin fee` : ''})`,
           status: 'COMPLETED',
         },
       });
@@ -170,6 +176,8 @@ export class MicroJobsService {
           totalBudget: workerBudget,
           platformFee,
           status: 'ACTIVE',
+          isPinned,
+          pinnedUntil: isPinned ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : null,
           minKycRequired: Boolean(dto.minKycRequired),
           autoApproveHours,
         },
@@ -227,9 +235,9 @@ export class MicroJobsService {
       ];
     }
 
-    let orderBy: any = { createdAt: 'desc' };
-    if (query.sort === 'reward_high') orderBy = { rewardPerWorker: 'desc' };
-    if (query.sort === 'reward_low') orderBy = { rewardPerWorker: 'asc' };
+    let orderBy: any = [{ isPinned: 'desc' }, { createdAt: 'desc' }];
+    if (query.sort === 'reward_high') orderBy = [{ isPinned: 'desc' }, { rewardPerWorker: 'desc' }];
+    if (query.sort === 'reward_low') orderBy = [{ isPinned: 'desc' }, { rewardPerWorker: 'asc' }];
 
     const [items, total] = await Promise.all([
       this.prisma.microJob.findMany({
@@ -368,7 +376,7 @@ export class MicroJobsService {
     const autoApproveHours = job.autoApproveHours || 48;
     const autoApproveAt = new Date(Date.now() + autoApproveHours * 60 * 60 * 1000);
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const submission = await tx.microJobSubmission.create({
         data: {
           jobId,
@@ -389,6 +397,29 @@ export class MicroJobsService {
 
       return submission;
     });
+
+    // Send Telegram alert to employer
+    if (this.telegramService && job.employerId) {
+      this.prisma.user
+        .findUnique({
+          where: { id: workerId },
+          select: { firstName: true, lastName: true, uniqueUserId: true },
+        })
+        .then((worker) => {
+          const workerName = worker?.firstName
+            ? `${worker.firstName} ${worker.lastName || ''}`.trim()
+            : worker?.uniqueUserId || 'Worker';
+          return this.telegramService?.notifyMicroJobSubmitted(
+            job.employerId,
+            job.title,
+            workerName,
+            job.id,
+          );
+        })
+        .catch((err) => this.logger.error('Failed to notify employer via Telegram:', err));
+    }
+
+    return result;
   }
 
   /**
@@ -397,7 +428,7 @@ export class MicroJobsService {
   async getEmployerJobs(employerId: string) {
     return this.prisma.microJob.findMany({
       where: { employerId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
       include: {
         category: {
           select: { id: true, name: true, slug: true, icon: true },
@@ -555,15 +586,22 @@ export class MicroJobsService {
         }
       }
 
+      if (this.telegramService && submission.workerId) {
+        this.telegramService
+          .notifyMicroJobApproved(submission.workerId, submission.job.title, reward)
+          .catch((err) => this.logger.error('Failed to notify worker via Telegram:', err));
+      }
+
       return approvedResult;
     } else {
       // REJECT
-      return this.prisma.$transaction(async (tx) => {
+      const rejectReason = dto.rejectReason?.trim() || 'কাজের শর্ত অনুযায়ী প্রমাণ সঠিক হয়নি';
+      const rejectedResult = await this.prisma.$transaction(async (tx) => {
         const updated = await tx.microJobSubmission.update({
           where: { id: submissionId },
           data: {
             status: 'REJECTED',
-            rejectReason: dto.rejectReason?.trim() || 'কাজের শর্ত অনুযায়ী প্রমাণ সঠিক হয়নি',
+            rejectReason,
             reviewedAt: new Date(),
           },
         });
@@ -577,6 +615,14 @@ export class MicroJobsService {
 
         return updated;
       });
+
+      if (this.telegramService && submission.workerId) {
+        this.telegramService
+          .notifyMicroJobRejected(submission.workerId, submission.job.title, rejectReason)
+          .catch((err) => this.logger.error('Failed to notify worker via Telegram:', err));
+      }
+
+      return rejectedResult;
     }
   }
 
@@ -1123,15 +1169,22 @@ export class MicroJobsService {
         }
       }
 
+      if (this.telegramService && submission.workerId) {
+        this.telegramService
+          .notifyMicroJobApproved(submission.workerId, submission.job.title, reward)
+          .catch((err) => this.logger.error('Failed to notify worker via Telegram:', err));
+      }
+
       return approvedResult;
     } else {
       // REJECT
-      return this.prisma.$transaction(async (tx) => {
+      const rejectReason = dto.rejectReason?.trim() || 'অ্যাডমিন কর্তৃক বাতিল করা হয়েছে';
+      const rejectedResult = await this.prisma.$transaction(async (tx) => {
         const updated = await tx.microJobSubmission.update({
           where: { id: submissionId },
           data: {
             status: 'REJECTED',
-            rejectReason: dto.rejectReason?.trim() || 'অ্যাডমিন কর্তৃক বাতিল করা হয়েছে',
+            rejectReason,
             adminNotes: `Rejected by Admin (${adminId})`,
             reviewedAt: new Date(),
           },
@@ -1146,6 +1199,14 @@ export class MicroJobsService {
 
         return updated;
       });
+
+      if (this.telegramService && submission.workerId) {
+        this.telegramService
+          .notifyMicroJobRejected(submission.workerId, submission.job.title, rejectReason)
+          .catch((err) => this.logger.error('Failed to notify worker via Telegram:', err));
+      }
+
+      return rejectedResult;
     }
   }
 
@@ -1304,6 +1365,12 @@ export class MicroJobsService {
             },
           });
         });
+
+        if (this.telegramService && sub.workerId) {
+          this.telegramService
+            .notifyMicroJobApproved(sub.workerId, sub.job.title, Number(sub.job.rewardPerWorker))
+            .catch((err) => this.logger.error('Failed to notify auto-approved worker via Telegram:', err));
+        }
 
         // Process Affiliate Referral Reward for worker referral (from task platform fee)
         const affiliate = this.affiliateService;

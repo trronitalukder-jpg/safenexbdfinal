@@ -24,6 +24,7 @@ import { api } from '@/lib/api';
 import { getImageUrl } from '@/lib/imageUtils';
 import { trackEvent } from '@/lib/tracking';
 import DOMPurify from 'dompurify';
+import VerifiedBadge from '@/components/common/VerifiedBadge';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -325,12 +326,12 @@ export default function ProductDetailPage() {
               <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                 {lang === 'bn' ? 'সেলার পরিচিতি' : 'Seller Information'}
               </span>
-              {product.seller?.isVerified && (
-                <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>VERIFIED SELLER</span>
-                </span>
-              )}
+              <VerifiedBadge
+                isVerified={product.seller?.isVerified}
+                status={product.seller?.verificationStatus}
+                showText
+                text="VERIFIED SELLER"
+              />
             </div>
 
             <Link

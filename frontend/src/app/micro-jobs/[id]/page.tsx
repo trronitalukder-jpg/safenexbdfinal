@@ -26,6 +26,8 @@ import {
   FileText,
   Camera,
 } from 'lucide-react';
+import VerifiedBadge from '@/components/common/VerifiedBadge';
+import ImageLightbox from '@/components/common/ImageLightbox';
 
 export default function SingleMicroJobPage() {
   const params = useParams();
@@ -47,6 +49,8 @@ export default function SingleMicroJobPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   const isEnabled = settings.microJob?.enabled !== false;
 
@@ -202,6 +206,11 @@ export default function SingleMicroJobPage() {
               <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
                 {job.category?.name || 'Task'}
               </span>
+              {job.isPinned && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-xs">
+                  🔥 FEATURED JOB
+                </span>
+              )}
               {job.minKycRequired && (
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
                   NID ভেরিফাইড বাধ্যতামূলক
@@ -254,12 +263,14 @@ export default function SingleMicroJobPage() {
             </p>
             <p className="text-[11px] text-slate-400 font-mono">@{job.employer?.uniqueUserId}</p>
           </div>
-          {job.employer?.isVerified && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-sky-600 dark:text-sky-400 font-semibold ml-auto">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Verified Employer</span>
-            </span>
-          )}
+          <div className="ml-auto">
+            <VerifiedBadge
+              isVerified={job.employer?.isVerified}
+              status={job.employer?.verificationStatus}
+              showText
+              text="Verified Employer"
+            />
+          </div>
         </div>
 
         {/* Description */}
@@ -377,13 +388,21 @@ export default function SingleMicroJobPage() {
               <span className="text-xs text-slate-400 font-semibold">{lang === 'bn' ? 'স্ক্রিনশটসমূহ:' : 'Screenshots:'}</span>
               <div className="flex flex-wrap gap-3">
                 {job.mySubmission.proofScreenshots.map((url: string, i: number) => (
-                  <a key={i} href={url} target="_blank" rel="noreferrer">
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      setLightboxIndex(i);
+                      setLightboxOpen(true);
+                    }}
+                    className="relative w-24 h-24 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden cursor-zoom-in hover:scale-105 transition"
+                  >
                     <img
                       src={url}
                       alt={`Proof ${i + 1}`}
-                      className="w-24 h-24 object-cover rounded-xl border border-slate-200 dark:border-slate-700 hover:scale-105 transition"
+                      className="w-full h-full object-cover"
                     />
-                  </a>
+                  </button>
                 ))}
               </div>
             </div>
@@ -535,6 +554,15 @@ export default function SingleMicroJobPage() {
           </div>
         </form>
       )}
+
+      {/* Lightbox Modal */}
+      <ImageLightbox
+        images={Array.isArray(job?.mySubmission?.proofScreenshots) ? job.mySubmission.proofScreenshots : []}
+        initialIndex={lightboxIndex}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        title={lang === 'bn' ? 'আমার সাবমিট করা প্রুফ স্ক্রিনশট' : 'My Submitted Proof Screenshot'}
+      />
     </div>
   );
 }

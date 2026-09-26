@@ -7,8 +7,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { SettingsModule } from '../settings/settings.module';
 import { AffiliateModule } from '../affiliate/affiliate.module';
 
+import { TelegramModule } from '../telegram/telegram.module';
+
 @Module({
-  imports: [PrismaModule, SettingsModule, AffiliateModule],
+  imports: [PrismaModule, SettingsModule, AffiliateModule, TelegramModule],
   controllers: [MicroJobsController, MicroJobsAdminController],
   providers: [MicroJobsService, MicroJobsGuard],
   exports: [MicroJobsService],

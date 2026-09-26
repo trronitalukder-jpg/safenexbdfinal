@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Gift,
@@ -21,6 +21,9 @@ import {
   ShieldCheck,
   ArrowRight,
   Calculator,
+  Download,
+  QrCode,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -74,6 +77,162 @@ export default function AffiliateDashboardPage() {
   const referralCode = affiliateData.referralCode || user?.uniqueUserId || user?.id || '';
   const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://safnexbd.com';
   const referralLink = `${siteUrl}/register?ref=${referralCode}`;
+
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [posterLoaded, setPosterLoaded] = useState(false);
+
+  const shareUrls = {
+    whatsapp: `https://api.whatsapp.com/send?text=${encodeURIComponent(`🔥 ঘরে বসেই কাজ করে প্রতিদিন আয় করুন SafnexBD-তে! নিরাপদ এসক্রো ও মাইক্রো জব প্ল্যাটফর্ম।\n\nআমার রেফারেল লিংক: ${referralLink}\nরেফারেল কোড: ${referralCode}`)}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}`,
+    telegram: `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(`🔥 ঘরে বসেই কাজ করে প্রতিদিন আয় করুন SafnexBD-তে! রেফারেল কোড: ${referralCode}`)}`,
+    twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(`🔥 ঘরে বসেই কাজ করে প্রতিদিন আয় করুন SafnexBD-তে! রেফারেল কোড: ${referralCode}`)}`,
+  };
+
+  const generatePoster = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = 800;
+    canvas.height = 1000;
+
+    // Background Gradient (Deep rich dark theme with subtle navy)
+    const bg = ctx.createLinearGradient(0, 0, 800, 1000);
+    bg.addColorStop(0, '#090d16');
+    bg.addColorStop(0.5, '#0f172a');
+    bg.addColorStop(1, '#020617');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, 800, 1000);
+
+    // Decorative Glowing Orbs
+    const glow1 = ctx.createRadialGradient(680, 120, 10, 680, 120, 280);
+    glow1.addColorStop(0, 'rgba(245, 158, 11, 0.25)');
+    glow1.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow1;
+    ctx.fillRect(0, 0, 800, 500);
+
+    const glow2 = ctx.createRadialGradient(120, 880, 10, 120, 880, 280);
+    glow2.addColorStop(0, 'rgba(14, 165, 233, 0.2)');
+    glow2.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow2;
+    ctx.fillRect(0, 500, 800, 500);
+
+    // Border Frame
+    ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
+    ctx.lineWidth = 3;
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(25, 25, 750, 950, 24);
+      ctx.stroke();
+    } else {
+      ctx.strokeRect(25, 25, 750, 950);
+    }
+
+    // Brand Header
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#f59e0b';
+    ctx.font = 'bold 36px "Segoe UI", sans-serif';
+    ctx.fillText('⚡ SAFNEX BD', 400, 105);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '600 15px "Segoe UI", sans-serif';
+    ctx.fillText('Bangladesh Trusted P2P Escrow & Micro-Job Marketplace', 400, 138);
+
+    // Main Catchy Heading
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 36px "Segoe UI", sans-serif';
+    ctx.fillText('ঘরে বসেই কাজ করে আয় করুন!', 400, 225);
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 22px "Segoe UI", sans-serif';
+    ctx.fillText('১০০% নিরাপদ কেনাবেচা ও ইনস্ট্যান্ট পেমেন্ট', 400, 268);
+
+    // Feature highlights box
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(75, 310, 650, 200, 20);
+      ctx.fill();
+    } else {
+      ctx.fillRect(75, 310, 650, 200);
+    }
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = 'bold 19px "Segoe UI", sans-serif';
+    ctx.fillText('✔ প্রতিদিন সহজ সহজ মাইক্রো টাস্ক সম্পন্ন করে আয়', 115, 360);
+    ctx.fillText('✔ ফেসবুক, ইউটিউব, অ্যাপ ডাউনলোড ও রিভিউ কাজ', 115, 410);
+    ctx.fillText('✔ বিকাশ, নগদ ও রকেটে দ্রুত টাকা উইথড্র সুবিধা', 115, 460);
+
+    // Big Referral Code Card
+    ctx.fillStyle = 'rgba(245, 158, 11, 0.15)';
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(130, 545, 540, 105, 20);
+      ctx.fill();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    } else {
+      ctx.fillRect(130, 545, 540, 105);
+    }
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = '600 15px "Segoe UI", sans-serif';
+    ctx.fillText('রেফারেল কোড ব্যবহার করে ফ্রি বোনাস নিন:', 400, 578);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 34px "Segoe UI", monospace';
+    ctx.fillText(referralCode || 'SAFNEXBD', 400, 626);
+
+    // QR Code Image
+    const qrImg = new Image();
+    qrImg.crossOrigin = 'anonymous';
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=4&data=${encodeURIComponent(referralLink)}`;
+    qrImg.onload = () => {
+      ctx.fillStyle = '#ffffff';
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(310, 680, 180, 180, 16);
+        ctx.fill();
+      } else {
+        ctx.fillRect(310, 680, 180, 180);
+      }
+      ctx.drawImage(qrImg, 310, 680, 180, 180);
+
+      // Footer
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 15px "Segoe UI", sans-serif';
+      ctx.fillText('মোবাইল ক্যামেরা দিয়ে স্ক্যান করে এখনই যুক্ত হোন', 400, 895);
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 16px "Segoe UI", sans-serif';
+      ctx.fillText('safnexbd.com', 400, 925);
+
+      setPosterLoaded(true);
+    };
+    qrImg.src = qrSrc;
+  }, [referralCode, referralLink]);
+
+  useEffect(() => {
+    if (!loading && referralCode) {
+      generatePoster();
+    }
+  }, [loading, referralCode, generatePoster]);
+
+  const handleDownloadPoster = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = `safnexbd-referral-${referralCode || 'invite'}.png`;
+    link.href = canvas.toDataURL('image/png');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(referralLink);
@@ -257,6 +416,120 @@ export default function AffiliateDashboardPage() {
                 {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* 1-Click Social Media Share Buttons */}
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2.5">
+            {lang === 'bn' ? '⚡ ১-ক্লিকে সোশ্যাল মিডিয়ায় বন্ধুদের সাথে শেয়ার করুন:' : '⚡ 1-Click Share on Social Media:'}
+          </label>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <a
+              href={shareUrls.whatsapp}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition"
+            >
+              <span>💬 WhatsApp</span>
+            </a>
+            <a
+              href={shareUrls.facebook}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-xs transition"
+            >
+              <span>🌐 Facebook</span>
+            </a>
+            <a
+              href={shareUrls.telegram}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs shadow-xs transition"
+            >
+              <span>✈️ Telegram</span>
+            </a>
+            <a
+              href={shareUrls.twitter}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs shadow-xs transition"
+            >
+              <span>✖️ X (Twitter)</span>
+            </a>
+            <button
+              onClick={handleCopyLink}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 font-bold text-xs border border-amber-500/30 transition cursor-pointer"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>{copiedLink ? (lang === 'bn' ? 'লিংক কপি হয়েছে!' : 'Link Copied!') : (lang === 'bn' ? 'কপি লিংক' : 'Copy Link')}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 🎨 Visual Referral Poster Generator (HTML5 Canvas) */}
+      <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-slate-900/10 border border-amber-500/20 shadow-xs space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <ImageIcon className="w-5 h-5 text-amber-500" />
+              <span>{lang === 'bn' ? '🎨 আকর্ষণীয় প্রমোশনাল পোস্টার কিট (HD Referral Poster)' : '🎨 HD Referral Marketing Poster Kit'}</span>
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {lang === 'bn'
+                ? 'আপনার নিজস্ব রেফারেল কিউআর কোডসহ হাই-রেজোলিউশন পোস্টার তৈরি হয়েছে। ডাউনলোড করে ফেসবুক বা ইনস্টাগ্রামে পোস্ট করুন!'
+                : 'High-resolution promotional banner generated with your personal referral QR code. Download and share!'}
+            </p>
+          </div>
+
+          <button
+            onClick={handleDownloadPoster}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 active:scale-95 transition cursor-pointer"
+          >
+            <Download className="w-4 h-4" />
+            <span>{lang === 'bn' ? 'পোস্টার ডাউনলোড করুন (PNG)' : 'Download Poster (PNG)'}</span>
+          </button>
+        </div>
+
+        {/* Poster Canvas Preview Card */}
+        <div className="flex flex-col md:flex-row items-center justify-center gap-6 p-4 rounded-2xl bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800">
+          <div className="relative max-w-xs w-full rounded-2xl overflow-hidden shadow-2xl border border-amber-500/20">
+            <canvas ref={canvasRef} className="w-full h-auto block" />
+            {!posterLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 text-white text-xs font-semibold">
+                পোস্টার তৈরি হচ্ছে...
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3 max-w-sm text-xs">
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-slate-700 dark:text-slate-300 space-y-1.5">
+              <p className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                <QrCode className="w-4 h-4" />
+                <span>অটোমেটিক কিউআর কোড স্ক্যানার</span>
+              </p>
+              <p className="text-[11px] leading-relaxed">
+                যে কেউ এই পোস্টারের কিউআর কোড মোবাইল দিয়ে স্ক্যান করলে সাথে সাথে আপনার রেফারেল লিংকে পৌঁছে যাবে।
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 space-y-1">
+              <p className="font-bold text-slate-900 dark:text-white">কোথায় শেয়ার করবেন?</p>
+              <ul className="list-disc list-inside text-[11px] space-y-1">
+                <li>ফেসবুক আর্নিং গ্রুপ ও পেজ</li>
+                <li>টেলিগ্রাম আর্নিং চ্যানেল ও গ্রুপ</li>
+                <li>হোয়াটসঅ্যাপ স্টোরি ও ফ্রেন্ড সার্কেল</li>
+              </ul>
+            </div>
+
+            <button
+              onClick={handleDownloadPoster}
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white font-bold text-xs transition border border-slate-700 cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>ডাউনলোড করে শেয়ার করুন</span>
+            </button>
           </div>
         </div>
       </div>
