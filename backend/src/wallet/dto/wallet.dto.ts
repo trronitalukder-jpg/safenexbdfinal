@@ -314,5 +314,82 @@ export class ExecuteGatewayPaymentDto {
   simulated?: boolean;
 }
 
+export class CreateWithdrawalMethodDto {
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  code: string;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  minAmount?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  maxAmount?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  feePercentage?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  feeFlat?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
+
+  @IsNumber()
+  @IsOptional()
+  sortOrder?: number;
+}
+
+export class UpdateWithdrawalMethodDto {
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
+  @IsOptional()
+  code?: string;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  minAmount?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  maxAmount?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  feePercentage?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  feeFlat?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
+
+  @IsNumber()
+  @IsOptional()
+  sortOrder?: number;
+}
+
+
 
 

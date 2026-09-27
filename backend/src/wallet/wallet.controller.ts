@@ -15,6 +15,7 @@ import {
   AdminWalletAdjustmentDto,
   CreateRechargeMethodDto,
   CreateRechargeRequestDto,
+  CreateWithdrawalMethodDto,
   CreateWithdrawalRequestDto,
   ExecuteGatewayPaymentDto,
   HoldResolutionDto,
@@ -23,6 +24,7 @@ import {
   ReviewWithdrawalDto,
   SaveGatewaySettingsDto,
   UpdateRechargeMethodDto,
+  UpdateWithdrawalMethodDto,
 } from './dto/wallet.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -251,6 +253,46 @@ export class WalletController {
   @Delete('admin/recharge-methods/:id')
   async deleteRechargeMethod(@Param('id') id: string) {
     return this.walletService.deleteRechargeMethod(id);
+  }
+
+  // ---------------- Admin Withdrawal Methods & Limits ----------------
+
+  @UseGuards(RolesGuard, PermissionsGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'FINANCE_ADMIN')
+  @Get('admin/withdrawal-methods')
+  async getAllAdminWithdrawalMethods() {
+    return this.walletService.getAllAdminWithdrawalMethods();
+  }
+
+  @UseGuards(RolesGuard, PermissionsGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'FINANCE_ADMIN')
+  @Post('admin/withdrawal-methods')
+  async createWithdrawalMethod(@Body() dto: CreateWithdrawalMethodDto) {
+    return this.walletService.createWithdrawalMethod(dto);
+  }
+
+  @UseGuards(RolesGuard, PermissionsGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'FINANCE_ADMIN')
+  @Patch('admin/withdrawal-methods/:id')
+  async updateWithdrawalMethod(
+    @Param('id') id: string,
+    @Body() dto: UpdateWithdrawalMethodDto,
+  ) {
+    return this.walletService.updateWithdrawalMethod(id, dto);
+  }
+
+  @UseGuards(RolesGuard, PermissionsGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'FINANCE_ADMIN')
+  @Patch('admin/withdrawal-methods/:id/toggle')
+  async toggleWithdrawalMethod(@Param('id') id: string) {
+    return this.walletService.toggleWithdrawalMethod(id);
+  }
+
+  @UseGuards(RolesGuard, PermissionsGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'FINANCE_ADMIN')
+  @Delete('admin/withdrawal-methods/:id')
+  async deleteWithdrawalMethod(@Param('id') id: string) {
+    return this.walletService.deleteWithdrawalMethod(id);
   }
 
   // ---------------- Automated Payment Gateways (bKash PGW & SSLCommerz) ----------------

@@ -15,11 +15,13 @@ import {
   AdminWalletAdjustmentDto,
   CreateRechargeMethodDto,
   CreateRechargeRequestDto,
+  CreateWithdrawalMethodDto,
   CreateWithdrawalRequestDto,
   HoldResolutionDto,
   ReviewRechargeDto,
   ReviewWithdrawalDto,
   UpdateRechargeMethodDto,
+  UpdateWithdrawalMethodDto,
 } from './dto/wallet.dto';
 import { CommissionService } from '../commission/commission.service';
 import { ChatGateway } from '../chat/chat.gateway';
@@ -224,13 +226,116 @@ export class WalletService {
   }
 
   /**
-   * Get active withdrawal methods
+   * Get active withdrawal methods (Public/User)
    */
   async getWithdrawalMethods() {
     return this.prisma.withdrawalMethod.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: 'asc' },
     });
+  }
+
+  /**
+   * Admin: Get all withdrawal methods (active and inactive)
+   */
+  async getAllAdminWithdrawalMethods() {
+    return this.prisma.withdrawalMethod.findMany({
+      include: {
+        _count: {
+          select: { requests: true },
+        },
+      },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
+  /**
+   * Admin: Create new withdrawal method
+   */
+  async createWithdrawalMethod(dto: CreateWithdrawalMethodDto) {
+    const existing = await this.prisma.withdrawalMethod.findUnique({
+      where: { code: dto.code.trim().toUpperCase() },
+    });
+    if (existing) {
+      throw new BadRequestException('A withdrawal method with this code already exists');
+    }
+
+    return this.prisma.withdrawalMethod.create({
+      data: {
+        name: dto.name.trim(),
+        code: dto.code.trim().toUpperCase(),
+        minAmount: dto.minAmount !== undefined ? new Prisma.Decimal(dto.minAmount) : new Prisma.Decimal(100),
+        maxAmount: dto.maxAmount !== undefined ? new Prisma.Decimal(dto.maxAmount) : new Prisma.Decimal(100000),
+        feePercentage: dto.feePercentage !== undefined ? new Prisma.Decimal(dto.feePercentage) : new Prisma.Decimal(0),
+        feeFlat: dto.feeFlat !== undefined ? new Prisma.Decimal(dto.feeFlat) : new Prisma.Decimal(0),
+        isActive: dto.isActive !== undefined ? Boolean(dto.isActive) : true,
+        sortOrder: dto.sortOrder !== undefined ? Number(dto.sortOrder) : 0,
+      },
+    });
+  }
+
+  /**
+   * Admin: Update withdrawal method
+   */
+  async updateWithdrawalMethod(id: string, dto: UpdateWithdrawalMethodDto) {
+    const method = await this.prisma.withdrawalMethod.findUnique({ where: { id } });
+    if (!method) throw new NotFoundException('Withdrawal method not found');
+
+    if (dto.code && dto.code.trim().toUpperCase() !== method.code) {
+      const duplicate = await this.prisma.withdrawalMethod.findUnique({
+        where: { code: dto.code.trim().toUpperCase() },
+      });
+      if (duplicate) throw new BadRequestException('Code already in use by another withdrawal method');
+    }
+
+    return this.prisma.withdrawalMethod.update({
+      where: { id },
+      data: {
+        ...(dto.name && { name: dto.name.trim() }),
+        ...(dto.code && { code: dto.code.trim().toUpperCase() }),
+        ...(dto.minAmount !== undefined && { minAmount: new Prisma.Decimal(dto.minAmount) }),
+        ...(dto.maxAmount !== undefined && { maxAmount: new Prisma.Decimal(dto.maxAmount) }),
+        ...(dto.feePercentage !== undefined && { feePercentage: new Prisma.Decimal(dto.feePercentage) }),
+        ...(dto.feeFlat !== undefined && { feeFlat: new Prisma.Decimal(dto.feeFlat) }),
+        ...(dto.isActive !== undefined && { isActive: Boolean(dto.isActive) }),
+        ...(dto.sortOrder !== undefined && { sortOrder: Number(dto.sortOrder) }),
+      },
+    });
+  }
+
+  /**
+   * Admin: Quick Toggle Active/Inactive status
+   */
+  async toggleWithdrawalMethod(id: string) {
+    const method = await this.prisma.withdrawalMethod.findUnique({ where: { id } });
+    if (!method) throw new NotFoundException('Withdrawal method not found');
+
+    return this.prisma.withdrawalMethod.update({
+      where: { id },
+      data: { isActive: !method.isActive },
+    });
+  }
+
+  /**
+   * Admin: Delete or deactivate withdrawal method
+   */
+  async deleteWithdrawalMethod(id: string) {
+    const method = await this.prisma.withdrawalMethod.findUnique({
+      where: { id },
+      include: { _count: { select: { requests: true } } },
+    });
+    if (!method) throw new NotFoundException('Withdrawal method not found');
+
+    if (method._count.requests > 0) {
+      await this.prisma.withdrawalMethod.update({
+        where: { id },
+        data: { isActive: false },
+      });
+      return { success: true, message: 'উইথড্র মেথডের সাথে লেনদেনের ডাটা থাকায় এটি পুরোপুরি ডিলিট করার বদলে নিষ্ক্রিয় (Inactive) করা হয়েছে।' };
+    }
+
+    await this.prisma.withdrawalMethod.delete({ where: { id } });
+    return { success: true, message: 'Withdrawal method deleted successfully' };
   }
 
   /**
