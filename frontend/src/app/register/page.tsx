@@ -41,7 +41,7 @@ function RegisterContent() {
   const { triggerPostRegistrationPrompt } = usePwa();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const refParam = searchParams.get('ref') || '';
+  const refParam = searchParams.get('ref') || searchParams.get('promo') || '';
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -53,11 +53,25 @@ function RegisterContent() {
     confirmPassword: '',
     businessName: '',
     referralCode: refParam,
+    promoCode: refParam,
   });
 
   useEffect(() => {
-    if (refParam) {
-      setFormData((prev) => ({ ...prev, referralCode: refParam }));
+    let activeCode = refParam;
+    if (!activeCode && typeof window !== 'undefined') {
+      try {
+        const storedPromo = localStorage.getItem('safnex_promo');
+        if (storedPromo) {
+          activeCode = storedPromo;
+        }
+      } catch {}
+    }
+    if (activeCode) {
+      setFormData((prev) => ({
+        ...prev,
+        referralCode: prev.referralCode || activeCode,
+        promoCode: activeCode,
+      }));
     }
   }, [refParam]);
 
@@ -592,14 +606,14 @@ function RegisterContent() {
             </div>
           </div>
 
-          {/* Referral Code Box with high visual appeal */}
+          {/* Referral / Promo Code Box with high visual appeal */}
           <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/8 via-amber-500/5 to-transparent border border-amber-500/30 dark:border-amber-500/20 space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
                 <Gift className="w-4 h-4 text-amber-500" />
-                <span>{lang === 'bn' ? 'রেফারেল কোড (ঐচ্ছিক / বোনাস কোড)' : 'Referral Code (Optional)'}</span>
+                <span>{lang === 'bn' ? 'রেফারেল বা প্রমো কোড (ঐচ্ছিক)' : 'Referral or Promo Code (Optional)'}</span>
               </label>
-              {formData.referralCode && (
+              {(formData.referralCode || formData.promoCode) && (
                 <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
                   <span>✓</span>
                   <span>{lang === 'bn' ? 'কোড যুক্ত হয়েছে' : 'Applied'}</span>
@@ -608,9 +622,12 @@ function RegisterContent() {
             </div>
             <input
               type="text"
-              value={formData.referralCode}
-              onChange={(e) => setFormData({ ...formData, referralCode: e.target.value })}
-              placeholder={lang === 'bn' ? 'যেমন: Safenex77 (যদি কেউ রেফার করে থাকে)' : 'e.g. Safenex77'}
+              value={formData.referralCode || formData.promoCode}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFormData({ ...formData, referralCode: val, promoCode: val });
+              }}
+              placeholder={lang === 'bn' ? 'যেমন: TANVIR26 বা Safenex77 (যদি থাকে)' : 'e.g. TANVIR26 or Safenex77'}
               className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/30 text-xs font-mono text-slate-900 dark:text-white uppercase placeholder:normal-case placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition"
             />
           </div>

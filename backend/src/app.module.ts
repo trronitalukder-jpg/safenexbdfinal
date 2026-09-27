@@ -30,6 +30,7 @@ import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { TrafficModule } from './traffic/traffic.module';
 import { ScammerReportsModule } from './scammer-reports/scammer-reports.module';
 import { LuckyWheelModule } from './lucky-wheel/lucky-wheel.module';
+import { PromotionsModule } from './promotions/promotions.module';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { LuckyWheelModule } from './lucky-wheel/lucky-wheel.module';
     TrafficModule,
     ScammerReportsModule,
     LuckyWheelModule,
+    PromotionsModule,
   ],
   providers: [
     {

@@ -123,6 +123,23 @@ export class AuthService {
       }
     }
 
+    // Look up promotion campaign if promoCode provided or referralCode matches a campaign
+    let promotionCampaignId: string | null = null;
+    const possiblePromoCode = (dto.promoCode || dto.referralCode || '').toLowerCase().trim();
+    if (possiblePromoCode) {
+      const promoSetting = await this.prisma.promotionSetting.findUnique({
+        where: { id: 'default' },
+      });
+      if (!promoSetting || promoSetting.isEnabled) {
+        const campaign = await this.prisma.promotionCampaign.findUnique({
+          where: { code: possiblePromoCode },
+        });
+        if (campaign && campaign.isActive) {
+          promotionCampaignId = campaign.id;
+        }
+      }
+    }
+
     // Get default USER role
     const userRole = await this.prisma.role.findUnique({ where: { name: 'USER' } });
 
@@ -141,6 +158,7 @@ export class AuthService {
           businessName: dto.businessName,
           businessType: dto.businessType,
           referredById: referredById || undefined,
+          promotionCampaignId: promotionCampaignId || undefined,
           isActive: true,
           wallet: {
             create: {

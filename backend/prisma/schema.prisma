@@ -136,11 +136,15 @@ model User {
   luckySpins           LuckyWheelSpin[]
   spinQuota            UserSpinQuota?
 
+  promotionCampaignId  String?
+  promotionCampaign    PromotionCampaign?  @relation("CampaignUsers", fields: [promotionCampaignId], references: [id], onDelete: SetNull)
+
   @@index([uniqueUserId])
   @@index([email])
   @@index([phone])
   @@index([telegramChatId])
   @@index([referredById])
+  @@index([promotionCampaignId])
   @@map("users")
 }
 
@@ -1685,5 +1689,69 @@ model UserSpinQuota {
   @@map("user_spin_quotas")
 }
 
+// -----------------------------------------------------------------------------
+// Promotion & Influencer Campaigns
+// -----------------------------------------------------------------------------
 
+model PromotionSetting {
+  id               String   @id @default("default")
+  isEnabled        Boolean  @default(true) // Master Global ON/OFF Switch
+  allowSelfPortal  Boolean  @default(true) // Whether promoters can view their live portal
+  attributionDays  Int      @default(30)   // Cookie/localStorage lifespan in days
+  defaultTargetUrl String   @default("/")  @db.VarChar(255)
+  updatedAt        DateTime @updatedAt
 
+  @@map("promotion_settings")
+}
+
+enum PromotionCommissionType {
+  TRACKING_ONLY
+  FIXED_PER_REGISTRATION
+  COMMISSION_PERCENTAGE
+  FLAT_BUDGET
+}
+
+model PromotionCampaign {
+  id                  String                  @id @default(uuid())
+  name                String                  @db.VarChar(150) // Campaign or Promoter Name
+  code                String                  @unique @db.VarChar(50) // Unique referral slug (e.g. tanvir, techbd)
+  promoterName        String?                 @db.VarChar(100)
+  promoterPhone       String?                 @db.VarChar(50)
+  promoterChannel     String?                 @db.VarChar(255)
+  commissionType      PromotionCommissionType @default(TRACKING_ONLY)
+  commissionRate      Decimal                 @default(0.0000) @db.Decimal(18, 4) // Fixed BDT or % rate
+  flatBudget          Decimal                 @default(0.0000) @db.Decimal(18, 4)
+  paidAmount          Decimal                 @default(0.0000) @db.Decimal(18, 4) // Amount already disbursed to promoter
+  commissionNote      String?                 @db.Text
+  targetUrl           String                  @default("/") @db.VarChar(255)
+  viewToken           String                  @default(uuid()) @db.VarChar(100) // Secret key for promoter live portal
+  isActive            Boolean                 @default(true) // Individual ON/OFF switch
+  clicksCount         Int                     @default(0)
+  uniqueVisitorsCount Int                     @default(0)
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+
+  clicks              PromotionClick[]
+  registeredUsers     User[]                  @relation("CampaignUsers")
+
+  @@index([code])
+  @@index([isActive])
+  @@map("promotion_campaigns")
+}
+
+model PromotionClick {
+  id                  String            @id @default(uuid())
+  campaignId          String
+  ipAddress           String?           @db.VarChar(50)
+  userAgent           String?           @db.VarChar(500)
+  referrer            String?           @db.VarChar(500)
+  device              String?           @db.VarChar(50)
+  createdAt           DateTime          @default(now())
+
+  campaign            PromotionCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([ipAddress])
+  @@index([createdAt])
+  @@map("promotion_clicks")
+}

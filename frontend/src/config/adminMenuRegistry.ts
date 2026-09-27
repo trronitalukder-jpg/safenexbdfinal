@@ -22,6 +22,7 @@ import {
   Activity,
   Briefcase,
   Sparkles,
+  Megaphone,
   LucideIcon,
 } from 'lucide-react';
 
@@ -118,6 +119,16 @@ export const adminMenuRegistry: AdminMenuItem[] = [
     icon: Activity,
     descriptionEn: 'Live traffic radar, IP intelligence, dwell times, new vs repeat visitors & funnel',
     descriptionBn: 'লাইভ ভিজিটর রাডার, আইপি অডিট, অবস্থানকাল ও আচরণ ফানেল অ্যানালিটিক্স',
+    category: 'general',
+  },
+  {
+    key: 'promotions',
+    labelEn: 'Promotions & Influencers',
+    labelBn: 'প্রমোশন ট্র্যাকার (Promotions)',
+    href: '/admin/promotions',
+    icon: Megaphone,
+    descriptionEn: 'Create & track influencer promo links, visitor clicks, user signups and transaction volume',
+    descriptionBn: 'ইনফ্লুয়েন্সার ও প্রমোশন লিংক তৈরি, ভিজিটর ট্র্যাকিং, রেজিস্ট্রেশন ও মোট লেনদেনের হিসাব',
     category: 'general',
   },
   {

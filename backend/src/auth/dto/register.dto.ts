@@ -45,5 +45,9 @@ export class RegisterDto {
   @IsString()
   @IsOptional()
   referralCode?: string;
+
+  @IsString()
+  @IsOptional()
+  promoCode?: string;
 }
 
