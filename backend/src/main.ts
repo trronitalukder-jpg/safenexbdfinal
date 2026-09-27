@@ -18,9 +18,9 @@ async function bootstrap() {
     bodyParser: false,
   });
 
-  // Global body parsers with 50mb limit to handle Base64 avatars and documents
-  app.use(json({ limit: '50mb' }));
-  app.use(urlencoded({ extended: true, limit: '50mb' }));
+  // Global body parsers with 10mb limit to handle Base64 avatars and documents while preventing RAM exhaustion / DoS
+  app.use(json({ limit: '10mb' }));
+  app.use(urlencoded({ extended: true, limit: '10mb' }));
 
   // Global Prefix
   app.setGlobalPrefix('api/v1');
@@ -45,9 +45,11 @@ async function bootstrap() {
     }),
   );
 
-  // Serve static uploaded files
+  // Serve static uploaded files with browser caching enabled (7 days max-age)
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    immutable: true,
   });
 
   // Swagger Documentation

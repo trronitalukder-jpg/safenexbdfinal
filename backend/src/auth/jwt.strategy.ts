@@ -20,13 +20,15 @@ export function invalidateUserCache(userId?: string) {
   }
 }
 
+import { getJwtSecret } from '../common/config/jwt.config';
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private prisma: PrismaService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || 'safnexbd_super_secret_jwt_access_key_2026_production_grade',
+      secretOrKey: getJwtSecret(),
     });
   }
 

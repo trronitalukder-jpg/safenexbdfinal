@@ -11,6 +11,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as path from 'path';
 import { UploadsService } from './uploads.service';
 import { Public } from '../common/decorators/roles.decorator';
+import { getJwtSecret } from '../common/config/jwt.config';
 
 @Controller('uploads')
 export class UploadsController {
@@ -37,7 +38,7 @@ export class UploadsController {
       }
       try {
         await this.jwtService.verifyAsync(token, {
-          secret: process.env.JWT_SECRET || 'safnexbd_super_secret_jwt_access_key_2026_production_grade',
+          secret: getJwtSecret(),
         });
       } catch {
         throw new UnauthorizedException('Invalid or expired authentication token');

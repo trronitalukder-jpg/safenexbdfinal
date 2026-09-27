@@ -145,6 +145,8 @@ model User {
   @@index([telegramChatId])
   @@index([referredById])
   @@index([promotionCampaignId])
+  @@index([createdAt])
+  @@index([isActive, isVerified])
   @@map("users")
 }
 
@@ -369,6 +371,7 @@ model WalletLedger {
   @@index([walletId])
   @@index([userId])
   @@index([userId, createdAt])
+  @@index([walletId, createdAt])
   @@index([type])
   @@index([createdAt])
   @@map("wallet_ledger")
@@ -462,6 +465,8 @@ model RechargeRequest {
 
   @@index([userId])
   @@index([status])
+  @@index([userId, status, createdAt])
+  @@index([status, createdAt])
   @@index([transactionNumber])
   @@index([assignedToId])
   @@map("recharge_requests")
@@ -515,6 +520,8 @@ model WithdrawalRequest {
 
   @@index([userId])
   @@index([status])
+  @@index([userId, status, createdAt])
+  @@index([status, createdAt])
   @@index([assignedToId])
   @@map("withdrawal_requests")
 }
@@ -911,6 +918,8 @@ model Transaction {
   @@index([receiverId])
   @@index([receiverId, status, createdAt])
   @@index([status])
+  @@index([status, createdAt])
+  @@index([transactionType, status])
   @@index([createdAt])
   @@map("transactions")
 }
@@ -1751,6 +1760,7 @@ model PromotionClick {
   campaign            PromotionCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
   @@index([campaignId])
+  @@index([campaignId, createdAt])
   @@index([ipAddress])
   @@index([createdAt])
   @@map("promotion_clicks")

@@ -16,6 +16,7 @@ import { CommissionService } from '../commission/commission.service';
 import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcryptjs';
+import { getJwtSecret } from '../common/config/jwt.config';
 import {
   CreatePartnerAppDto,
   PartnerApplyDto,
@@ -357,7 +358,7 @@ export class PartnerService {
     }
 
     // Sign a 24-hour Client Session Token (JWT)
-    const jwtSecret = process.env.JWT_SECRET || 'safnexbd-secret-key';
+    const jwtSecret = getJwtSecret();
     const payload = {
       sub: safnexUser.id,
       partnerAppId: app.id,
@@ -403,7 +404,7 @@ export class PartnerService {
     }
 
     try {
-      const jwtSecret = process.env.JWT_SECRET || 'safnexbd-secret-key';
+      const jwtSecret = getJwtSecret();
       const decoded = this.jwtService.verify(token, { secret: jwtSecret });
       if (decoded.type !== 'PARTNER_SESSION') {
         throw new UnauthorizedException('Invalid token type');

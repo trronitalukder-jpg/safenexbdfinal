@@ -14,6 +14,7 @@ import { ChatService } from './chat.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiService } from '../ai/ai.service';
 import { SettingsService } from '../settings/settings.service';
+import { getJwtSecret } from '../common/config/jwt.config';
 
 @WebSocketGateway({
   cors: {
@@ -73,7 +74,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       if (token) {
         const payload: any = this.jwtService.verify(token, {
-          secret: process.env.JWT_SECRET || 'safnexbd_super_secret_jwt_access_key_2026_production_grade',
+          secret: getJwtSecret(),
         });
         const user = await this.prisma.user.findUnique({
           where: { id: payload.sub },
@@ -111,7 +112,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!client.data.user && data?.token) {
       try {
         const payload: any = this.jwtService.verify(data.token, {
-          secret: process.env.JWT_SECRET || 'safnexbd_super_secret_jwt_access_key_2026_production_grade',
+          secret: getJwtSecret(),
         });
         client.data.user = payload;
       } catch {}
@@ -189,7 +190,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!client.data.user && data?.token) {
       try {
         const payload: any = this.jwtService.verify(data.token, {
-          secret: process.env.JWT_SECRET || 'safnexbd_super_secret_jwt_access_key_2026_production_grade',
+          secret: getJwtSecret(),
         });
         client.data.user = payload;
       } catch {}

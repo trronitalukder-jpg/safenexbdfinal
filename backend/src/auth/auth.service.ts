@@ -20,6 +20,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { OtpService } from '../sms/otp.service';
 import { SmsService } from '../sms/sms.service';
 import { purgeOrScrubUser } from '../common/utils/user-cleanup.util';
+import { getJwtSecret, getJwtRefreshSecret } from '../common/config/jwt.config';
 
 @Injectable()
 export class AuthService {
@@ -524,12 +525,12 @@ export class AuthService {
     const payload = { sub: userId, email };
 
     const accessToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_SECRET || 'safnexbd_super_secret_jwt_access_key_2026_production_grade',
+      secret: getJwtSecret(),
       expiresIn: (process.env.JWT_EXPIRES_IN || '1d') as any,
     });
 
     const refreshToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_REFRESH_SECRET || 'safnexbd_super_secret_jwt_refresh_key_2026_production_grade',
+      secret: getJwtRefreshSecret(),
       expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || '7d') as any,
     });
 
@@ -660,7 +661,7 @@ export class AuthService {
     const resetToken = this.jwtService.sign(
       { sub: user.id, email: user.email, purpose: 'PASSWORD_RESET' },
       {
-        secret: process.env.JWT_SECRET || 'safnexbd_super_secret_jwt_access_key_2026_production_grade',
+        secret: getJwtSecret(),
         expiresIn: '15m',
       },
     );
@@ -691,7 +692,7 @@ export class AuthService {
     let decoded: any;
     try {
       decoded = this.jwtService.verify(body.resetToken, {
-        secret: process.env.JWT_SECRET || 'safnexbd_super_secret_jwt_access_key_2026_production_grade',
+        secret: getJwtSecret(),
       });
     } catch {
       throw new BadRequestException('পাসওয়ার্ড রিসেট টোকেনটির মেয়াদ শেষ হয়ে গেছে বা অকার্যকর। অনুগ্রহ করে পুনরায় ওটিপি কোড নিন।');

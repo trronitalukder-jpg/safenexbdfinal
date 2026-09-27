@@ -5,10 +5,12 @@ import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller';
 import { TelegramModule } from '../telegram/telegram.module';
 
+import { getJwtSecret } from '../common/config/jwt.config';
+
 @Module({
   imports: [
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'safnexbd_super_secret_jwt_access_key_2026_production_grade',
+      secret: getJwtSecret(),
     }),
     forwardRef(() => TelegramModule),
   ],

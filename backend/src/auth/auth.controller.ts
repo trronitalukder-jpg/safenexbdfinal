@@ -1,4 +1,5 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto, RefreshTokenDto } from './dto/login.dto';
@@ -12,6 +13,7 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Public()
+  @Throttle({ short: { limit: 2, ttl: 1000 }, medium: { limit: 5, ttl: 10000 }, long: { limit: 10, ttl: 60000 } })
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() dto: RegisterDto) {
@@ -19,6 +21,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ short: { limit: 2, ttl: 1000 }, medium: { limit: 6, ttl: 10000 }, long: { limit: 15, ttl: 60000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto) {
@@ -26,6 +29,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ short: { limit: 2, ttl: 1000 }, medium: { limit: 4, ttl: 10000 }, long: { limit: 8, ttl: 60000 } })
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
@@ -33,6 +37,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ short: { limit: 1, ttl: 1000 }, medium: { limit: 3, ttl: 10000 }, long: { limit: 5, ttl: 60000 } })
   @Post('forgot-password/send-otp')
   @HttpCode(HttpStatus.OK)
   async sendForgotPasswordOtp(@Body() body: { identifier: string }) {
