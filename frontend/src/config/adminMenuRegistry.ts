@@ -21,6 +21,7 @@ import {
   Globe,
   Activity,
   Briefcase,
+  Sparkles,
   LucideIcon,
 } from 'lucide-react';
 
@@ -320,6 +321,16 @@ export const adminMenuRegistry: AdminMenuItem[] = [
     icon: Activity,
     descriptionEn: 'Real-time staff workload balancing, claim queue, and queue health',
     descriptionBn: 'রিয়েল-টাইম স্টাফ অ্যাক্টিভিটি, পেন্ডিং কিউ ও ওয়ার্কলোড সমবণ্টন',
+    category: 'system',
+  },
+  {
+    key: 'lucky_wheel',
+    labelEn: 'Lucky Wheel (Spin & Win)',
+    labelBn: 'লাকি হুইল (স্পিন অ্যান্ড উইন)',
+    href: '/admin/lucky-wheel',
+    icon: Sparkles,
+    descriptionEn: 'Configure daily budgets, rewards, slice probabilities and spin logs',
+    descriptionBn: 'স্পিন বাজেট, রিওয়ার্ড রেঞ্জ, স্লাইস ও ড্রপ রেট এবং স্পিন লগ নিয়ন্ত্রণ',
     category: 'system',
   },
   {

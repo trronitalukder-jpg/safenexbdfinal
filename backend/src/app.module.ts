@@ -29,6 +29,7 @@ import { MicroJobsModule } from './micro-jobs/micro-jobs.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { TrafficModule } from './traffic/traffic.module';
 import { ScammerReportsModule } from './scammer-reports/scammer-reports.module';
+import { LuckyWheelModule } from './lucky-wheel/lucky-wheel.module';
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { ScammerReportsModule } from './scammer-reports/scammer-reports.module';
     LeaderboardModule,
     TrafficModule,
     ScammerReportsModule,
+    LuckyWheelModule,
   ],
   providers: [
     {

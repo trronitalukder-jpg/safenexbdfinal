@@ -31,6 +31,7 @@ import {
   Gift,
   Briefcase,
   Search,
+  Sparkles,
 } from 'lucide-react';
 import { DashboardSidebar } from '@/components/layout/DashboardSidebar';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -41,6 +42,7 @@ import { usePwa } from '@/context/PwaContext';
 import { useNotification } from '@/context/NotificationContext';
 import { getImageUrl } from '@/lib/imageUtils';
 import { ComplaintModal } from '@/components/complaint/ComplaintModal';
+import { LuckyWheelModal } from '@/components/lucky-wheel/LuckyWheelModal';
 
 export default function DashboardLayout({
   children,
@@ -56,6 +58,7 @@ export default function DashboardLayout({
   const { permission: notifPermission, requestPermission, unreadCount } = useNotification();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [showComplaintModal, setShowComplaintModal] = useState(false);
+  const [showSpinModal, setShowSpinModal] = useState(false);
 
   useEffect(() => {
     refreshMe();
@@ -63,6 +66,9 @@ export default function DashboardLayout({
       const params = new URLSearchParams(window.location.search);
       if (params.get('openComplaint') === 'true') {
         setShowComplaintModal(true);
+      }
+      if (params.get('openSpin') === 'true') {
+        setShowSpinModal(true);
       }
     }
   }, []);
@@ -98,6 +104,7 @@ export default function DashboardLayout({
     { href: '/dashboard/wallet', label: lang === 'bn' ? 'ওয়ালেট ও লেজার' : 'Wallet & Ledger', icon: Wallet },
     { href: '/dashboard/chat', label: lang === 'bn' ? 'মেসেজ ও লাইভ চ্যাট' : 'Live Chat & Deals', icon: MessageSquare },
     { href: '/dashboard/notifications', label: lang === 'bn' ? 'নোটিফিকেশন' : 'Notifications', icon: Bell },
+    { href: '/dashboard/lucky-wheel', label: lang === 'bn' ? '🎡 লাকি স্পিন' : '🎡 Lucky Spin', icon: Sparkles },
     { href: '/dashboard/affiliate', label: lang === 'bn' ? '🎁 রেফার ও আয়' : '🎁 Refer & Earn', icon: Gift },
     ...(isMicroJobEnabled
       ? [
@@ -234,6 +241,26 @@ export default function DashboardLayout({
                   );
                 })}
               </nav>
+
+              {/* Lucky Spin Button in Mobile Drawer */}
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileDrawerOpen(false);
+                  setShowSpinModal(true);
+                }}
+                className="w-full p-3 rounded-xl bg-gradient-to-r from-amber-500/20 via-rose-500/20 to-indigo-500/20 border border-amber-500/30 flex items-center justify-between text-sm font-bold text-amber-700 dark:text-amber-300 hover:from-amber-500/30 hover:to-indigo-500/30 transition shadow-xs"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-lg">🎡</span>
+                  <span>
+                    {lang === 'bn' ? 'লাকি স্পিন (Spin & Win)' : 'Lucky Spin & Win'}
+                  </span>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black uppercase tracking-wider animate-pulse">
+                  Free
+                </span>
+              </button>
 
               {/* Complaint Button in Mobile Drawer */}
               <button
@@ -480,6 +507,20 @@ export default function DashboardLayout({
                     </span>
                   </button>
 
+                  {/* Lucky Spin Button in Footer (Phone, Tab, Desktop) */}
+                  <button
+                    type="button"
+                    onClick={() => setShowSpinModal(true)}
+                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 hover:from-amber-600 hover:via-rose-600 hover:to-indigo-700 text-white font-extrabold transition flex items-center gap-1.5 shadow-md shadow-amber-500/25 text-xs active:scale-95 cursor-pointer ring-1 ring-amber-400/40"
+                    title={lang === 'bn' ? 'লাকি স্পিন করুন ও ক্যাশ জিতুন!' : 'Spin the Lucky Wheel & Win Cash!'}
+                  >
+                    <span className="text-sm">🎡</span>
+                    <span>{lang === 'bn' ? 'স্পিন (Spin)' : 'Spin'}</span>
+                    <span className="px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 text-[9px] font-black uppercase tracking-wider animate-pulse">
+                      Free
+                    </span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={installApp}
@@ -502,6 +543,32 @@ export default function DashboardLayout({
           </main>
         )}
       </div>
+
+      {/* Floating Universal Quick Spin Button (Accessible on Phone, Tablet, & Desktop at any scroll level) */}
+      <div className="fixed bottom-5 right-5 z-40">
+        <button
+          type="button"
+          onClick={() => setShowSpinModal(true)}
+          className="group relative flex items-center gap-2 px-3.5 py-2 rounded-full bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white font-black text-xs shadow-xl shadow-amber-500/35 hover:shadow-rose-500/50 border border-white/30 active:scale-90 transition-all hover:scale-105 cursor-pointer backdrop-blur-sm"
+          title={lang === 'bn' ? 'লাকি স্পিন (Spin & Win)' : 'Lucky Spin & Win'}
+        >
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400"></span>
+          </span>
+          <span className="text-sm">🎡</span>
+          <span className="font-extrabold tracking-wider uppercase text-[11px]">{lang === 'bn' ? 'স্পিন' : 'Spin'}</span>
+        </button>
+      </div>
+
+      {/* Lucky Wheel Modal */}
+      <LuckyWheelModal
+        isOpen={showSpinModal}
+        onClose={() => setShowSpinModal(false)}
+        onSpinSuccess={() => {
+          refreshMe();
+        }}
+      />
 
       {/* Complaint Submission Modal */}
       <ComplaintModal

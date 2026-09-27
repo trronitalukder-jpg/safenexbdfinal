@@ -133,6 +133,8 @@ model User {
   postedMicroJobs      MicroJob[]          @relation("EmployerJobs")
   workerSubmissions    MicroJobSubmission[] @relation("WorkerSubmissions")
   trafficSessions      TrafficSession[]
+  luckySpins           LuckyWheelSpin[]
+  spinQuota            UserSpinQuota?
 
   @@index([uniqueUserId])
   @@index([email])
@@ -336,6 +338,7 @@ enum LedgerEntryType {
   MICROJOB_EARNING
   MICROJOB_REFUND
   MICROJOB_FEE
+  LUCKY_WHEEL_REWARD
 }
 
 model WalletLedger {
@@ -1612,6 +1615,74 @@ model ScammerRecord {
   @@index([status])
   @@index([reporterId])
   @@map("scammer_records")
+}
+
+// -----------------------------------------------------------------------------
+// Lucky Wheel (লাকি হুইল / Spin & Win)
+// -----------------------------------------------------------------------------
+
+model LuckyWheelSetting {
+  id                     String   @id @default("default")
+  isEnabled              Boolean  @default(true)
+  isBudgetEnabled        Boolean  @default(true)
+  dailyBudget            Decimal  @default(500.00) @db.Decimal(18, 4)
+  isNewUserRewardEnabled  Boolean  @default(true)
+  newUserMinReward       Decimal  @default(2.00) @db.Decimal(18, 4)
+  newUserMaxReward       Decimal  @default(15.00) @db.Decimal(18, 4)
+  isMonthlyCapEnabled    Boolean  @default(true)
+  monthlyMaxPerUser      Decimal  @default(150.00) @db.Decimal(18, 4)
+  emptyMessage           String   @default("শূন্য আমি রিক্ত আমি আজ দেওয়ার কিছু নাই, আজ আছে শুধু ভালোবাসা দিয়ে গেলাম তাই, আবার চেষ্টা করুন ❤️") @db.VarChar(500)
+  dailyFreeSpinsPerUser  Int      @default(1)
+  updatedAt              DateTime @updatedAt
+
+  @@map("lucky_wheel_settings")
+}
+
+model LuckyWheelSegment {
+  id                String          @id @default(uuid())
+  title             String          @db.VarChar(100)
+  prizeType         String          @db.VarChar(50)
+  prizeValue        Decimal         @default(0.0000) @db.Decimal(18, 4)
+  probabilityWeight Int             @default(10)
+  color             String          @default("#3B82F6")
+  textColor         String          @default("#FFFFFF")
+  icon              String?         @db.VarChar(100)
+  isActive          Boolean         @default(true)
+  sortOrder         Int             @default(0)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  spins             LuckyWheelSpin[]
+
+  @@map("lucky_wheel_segments")
+}
+
+model LuckyWheelSpin {
+  id         String            @id @default(uuid())
+  userId     String
+  segmentId  String
+  prizeType  String            @db.VarChar(50)
+  prizeValue Decimal           @default(0.0000) @db.Decimal(18, 4)
+  spinSource String            @default("DAILY_FREE")
+  createdAt  DateTime          @default(now())
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  segment    LuckyWheelSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([segmentId])
+  @@map("lucky_wheel_spins")
+}
+
+model UserSpinQuota {
+  userId          String    @id
+  bonusSpins      Int       @default(0)
+  lastDailySpinAt DateTime?
+  updatedAt       DateTime  @updatedAt
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_spin_quotas")
 }
 
 
