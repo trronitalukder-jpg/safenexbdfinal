@@ -22,6 +22,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface WheelSegmentAdmin {
   id: string;
@@ -78,6 +79,7 @@ interface SpinLogItem {
 }
 
 export default function AdminLuckyWheelPage() {
+  const { lang } = useLanguage();
   const [activeTab, setActiveTab] = useState<'rules' | 'segments' | 'preview' | 'logs'>('rules');
   const [loading, setLoading] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -261,7 +263,7 @@ export default function AdminLuckyWheelPage() {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3500);
     } catch (err: any) {
-      setSaveError(err.response?.data?.message || 'সেটিংস সেভ করতে ব্যর্থ হয়েছে');
+      setSaveError(err.response?.data?.message || (lang === 'bn' ? 'সেটিংস সেভ করতে ব্যর্থ হয়েছে' : 'Failed to save settings'));
     } finally {
       setSavingSettings(false);
     }
@@ -285,7 +287,7 @@ export default function AdminLuckyWheelPage() {
         icon: 'Coins',
       });
     } catch (err: any) {
-      alert(err.response?.data?.message || 'সেগমেন্ট তৈরিতে সমস্যা হয়েছে');
+      alert(err.response?.data?.message || (lang === 'bn' ? 'সেগমেন্ট তৈরিতে সমস্যা হয়েছে' : 'Failed to create segment'));
     }
   };
 
@@ -296,18 +298,18 @@ export default function AdminLuckyWheelPage() {
       const data = (res as any)?.data ?? res;
       setSegments((prev) => prev.map((s) => (s.id === id ? { ...s, ...data } : s)));
     } catch (err: any) {
-      alert(err.response?.data?.message || 'সেগমেন্ট আপডেট করতে ব্যর্থ হয়েছে');
+      alert(err.response?.data?.message || (lang === 'bn' ? 'সেগমেন্ট আপডেট করতে ব্যর্থ হয়েছে' : 'Failed to update segment'));
     }
   };
 
   // Delete segment
   const handleDeleteSegment = async (id: string) => {
-    if (!confirm('আপনি কি নিশ্চিত যে এই সেগমেন্টটি মুছে ফেলতে চান?')) return;
+    if (!confirm(lang === 'bn' ? 'আপনি কি নিশ্চিত যে এই সেগমেন্টটি মুছে ফেলতে চান?' : 'Are you sure you want to delete this segment?')) return;
     try {
       await api.delete(`/lucky-wheel/admin/segments/${id}`);
       setSegments((prev) => prev.filter((s) => s.id !== id));
     } catch (err: any) {
-      alert(err.response?.data?.message || 'সেগমেন্ট ডিলিট করতে সমস্যা হয়েছে');
+      alert(err.response?.data?.message || (lang === 'bn' ? 'সেগমেন্ট ডিলিট করতে সমস্যা হয়েছে' : 'Failed to delete segment'));
     }
   };
 
@@ -315,7 +317,9 @@ export default function AdminLuckyWheelPage() {
     return (
       <div className="p-8 flex flex-col items-center justify-center min-h-[400px] gap-3">
         <div className="w-10 h-10 border-3 border-amber-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs text-slate-400">লাকি হুইল কনফিগারেশন লোড হচ্ছে...</p>
+        <p className="text-xs text-slate-400">
+          {lang === 'bn' ? 'লাকি হুইল কনফিগারেশন লোড হচ্ছে...' : 'Loading Lucky Wheel Configuration...'}
+        </p>
       </div>
     );
   }
@@ -330,13 +334,15 @@ export default function AdminLuckyWheelPage() {
           </div>
           <div>
             <h1 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-              <span>লাকি হুইল ম্যানেজমেন্ট</span>
+              <span>{lang === 'bn' ? 'লাকি হুইল ম্যানেজমেন্ট' : 'Lucky Wheel Management'}</span>
               <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 font-bold border border-amber-300 dark:border-amber-800">
-                কন্ট্রোল সেন্টার
+                {lang === 'bn' ? 'কন্ট্রোল সেন্টার' : 'Control Center'}
               </span>
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              দৈনিক বাজেট, নতুন ইউজার লিমিট, ডায়নামিক স্লাইস ও কাব্যিক বাংলা মেসেজ সম্পূর্ণ কাস্টমাইজ করুন
+              {lang === 'bn'
+                ? 'দৈনিক বাজেট, নতুন ইউজার লিমিট, ডায়নামিক স্লাইস ও কাব্যিক বাংলা মেসেজ সম্পূর্ণ কাস্টমাইজ করুন'
+                : 'Fully customize daily budgets, reward rules, dynamic slices & poetic messages'}
             </p>
           </div>
         </div>
@@ -349,7 +355,11 @@ export default function AdminLuckyWheelPage() {
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md transition active:scale-95 disabled:opacity-50 cursor-pointer"
           >
             <Save className="w-4 h-4" />
-            <span>{savingSettings ? 'সংরক্ষণ হচ্ছে...' : 'সেটিংস সেভ করুন'}</span>
+            <span>
+              {savingSettings
+                ? (lang === 'bn' ? 'সংরক্ষণ হচ্ছে...' : 'Saving...')
+                : (lang === 'bn' ? 'সেটিংস সেভ করুন' : 'Save Settings')}
+            </span>
           </button>
         </div>
       </div>
@@ -358,48 +368,55 @@ export default function AdminLuckyWheelPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-            <span>আজকের বিতরণকৃত ক্যাশ</span>
+            <span>{lang === 'bn' ? 'আজকের বিতরণকৃত ক্যাশ' : "Today's Cash Disbursed"}</span>
             <DollarSign className="w-4 h-4 text-emerald-500" />
           </div>
           <p className="text-xl font-black text-slate-900 dark:text-white">
             ৳{telemetry.todayCashDisbursed.toFixed(2)}
           </p>
           <p className="text-[11px] text-slate-400 mt-1">
-            বাজেট: {settings.isBudgetEnabled ? `৳${settings.dailyBudget}` : 'আনলিমিটেড'}
+            {lang === 'bn' ? 'বাজেট:' : 'Budget:'}{' '}
+            {settings.isBudgetEnabled ? `৳${settings.dailyBudget}` : (lang === 'bn' ? 'আনলিমিটেড' : 'Unlimited')}
           </p>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-            <span>আজকে মোট স্পিন</span>
+            <span>{lang === 'bn' ? 'আজকে মোট স্পিন' : "Today's Total Spins"}</span>
             <Sparkles className="w-4 h-4 text-amber-500" />
           </div>
           <p className="text-xl font-black text-slate-900 dark:text-white">
             {telemetry.todaySpinsCount}
           </p>
-          <p className="text-[11px] text-slate-400 mt-1">আজকের সক্রিয় ব্যবহারকারী</p>
+          <p className="text-[11px] text-slate-400 mt-1">
+            {lang === 'bn' ? 'আজকের সক্রিয় ব্যবহারকারী' : 'Active users today'}
+          </p>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-            <span>চলতি মাসের মোট খরচ</span>
+            <span>{lang === 'bn' ? 'চলতি মাসের মোট খরচ' : 'Monthly Cash Disbursed'}</span>
             <Coins className="w-4 h-4 text-sky-500" />
           </div>
           <p className="text-xl font-black text-slate-900 dark:text-white">
             ৳{telemetry.monthCashDisbursed.toFixed(2)}
           </p>
-          <p className="text-[11px] text-slate-400 mt-1">ক্যালেন্ডার মাস অনুযায়ী</p>
+          <p className="text-[11px] text-slate-400 mt-1">
+            {lang === 'bn' ? 'ক্যালেন্ডার মাস অনুযায়ী' : 'Current calendar month'}
+          </p>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-            <span>সর্বমোট স্পিন সংখ্যা</span>
+            <span>{lang === 'bn' ? 'সর্বমোট স্পিন সংখ্যা' : 'Lifetime Spins Count'}</span>
             <Users className="w-4 h-4 text-indigo-500" />
           </div>
           <p className="text-xl font-black text-slate-900 dark:text-white">
             {telemetry.totalSpinsCount}
           </p>
-          <p className="text-[11px] text-slate-400 mt-1">প্ল্যাটফর্ম শুরু থেকে আজ পর্যন্ত</p>
+          <p className="text-[11px] text-slate-400 mt-1">
+            {lang === 'bn' ? 'প্ল্যাটফর্ম শুরু থেকে আজ পর্যন্ত' : 'All time system spins'}
+          </p>
         </div>
       </div>
 
@@ -407,7 +424,11 @@ export default function AdminLuckyWheelPage() {
       {saveSuccess && (
         <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2">
           <CheckCircle className="w-4 h-4 shrink-0 text-emerald-500" />
-          <span>লাকি হুইলের সমস্ত সেটিংস সফলভাবে আপডেট করা হয়েছে!</span>
+          <span>
+            {lang === 'bn'
+              ? 'লাকি হুইলের সমস্ত সেটিংস সফলভাবে আপডেট করা হয়েছে!'
+              : 'Lucky wheel settings have been successfully updated!'}
+          </span>
         </div>
       )}
 
@@ -430,7 +451,7 @@ export default function AdminLuckyWheelPage() {
           }`}
         >
           <Sliders className="w-4 h-4" />
-          <span>১. বাজেট ও লিমিট রুলস</span>
+          <span>{lang === 'bn' ? '১. বাজেট ও লিমিট রুলস' : '1. Budget & Limit Rules'}</span>
         </button>
 
         <button
@@ -443,7 +464,11 @@ export default function AdminLuckyWheelPage() {
           }`}
         >
           <Layers className="w-4 h-4" />
-          <span>২. ডায়নামিক হুইল স্লাইস ({segments.length}টি)</span>
+          <span>
+            {lang === 'bn'
+              ? `২. ডায়নামিক হুইল স্লাইস (${segments.length}টি)`
+              : `2. Dynamic Wheel Slices (${segments.length})`}
+          </span>
         </button>
 
         <button
@@ -456,7 +481,7 @@ export default function AdminLuckyWheelPage() {
           }`}
         >
           <Eye className="w-4 h-4" />
-          <span>৩. লাইভ প্রিভিউ</span>
+          <span>{lang === 'bn' ? '৩. লাইভ প্রিভিউ' : '3. Live Preview'}</span>
         </button>
 
         <button
@@ -469,7 +494,7 @@ export default function AdminLuckyWheelPage() {
           }`}
         >
           <History className="w-4 h-4" />
-          <span>৪. স্পিন হিস্ট্রি ও অডিট</span>
+          <span>{lang === 'bn' ? '৪. স্পিন হিস্ট্রি ও অডিট' : '4. Spin History & Audit'}</span>
         </button>
       </div>
 
@@ -481,10 +506,12 @@ export default function AdminLuckyWheelPage() {
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
               <div>
                 <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                  লাকি হুইল সিস্টেম সক্রিয় রাখুন
+                  {lang === 'bn' ? 'লাকি হুইল সিস্টেম সক্রিয় রাখুন' : 'Enable Lucky Wheel System'}
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  বন্ধ করলে ইউজাররা স্পিন করতে পারবেন না
+                  {lang === 'bn'
+                    ? 'বন্ধ করলে ইউজাররা স্পিন করতে পারবেন না'
+                    : 'If disabled, users cannot spin the wheel'}
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -502,10 +529,12 @@ export default function AdminLuckyWheelPage() {
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
               <div>
                 <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                  দৈনিক বাজেট লিমিট সক্রিয় রাখুন
+                  {lang === 'bn' ? 'দৈনিক বাজেট লিমিট সক্রিয় রাখুন' : 'Enable Daily Budget Cap'}
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  বাজেট সেট করতেও পারেন নাও করতে পারেন (সম্পূর্ণ ডায়নামিক)
+                  {lang === 'bn'
+                    ? 'বাজেট সেট করতেও পারেন নাও করতে পারেন (সম্পূর্ণ ডায়নামিক)'
+                    : 'Budget cap is completely optional & dynamic'}
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -525,7 +554,7 @@ export default function AdminLuckyWheelPage() {
             {/* Daily Budget Amount */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                দৈনিক বাজেট ক্যাপ (৳)
+                {lang === 'bn' ? 'দৈনিক বাজেট ক্যাপ (৳)' : 'Daily Budget Cap (৳)'}
               </label>
               <input
                 type="number"
@@ -539,15 +568,17 @@ export default function AdminLuckyWheelPage() {
               />
               <span className="text-[11px] text-slate-400">
                 {settings.isBudgetEnabled
-                  ? 'এই বাজেট পূর্ণ হলে আর কোনো ক্যাশ রিওয়ার্ড আসবে না'
-                  : 'বাজেট লিমিট বর্তমানে নিষ্ক্রিয়'}
+                  ? (lang === 'bn'
+                      ? 'এই বাজেট পূর্ণ হলে আর কোনো ক্যাশ রিওয়ার্ড আসবে না'
+                      : 'No cash rewards will be given after this cap is reached today')
+                  : (lang === 'bn' ? 'বাজেট লিমিট বর্তমানে নিষ্ক্রিয়' : 'Budget cap is currently disabled')}
               </span>
             </div>
 
             {/* New User Reward Range Min */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                নতুন ইউজারের সর্বনিম্ন প্রাপ্তি (৳)
+                {lang === 'bn' ? 'নতুন ইউজারের সর্বনিম্ন প্রাপ্তি (৳)' : 'New User Min Reward (৳)'}
               </label>
               <input
                 type="number"
@@ -558,13 +589,15 @@ export default function AdminLuckyWheelPage() {
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white"
                 placeholder="2"
               />
-              <span className="text-[11px] text-slate-400">নতুন নিবন্ধিতদের মিনিমাম রেঞ্জ</span>
+              <span className="text-[11px] text-slate-400">
+                {lang === 'bn' ? 'নতুন নিবন্ধিতদের মিনিমাম রেঞ্জ' : 'Minimum reward range for newly registered users'}
+              </span>
             </div>
 
             {/* New User Reward Range Max */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                নতুন ইউজারের সর্বোচ্চ প্রাপ্তি (৳)
+                {lang === 'bn' ? 'নতুন ইউজারের সর্বোচ্চ প্রাপ্তি (৳)' : 'New User Max Reward (৳)'}
               </label>
               <input
                 type="number"
@@ -575,17 +608,21 @@ export default function AdminLuckyWheelPage() {
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white"
                 placeholder="15"
               />
-              <span className="text-[11px] text-slate-400">নতুন নিবন্ধিতদের ম্যাক্সিমাম রেঞ্জ</span>
+              <span className="text-[11px] text-slate-400">
+                {lang === 'bn' ? 'নতুন নিবন্ধিতদের ম্যাক্সিমাম রেঞ্জ' : 'Maximum reward range for newly registered users'}
+              </span>
             </div>
           </div>
 
-          {/* Monthly Cap & Daily Free Spins */}
+          {/* Monthly Cap & User Limit */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
             {/* Monthly Max per User */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                  একজন ইউজারের মাসিক সর্বোচ্চ ক্যাশ জয়সীমা (৳)
+                  {lang === 'bn'
+                    ? 'একজন ইউজারের মাসিক সর্বোচ্চ ক্যাশ জয়সীমা (৳) [ইউজারের কাছে গোপন থাকবে]'
+                    : 'Monthly Max Cash Cap Per User (৳) [Hidden from user]'}
                 </label>
                 <label className="inline-flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer">
                   <input
@@ -596,7 +633,7 @@ export default function AdminLuckyWheelPage() {
                     }
                     className="rounded text-sky-600"
                   />
-                  <span>সক্রিয়</span>
+                  <span>{lang === 'bn' ? 'সক্রিয়' : 'Active'}</span>
                 </label>
               </div>
               <input
@@ -610,28 +647,22 @@ export default function AdminLuckyWheelPage() {
                 placeholder="150"
               />
               <span className="text-[11px] text-slate-400">
-                এক মাসে কোনো ইউজার এই পরিমাণের বেশি ক্যাশ জিততে পারবে না
+                {lang === 'bn'
+                  ? 'এক মাসে কোনো ইউজার এই পরিমাণের বেশি ক্যাশ জিততে পারবে না (ইউজারকে দেখানো হবে না)'
+                  : 'User cannot exceed this winning cap per calendar month (hidden from user view)'}
               </span>
             </div>
 
-            {/* Daily Free Spins */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                দৈনিক ফ্রি স্পিন সংখ্যা (প্রতি ইউজার)
-              </label>
-              <input
-                type="number"
-                value={settings.dailyFreeSpinsPerUser}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    dailyFreeSpinsPerUser: parseInt(e.target.value) || 1,
-                  })
-                }
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white"
-                placeholder="1"
-              />
-              <span className="text-[11px] text-slate-400">সাধারণত ১ দিন পর পর ১টি করে ফ্রি স্পিন</span>
+            {/* Note on Unlimited Spins */}
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-1">
+              <h5 className="font-bold text-xs text-amber-700 dark:text-amber-300">
+                {lang === 'bn' ? '✨ আনলিমিটেড স্পিন রুল' : '✨ Unlimited Spins Rule'}
+              </h5>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                {lang === 'bn'
+                  ? 'ইউজাররা দিনে যতখুশি ততবার স্পিন করতে পারবেন। তবে দিনে সর্বোচ্চ একবার ক্যাশ জিততে পারবেন, বাকি স্পিনে বা বেশিরভাগ সময় কাব্যিক বার্তা আসবে।'
+                  : 'Users can spin as many times as they want per day. Cash can be won at most once per day, and all other spins land on poetic greetings.'}
+              </p>
             </div>
           </div>
 
@@ -640,7 +671,9 @@ export default function AdminLuckyWheelPage() {
             <div className="flex items-center gap-2">
               <Heart className="w-4 h-4 text-rose-500" />
               <label className="block text-xs font-extrabold text-slate-800 dark:text-slate-200">
-                "আবার চেষ্টা করুন" পপআপ মেসেজ (কাব্যিক বাংলা বার্তা):
+                {lang === 'bn'
+                  ? '"আবার চেষ্টা করুন" পপআপ মেসেজ (কাব্যিক বাংলা বার্তা):'
+                  : 'Try Again Poetic Bengali Message:'}
               </label>
             </div>
             <textarea
@@ -651,7 +684,9 @@ export default function AdminLuckyWheelPage() {
               placeholder="শূন্য আমি রিক্ত আমি আজ দেওয়ার কিছু নাই..."
             />
             <p className="text-[11px] text-slate-400">
-              হুইলে কোনো টাকা বা পুরস্কার না উঠলে ইউজারের স্ক্রিনে এই সুন্দর বার্তাটি ভেসে উঠবে।
+              {lang === 'bn'
+                ? 'হুইলে কোনো টাকা বা পুরস্কার না উঠলে ইউজারের স্ক্রিনে এই সুন্দর বার্তাটি ভেসে উঠবে।'
+                : 'This poetic Bengali message appears when non-cash segments are landed.'}
             </p>
           </div>
         </div>
@@ -662,7 +697,9 @@ export default function AdminLuckyWheelPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              হুইলে কতটি ফিল্ড থাকবে তা আপনি ইচ্ছামতো বাড়াতে বা কমাতে পারেন। প্রতিটি ফিল্ডের পুরস্কার, রং ও সম্ভাবনা নির্ধারণ করুন।
+              {lang === 'bn'
+                ? 'হুইলে কতটি ফিল্ড থাকবে তা আপনি ইচ্ছামতো বাড়াতে বা কমাতে পারেন। প্রতিটি ফিল্ডের পুরস্কার, রং ও সম্ভাবনা নির্ধারণ করুন।'
+                : 'Configure how many slices exist on the wheel. Customize title, prize, probability weight & colors.'}
             </p>
             <button
               type="button"
@@ -670,7 +707,7 @@ export default function AdminLuckyWheelPage() {
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition active:scale-95 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>নতুন স্লাইস যোগ করুন</span>
+              <span>{lang === 'bn' ? 'নতুন স্লাইস যোগ করুন' : 'Add New Slice'}</span>
             </button>
           </div>
 
@@ -679,13 +716,13 @@ export default function AdminLuckyWheelPage() {
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider">
                   <tr>
-                    <th className="py-3.5 px-4">ফিল্ডের নাম (Title)</th>
-                    <th className="py-3.5 px-4">ধরন (Type)</th>
-                    <th className="py-3.5 px-4">ক্যাশ মান (৳)</th>
-                    <th className="py-3.5 px-4">প্রবাবিলিটি ওয়েইট</th>
-                    <th className="py-3.5 px-4">রং (Color)</th>
-                    <th className="py-3.5 px-4">অবস্থা</th>
-                    <th className="py-3.5 px-4 text-right">অ্যাকশন</th>
+                    <th className="py-3.5 px-4">{lang === 'bn' ? 'ফিল্ডের নাম (Title)' : 'Slice Title'}</th>
+                    <th className="py-3.5 px-4">{lang === 'bn' ? 'ধরন (Type)' : 'Prize Type'}</th>
+                    <th className="py-3.5 px-4">{lang === 'bn' ? 'ক্যাশ মান (৳)' : 'Prize Value (৳)'}</th>
+                    <th className="py-3.5 px-4">{lang === 'bn' ? 'প্রবাবিলিটি ওয়েইট' : 'Probability Weight'}</th>
+                    <th className="py-3.5 px-4">{lang === 'bn' ? 'রং (Color)' : 'Color'}</th>
+                    <th className="py-3.5 px-4">{lang === 'bn' ? 'অবস্থা' : 'Status'}</th>
+                    <th className="py-3.5 px-4 text-right">{lang === 'bn' ? 'অ্যাকশন' : 'Action'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -705,9 +742,9 @@ export default function AdminLuckyWheelPage() {
                           onChange={(e) => handleUpdateSegment(seg.id, { prizeType: e.target.value })}
                           className="px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold"
                         >
-                          <option value="CASH">ক্যাশ (CASH)</option>
-                          <option value="TRY_AGAIN">আবার চেষ্টা করুন (TRY_AGAIN)</option>
-                          <option value="JOB_VOUCHER">ভাউচার (VOUCHER)</option>
+                          <option value="CASH">{lang === 'bn' ? 'ক্যাশ (CASH)' : 'Cash (CASH)'}</option>
+                          <option value="TRY_AGAIN">{lang === 'bn' ? 'আবার চেষ্টা করুন (TRY_AGAIN)' : 'Try Again (TRY_AGAIN)'}</option>
+                          <option value="JOB_VOUCHER">{lang === 'bn' ? 'ভাউচার (VOUCHER)' : 'Voucher (VOUCHER)'}</option>
                         </select>
                       </td>
                       <td className="py-3 px-4">
@@ -755,7 +792,7 @@ export default function AdminLuckyWheelPage() {
                               : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
                           }`}
                         >
-                          {seg.isActive ? 'সক্রিয়' : 'বন্ধ'}
+                          {seg.isActive ? (lang === 'bn' ? 'সক্রিয়' : 'Active') : (lang === 'bn' ? 'বন্ধ' : 'Disabled')}
                         </button>
                       </td>
                       <td className="py-3 px-4 text-right">
@@ -763,7 +800,7 @@ export default function AdminLuckyWheelPage() {
                           type="button"
                           onClick={() => handleDeleteSegment(seg.id)}
                           className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition"
-                          title="মুছে ফেলুন"
+                          title={lang === 'bn' ? 'মুছে ফেলুন' : 'Delete'}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -781,10 +818,14 @@ export default function AdminLuckyWheelPage() {
       {activeTab === 'preview' && (
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col items-center justify-center space-y-4">
           <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
-            লাইভ হুইল প্রিভিউ ({segments.filter((s) => s.isActive).length}টি সক্রিয় স্লাইস)
+            {lang === 'bn'
+              ? `লাইভ হুইল প্রিভিউ (${segments.filter((s) => s.isActive).length}টি সক্রিয় স্লাইস)`
+              : `Live Wheel Preview (${segments.filter((s) => s.isActive).length} active slices)`}
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md text-center">
-            এডমিন প্যানেলে স্লাইস ও রং পরিবর্তনের সাথে সাথে ইউজাররা এই হুইলটি দেখতে পাবেন।
+            {lang === 'bn'
+              ? 'এডমিন প্যানেলে স্লাইস ও রং পরিবর্তনের সাথে সাথে ইউজাররা এই হুইলটি দেখতে পাবেন।'
+              : 'As you configure slices, users will instantly see this rendered canvas.'}
           </p>
 
           <div className="p-3 rounded-full bg-slate-950 shadow-2xl border-4 border-amber-500/40">
@@ -803,9 +844,11 @@ export default function AdminLuckyWheelPage() {
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs space-y-4 p-5">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-              ব্যবহারকারীদের স্পিন অডিট হিস্ট্রি
+              {lang === 'bn' ? 'ব্যবহারকারীদের স্পিন অডিট হিস্ট্রি' : 'User Spin Audit Logs'}
             </h3>
-            <span className="text-xs text-slate-400">পেজ {logsPage} / {logsTotalPages}</span>
+            <span className="text-xs text-slate-400">
+              {lang === 'bn' ? `পেজ ${logsPage} / ${logsTotalPages}` : `Page ${logsPage} of ${logsTotalPages}`}
+            </span>
           </div>
 
           {logsLoading ? (
@@ -813,31 +856,33 @@ export default function AdminLuckyWheelPage() {
               <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : logs.length === 0 ? (
-            <p className="text-center py-10 text-xs text-slate-400">এখনো কোনো স্পিন হয়নি</p>
+            <p className="text-center py-10 text-xs text-slate-400">
+              {lang === 'bn' ? 'এখনো কোনো স্পিন হয়নি' : 'No spins recorded yet'}
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider">
                   <tr>
-                    <th className="py-3 px-4">ইউজার</th>
-                    <th className="py-3 px-4">প্রাপ্ত স্লাইস</th>
-                    <th className="py-3 px-4">পুরস্কারের ধরন</th>
-                    <th className="py-3 px-4">পরিমাণ (৳)</th>
-                    <th className="py-3 px-4">স্পিন সোর্স</th>
-                    <th className="py-3 px-4 text-right">তারিখ ও সময়</th>
+                    <th className="py-3 px-4">{lang === 'bn' ? 'ইউজার' : 'User'}</th>
+                    <th className="py-3 px-4">{lang === 'bn' ? 'প্রাপ্ত স্লাইস' : 'Landed Slice'}</th>
+                    <th className="py-3 px-4">{lang === 'bn' ? 'পুরস্কারের ধরন' : 'Prize Type'}</th>
+                    <th className="py-3 px-4">{lang === 'bn' ? 'পরিমাণ (৳)' : 'Amount (৳)'}</th>
+                    <th className="py-3 px-4">{lang === 'bn' ? 'স্পিন সোর্স' : 'Source'}</th>
+                    <th className="py-3 px-4 text-right">{lang === 'bn' ? 'তারিখ ও সময়' : 'Date & Time'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {logs.map((log) => (
                     <tr key={log.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
                       <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">
-                        {log.user?.firstName || 'ইউজার'}{' '}
+                        {log.user?.firstName || (lang === 'bn' ? 'ইউজার' : 'User')}{' '}
                         <span className="text-slate-400 text-[11px]">
                           ({log.user?.uniqueUserId || log.user?.phone || 'N/A'})
                         </span>
                       </td>
                       <td className="py-3 px-4 font-bold text-slate-700 dark:text-slate-300">
-                        {log.segment?.title || 'স্লাইস'}
+                        {log.segment?.title || (lang === 'bn' ? 'স্লাইস' : 'Slice')}
                       </td>
                       <td className="py-3 px-4">
                         <span
@@ -855,7 +900,7 @@ export default function AdminLuckyWheelPage() {
                       </td>
                       <td className="py-3 px-4 text-slate-500 text-[11px]">{log.spinSource}</td>
                       <td className="py-3 px-4 text-right text-slate-400 text-[11px]">
-                        {new Date(log.createdAt).toLocaleString('bn-BD')}
+                        {new Date(log.createdAt).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US')}
                       </td>
                     </tr>
                   ))}
@@ -871,38 +916,44 @@ export default function AdminLuckyWheelPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
             <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
-              নতুন হুইল স্লাইস যোগ করুন
+              {lang === 'bn' ? 'নতুন হুইল স্লাইস যোগ করুন' : 'Add New Wheel Slice'}
             </h3>
 
             <form onSubmit={handleCreateSegment} className="space-y-4 text-xs">
               <div className="space-y-1">
-                <label className="font-bold text-slate-700 dark:text-slate-300">স্লাইস টাইটেল</label>
+                <label className="font-bold text-slate-700 dark:text-slate-300">
+                  {lang === 'bn' ? 'স্লাইস টাইটেল' : 'Slice Title'}
+                </label>
                 <input
                   type="text"
                   required
                   value={newSegment.title}
                   onChange={(e) => setNewSegment({ ...newSegment, title: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
-                  placeholder="যেমন: ৳১০ ক্যাশ বা আবার চেষ্টা করুন"
+                  placeholder={lang === 'bn' ? 'যেমন: ৳১০ ক্যাশ বা আবার চেষ্টা করুন' : 'e.g. ৳10 Cash or Try Again'}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700 dark:text-slate-300">পুরস্কারের ধরন</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300">
+                    {lang === 'bn' ? 'পুরস্কারের ধরন' : 'Prize Type'}
+                  </label>
                   <select
                     value={newSegment.prizeType}
                     onChange={(e) => setNewSegment({ ...newSegment, prizeType: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-semibold"
                   >
-                    <option value="CASH">ক্যাশ (CASH)</option>
-                    <option value="TRY_AGAIN">আবার চেষ্টা করুন (TRY_AGAIN)</option>
-                    <option value="JOB_VOUCHER">ভাউচার (VOUCHER)</option>
+                    <option value="CASH">{lang === 'bn' ? 'ক্যাশ (CASH)' : 'Cash (CASH)'}</option>
+                    <option value="TRY_AGAIN">{lang === 'bn' ? 'আবার চেষ্টা করুন (TRY_AGAIN)' : 'Try Again (TRY_AGAIN)'}</option>
+                    <option value="JOB_VOUCHER">{lang === 'bn' ? 'ভাউচার (VOUCHER)' : 'Voucher (VOUCHER)'}</option>
                   </select>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700 dark:text-slate-300">পুরস্কার মান (৳)</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300">
+                    {lang === 'bn' ? 'পুরস্কার মান (৳)' : 'Prize Value (৳)'}
+                  </label>
                   <input
                     type="number"
                     value={newSegment.prizeValue}
@@ -917,7 +968,9 @@ export default function AdminLuckyWheelPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700 dark:text-slate-300">প্রবাবিলিটি ওয়েইট</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300">
+                    {lang === 'bn' ? 'প্রবাবিলিটি ওয়েইট' : 'Probability Weight'}
+                  </label>
                   <input
                     type="number"
                     value={newSegment.probabilityWeight}
@@ -933,7 +986,9 @@ export default function AdminLuckyWheelPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700 dark:text-slate-300">স্লাইস ব্যাকগ্রাউন্ড কালার</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300">
+                    {lang === 'bn' ? 'স্লাইস ব্যাকগ্রাউন্ড কালার' : 'Slice Background Color'}
+                  </label>
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
@@ -952,13 +1007,13 @@ export default function AdminLuckyWheelPage() {
                   onClick={() => setShowAddSegmentModal(false)}
                   className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold"
                 >
-                  বাতিল
+                  {lang === 'bn' ? 'বাতিল' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold"
                 >
-                  যোগ করুন
+                  {lang === 'bn' ? 'যোগ করুন' : 'Add Slice'}
                 </button>
               </div>
             </form>

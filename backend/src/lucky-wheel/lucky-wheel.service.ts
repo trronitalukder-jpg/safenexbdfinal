@@ -234,43 +234,30 @@ export class LuckyWheelService {
       });
     }
 
-    // Check if user has already used daily free spin today (in Bangladesh timezone or UTC date)
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    const hasDailySpinAvailable =
-      !quota.lastDailySpinAt || new Date(quota.lastDailySpinAt) < startOfToday;
-
-    const totalAvailableSpins =
-      (hasDailySpinAvailable ? (setting?.dailyFreeSpinsPerUser || 1) : 0) +
-      quota.bonusSpins;
-
-    // Check user's earnings this month
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthlySum = await this.prisma.luckyWheelSpin.aggregate({
+    // Check if user has already won a CASH prize today
+    const todayCashWonCount = await this.prisma.luckyWheelSpin.count({
       where: {
         userId,
         prizeType: 'CASH',
-        createdAt: { gte: startOfMonth },
+        prizeValue: { gt: 0 },
+        createdAt: { gte: startOfToday },
       },
-      _sum: { prizeValue: true },
     });
-    const monthlyWon = Number(monthlySum._sum.prizeValue || 0);
+
+    const hasWonCashToday = todayCashWonCount >= 1;
 
     return {
-      canSpin: totalAvailableSpins > 0 && (setting?.isEnabled ?? true),
-      totalAvailableSpins,
-      hasDailySpinAvailable,
-      bonusSpins: quota.bonusSpins,
-      lastDailySpinAt: quota.lastDailySpinAt,
-      monthlyWon,
-      monthlyMaxPerUser: Number(setting?.monthlyMaxPerUser || 150),
-      isMonthlyCapEnabled: setting?.isMonthlyCapEnabled ?? true,
+      canSpin: setting?.isEnabled ?? true,
+      hasWonCashToday,
     };
   }
 
   /**
    * Execute spin by server-side RNG with budget & cap safeguards
+   * User can spin anytime unlimited times per day, wins cash at most once per day
    */
   async executeSpin(userId: string) {
     await this.ensureDefaults();
@@ -283,13 +270,7 @@ export class LuckyWheelService {
       throw new BadRequestException('লাকি হুইল সিস্টেম বর্তমানে সাময়িকভাবে বন্ধ আছে');
     }
 
-    // 1. Check user spin availability
-    const status = await this.getUserSpinStatus(userId);
-    if (!status.canSpin || status.totalAvailableSpins <= 0) {
-      throw new BadRequestException('আপনার আজকের কোনো স্পিন বাকি নেই। আগামীকাল আবার চেষ্টা করুন!');
-    }
-
-    // 2. Fetch all active segments
+    // 1. Fetch all active segments
     const allSegments = await this.prisma.luckyWheelSegment.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: 'asc' },
@@ -299,7 +280,7 @@ export class LuckyWheelService {
       throw new BadRequestException('হুইলের কোনো সেগমেন্ট কনফিগার করা নেই');
     }
 
-    // 3. Evaluate platform daily budget constraint
+    // 2. Evaluate platform daily budget constraint
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -318,10 +299,32 @@ export class LuckyWheelService {
       }
     }
 
-    // 4. Evaluate monthly cap per user constraint
+    // 3. Check if user already won a cash prize today (User can spin unlimited, but only wins cash once per day)
+    const todayCashSpins = await this.prisma.luckyWheelSpin.count({
+      where: {
+        userId,
+        prizeType: 'CASH',
+        prizeValue: { gt: 0 },
+        createdAt: { gte: startOfToday },
+      },
+    });
+    const hasWonCashToday = todayCashSpins >= 1;
+
+    // 4. Evaluate monthly cap per user constraint (silent internal risk limit)
     let isUserMonthlyCapExceeded = false;
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthlySum = await this.prisma.luckyWheelSpin.aggregate({
+      where: {
+        userId,
+        prizeType: 'CASH',
+        createdAt: { gte: startOfMonth },
+      },
+      _sum: { prizeValue: true },
+    });
+    const monthlyWon = Number(monthlySum._sum.prizeValue || 0);
+
     if (setting.isMonthlyCapEnabled) {
-      if (status.monthlyWon >= Number(setting.monthlyMaxPerUser)) {
+      if (monthlyWon >= Number(setting.monthlyMaxPerUser)) {
         isUserMonthlyCapExceeded = true;
       }
     }
@@ -345,21 +348,22 @@ export class LuckyWheelService {
     let candidateSegments = allSegments.filter((seg) => {
       const prizeVal = Number(seg.prizeValue);
 
-      // If budget exceeded or monthly cap exceeded, no CASH prize allowed
+      // If already won cash today, or platform budget exceeded, or monthly cap reached:
+      // Strictly no CASH prizes allowed!
       if (seg.prizeType === 'CASH') {
-        if (isDailyBudgetExceeded || isUserMonthlyCapExceeded) {
+        if (hasWonCashToday || isDailyBudgetExceeded || isUserMonthlyCapExceeded) {
           return false;
         }
         // If monthly cap would be exceeded
         if (
           setting.isMonthlyCapEnabled &&
-          status.monthlyWon + prizeVal > Number(setting.monthlyMaxPerUser)
+          monthlyWon + prizeVal > Number(setting.monthlyMaxPerUser)
         ) {
           return false;
         }
       }
 
-      // If user is new and new user reward is enabled, boost or match reward range
+      // If user is new and new user reward is enabled
       if (
         isNewUser &&
         setting.isNewUserRewardEnabled &&
@@ -367,7 +371,6 @@ export class LuckyWheelService {
       ) {
         const minRew = Number(setting.newUserMinReward);
         const maxRew = Number(setting.newUserMaxReward);
-        // Prefer segments in [minRew, maxRew]
         if (prizeVal < minRew || prizeVal > maxRew) {
           return false;
         }
@@ -376,7 +379,7 @@ export class LuckyWheelService {
       return true;
     });
 
-    // Fallback if filtering left no candidates (pick non-cash or all segments)
+    // Fallback if filtering left no candidates (pick non-cash segments)
     if (candidateSegments.length === 0) {
       candidateSegments = allSegments.filter((s) => s.prizeType !== 'CASH');
       if (candidateSegments.length === 0) {
@@ -405,38 +408,20 @@ export class LuckyWheelService {
       selectedSegment.prizeType === 'CASH' ? Number(selectedSegment.prizeValue) : 0;
     const targetIndex = allSegments.findIndex((s) => s.id === selectedSegment.id);
 
-    // 8. Execute Database Transaction (Deduct spin, Credit wallet if CASH, record spin log)
+    // 8. Execute Database Transaction (Credit wallet if CASH, record spin log)
     const result = await this.prisma.$transaction(async (tx) => {
-      // Consume spin quota
-      let quota = await tx.userSpinQuota.findUnique({
+      // Update last spin timestamp
+      await tx.userSpinQuota.upsert({
         where: { userId },
+        create: {
+          userId,
+          lastDailySpinAt: now,
+          bonusSpins: 0,
+        },
+        update: {
+          lastDailySpinAt: now,
+        },
       });
-
-      const usedDaily =
-        !quota?.lastDailySpinAt || new Date(quota.lastDailySpinAt) < startOfToday;
-
-      let spinSource = 'DAILY_FREE';
-      if (usedDaily) {
-        await tx.userSpinQuota.upsert({
-          where: { userId },
-          create: {
-            userId,
-            lastDailySpinAt: now,
-            bonusSpins: 0,
-          },
-          update: {
-            lastDailySpinAt: now,
-          },
-        });
-      } else {
-        spinSource = 'BONUS_SPIN';
-        await tx.userSpinQuota.update({
-          where: { userId },
-          data: {
-            bonusSpins: { decrement: 1 },
-          },
-        });
-      }
 
       // Record Spin Log
       const spinRecord = await tx.luckyWheelSpin.create({
@@ -445,7 +430,7 @@ export class LuckyWheelService {
           segmentId: selectedSegment.id,
           prizeType: selectedSegment.prizeType,
           prizeValue: new Prisma.Decimal(wonAmount),
-          spinSource,
+          spinSource: hasWonCashToday ? 'UNLIMITED_SPIN' : 'DAILY_SPIN',
         },
       });
 
@@ -500,8 +485,6 @@ export class LuckyWheelService {
       };
     });
 
-    const updatedStatus = await this.getUserSpinStatus(userId);
-
     return {
       success: true,
       selectedSegment: {
@@ -518,7 +501,7 @@ export class LuckyWheelService {
       isCash: selectedSegment.prizeType === 'CASH',
       emptyMessage: setting.emptyMessage,
       updatedBalance: result.updatedBalance,
-      remainingSpins: updatedStatus.totalAvailableSpins,
+      canSpin: true,
     };
   }
 

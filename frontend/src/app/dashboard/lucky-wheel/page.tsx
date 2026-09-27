@@ -57,15 +57,15 @@ export default function DashboardLuckyWheelPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold">
-            <Clock className="w-5 h-5" />
+            <Sparkles className="w-5 h-5" />
           </div>
           <h3 className="font-bold text-slate-900 dark:text-white text-sm">
-            {lang === 'bn' ? '২৪ ঘণ্টায় ১টি ফ্রি স্পিন' : '1 Free Spin Every 24 Hours'}
+            {lang === 'bn' ? 'দৈনিক আনলিমিটেড স্পিন' : 'Daily Unlimited Spins'}
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {lang === 'bn'
-              ? 'প্রত্যেক ইউজার প্রতিদিন একবার সম্পূর্ণ বিনামূল্যে স্পিন করার সুযোগ পাবেন।'
-              : 'Every user gets 1 guaranteed free spin every 24 hours without any recharge.'}
+              ? 'দিনে যতবার খুশি হুইল ঘুরিয়ে স্পিন করতে পারবেন এবং বিনোদন ও উপহার উপভোগ করতে পারবেন।'
+              : 'Spin as many times as you like throughout the day for excitement and surprises.'}
           </p>
         </div>
 
@@ -110,23 +110,18 @@ export default function DashboardLuckyWheelPage() {
         <ul className="space-y-2.5 text-xs text-slate-600 dark:text-slate-400 list-disc pl-5">
           <li>
             {lang === 'bn'
-              ? 'প্রতিদিন বাংলাদেশ সময় রাত ১২টার পর দৈনিক ফ্রি স্পিন নবায়ন করা হয়।'
-              : 'Daily free spin resets every day after 12:00 AM.'}
+              ? 'প্রতিদিন যতবার খুশি স্পিন করার সুযোগ রয়েছে।'
+              : 'You can spin as many times as you want every day.'}
           </li>
           <li>
             {lang === 'bn'
-              ? 'নতুন নিবন্ধিত ইউজাররা তাদের প্রথম স্পিনে বিশেষ স্বাগতম রিওয়ার্ড পাওয়ার সুযোগ পাবেন।'
+              ? 'নতুন নিবন্ধিত ইউজাররা তাদের প্রাথমিক স্পিনে বিশেষ স্বাগতম রিওয়ার্ড পাওয়ার সুযোগ পাবেন।'
               : 'Newly registered users may receive exclusive welcome bonuses on their initial spins.'}
           </li>
           <li>
             {lang === 'bn'
-              ? 'একজন ইউজার প্রতি মাসে এডমিন কর্তৃক নির্ধারিত মাসিক সর্বোচ্চ সীমা পর্যন্ত ক্যাশ রিওয়ার্ড জিততে পারবেন।'
-              : 'Each user can win cash rewards up to the monthly winning cap set by the administration.'}
-          </li>
-          <li>
-            {lang === 'bn'
-              ? 'কোনো কারণে ফাঁকা বা "আবার চেষ্টা করুন" আসলে পরের দিন পুনরায় চেষ্টা করতে হবে।'
-              : 'If you land on "Try Again", feel free to return tomorrow for another exciting spin.'}
+              ? 'ক্যাশ পুরস্কার ছাড়াও রয়েছে হৃদয়স্পর্শী শুভেচ্ছা ও অনুপ্রেরণামূলক কাব্যিক বার্তা।'
+              : 'Besides cash prizes, you will enjoy heartfelt poetic messages and wishes.'}
           </li>
         </ul>
       </div>

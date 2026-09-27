@@ -128,14 +128,10 @@ export const LuckyWheelModal: React.FC<LuckyWheelModalProps> = ({
   );
   const [spinStatus, setSpinStatus] = useState<{
     canSpin: boolean;
-    totalAvailableSpins: number;
-    monthlyWon: number;
-    monthlyMaxPerUser: number;
+    hasWonCashToday: boolean;
   }>({
-    canSpin: false,
-    totalAvailableSpins: 0,
-    monthlyWon: 0,
-    monthlyMaxPerUser: 150,
+    canSpin: true,
+    hasWonCashToday: false,
   });
 
   const [recentWinners, setRecentWinners] = useState<Winner[]>([]);
@@ -342,7 +338,10 @@ export const LuckyWheelModal: React.FC<LuckyWheelModalProps> = ({
 
       if (statusRes.status === 'fulfilled' && statusRes.value) {
         const sData = (statusRes.value as any)?.data ?? statusRes.value;
-        setSpinStatus(sData);
+        setSpinStatus({
+          canSpin: sData.canSpin !== false,
+          hasWonCashToday: Boolean(sData.hasWonCashToday),
+        });
       }
 
       if (winnersRes.status === 'fulfilled' && winnersRes.value) {
@@ -434,11 +433,11 @@ export const LuckyWheelModal: React.FC<LuckyWheelModalProps> = ({
             message: data.emptyMessage || emptyMessage,
           });
 
-          // Refresh status
+          // Refresh status (spins are unlimited!)
           setSpinStatus((prev) => ({
             ...prev,
-            canSpin: data.remainingSpins > 0,
-            totalAvailableSpins: data.remainingSpins,
+            canSpin: true,
+            hasWonCashToday: prev.hasWonCashToday || Boolean(data.isCash && data.wonAmount > 0),
           }));
 
           if (data.isCash && data.wonAmount > 0) {
@@ -558,50 +557,44 @@ export const LuckyWheelModal: React.FC<LuckyWheelModalProps> = ({
                 </div>
               </div>
 
-              {/* Spin Quota & Status Cards */}
-              <div className="w-full flex items-center justify-between bg-slate-800/70 border border-slate-700/60 rounded-2xl p-3.5 text-xs">
-                <div className="flex items-center gap-2">
+              {/* Status Banner (Monthly cap strictly hidden from user!) */}
+              <div className="w-full bg-slate-800/80 border border-slate-700/60 rounded-2xl p-3 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-black">
                     <Sparkles className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-                      {lang === 'bn' ? 'অবশিষ্ট স্পিন' : 'Remaining Spins'}
+                    <p className="text-white font-bold text-xs flex items-center gap-1.5">
+                      <span>{lang === 'bn' ? '🎡 আনলিমিটেড স্পিন' : '🎡 Unlimited Spins'}</span>
                     </p>
-                    <p className="text-sm font-extrabold text-white">
-                      {spinStatus.totalAvailableSpins}{' '}
-                      <span className="text-[11px] text-slate-400 font-normal">
-                        {lang === 'bn' ? 'টি স্পিন' : 'spins'}
-                      </span>
+                    <p className="text-[11px] text-slate-400">
+                      {spinStatus.hasWonCashToday
+                        ? (lang === 'bn'
+                            ? 'আজকের ক্যাশ রিওয়ার্ড সম্পন্ন, উপহার পেতে স্পিন করুন!'
+                            : 'Cash reward claimed today, spin for love & luck!')
+                        : (lang === 'bn'
+                            ? 'দিনে যতবার খুশি স্পিন করুন এবং উপহার জিতে নিন!'
+                            : 'Spin anytime as much as you want and win rewards!')}
                     </p>
                   </div>
                 </div>
-
                 <div className="text-right">
-                  <p className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-                    {lang === 'bn' ? 'চলতি মাসের আয়' : 'Monthly Won'}
-                  </p>
-                  <p className="text-sm font-extrabold text-emerald-400">
-                    ৳{spinStatus.monthlyWon.toFixed(2)}{' '}
-                    <span className="text-[10px] text-slate-400 font-normal">
-                      / ৳{spinStatus.monthlyMaxPerUser}
-                    </span>
-                  </p>
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-extrabold uppercase tracking-wider border border-emerald-500/30">
+                    {lang === 'bn' ? 'আনলিমিটেড' : 'Unlimited'}
+                  </span>
                 </div>
               </div>
 
-              {/* Action Spin Button */}
+              {/* Action Spin Button (Always active for unlimited daily spins) */}
               <div className="w-full pt-1">
                 <button
                   type="button"
                   onClick={handleSpin}
-                  disabled={spinning || !spinStatus.canSpin || spinStatus.totalAvailableSpins <= 0}
+                  disabled={spinning || !spinStatus.canSpin}
                   className={`w-full py-3.5 px-6 rounded-2xl font-black text-base transition-all flex items-center justify-center gap-2.5 shadow-xl active:scale-98 cursor-pointer ${
                     spinning
                       ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                      : spinStatus.canSpin && spinStatus.totalAvailableSpins > 0
-                      ? 'bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white shadow-amber-500/30 ring-2 ring-amber-400/40 hover:scale-[1.01]'
-                      : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white shadow-amber-500/30 ring-2 ring-amber-400/40 hover:scale-[1.01]'
                   }`}
                 >
                   {spinning ? (
@@ -609,15 +602,10 @@ export const LuckyWheelModal: React.FC<LuckyWheelModalProps> = ({
                       <RefreshCw className="w-5 h-5 animate-spin" />
                       <span>{lang === 'bn' ? 'হুইল ঘুরছে...' : 'Spinning Wheel...'}</span>
                     </>
-                  ) : spinStatus.canSpin && spinStatus.totalAvailableSpins > 0 ? (
+                  ) : (
                     <>
                       <span className="text-lg">🎡</span>
                       <span>{lang === 'bn' ? 'স্পিন করুন (SPIN NOW)' : 'SPIN NOW'}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Clock className="w-4 h-4 text-slate-500" />
-                      <span>{lang === 'bn' ? 'আজকের স্পিন শেষ! আগামীকাল আসুন' : 'No Spins Left! Come Tomorrow'}</span>
                     </>
                   )}
                 </button>
