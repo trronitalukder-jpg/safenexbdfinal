@@ -212,7 +212,9 @@ export default function DashboardLayout({
 
               {/* Navigation Links */}
               <nav className="space-y-1">
-                {navLinks.map((l) => {
+                {navLinks
+                  .filter((l) => l.href !== '/dashboard/lucky-wheel')
+                  .map((l) => {
                   const Icon = l.icon;
                   const isActive = pathname === l.href;
                   return (

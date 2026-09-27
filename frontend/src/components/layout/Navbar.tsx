@@ -211,11 +211,11 @@ export const Navbar = () => {
               <span>{lang === 'bn' ? 'গাইডস' : 'Guides'}</span>
             </Link>
 
-            {/* Scammer & Trust Checker Button */}
+            {/* Scammer & Trust Checker Button (Desktop Header) */}
             <Link
               href="/check"
               title={lang === 'bn' ? 'স্ক্যামার ও ট্রাস্ট চেকার' : 'Scammer & Trust Checker'}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-slate-950 transition shadow-xs flex-shrink-0"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-slate-950 transition shadow-xs flex-shrink-0"
             >
               <ShieldAlert className="w-3.5 h-3.5 text-red-500 shrink-0" />
               <span>{lang === 'bn' ? 'স্ক্যামার চেকার' : 'Trust Check'}</span>
@@ -419,16 +419,16 @@ export const Navbar = () => {
                   <span className="text-[11px] font-bold hidden xs:inline">{lang === 'bn' ? 'প্যানেল' : 'Panel'}</span>
                 </Link>
               ) : (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5 flex-shrink-0">
                   <Link
                     href="/login"
-                    className="px-2 sm:px-2.5 py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700/80 hover:bg-slate-200 transition"
+                    className="px-2.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700/80 transition shadow-xs whitespace-nowrap"
                   >
                     {t('login')}
                   </Link>
                   <Link
                     href="/register"
-                    className="px-2 sm:px-2.5 py-1.5 text-[11px] font-bold rounded-lg bg-sky-600 text-white hover:bg-sky-700 shadow-xs transition"
+                    className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-sky-600 text-white hover:bg-sky-700 shadow-sm transition whitespace-nowrap"
                   >
                     {t('register')}
                   </Link>

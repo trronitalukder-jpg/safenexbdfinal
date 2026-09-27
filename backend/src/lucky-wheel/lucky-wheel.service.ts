@@ -329,20 +329,20 @@ export class LuckyWheelService {
       }
     }
 
-    // 5. Check if user is a new user (created within 3 days and has 0 previous spins)
+    // 5. Check if user is a new user (created within 3 days and has never spun)
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, createdAt: true, uniqueUserId: true, firstName: true },
     });
 
-    const userSpinsCount = await this.prisma.luckyWheelSpin.count({
+    const userQuota = await this.prisma.userSpinQuota.findUnique({
       where: { userId },
     });
 
     const isNewUser =
       user &&
       now.getTime() - new Date(user.createdAt).getTime() <= 3 * 24 * 60 * 60 * 1000 &&
-      userSpinsCount === 0;
+      (!userQuota || !userQuota.lastDailySpinAt);
 
     // 6. Filter candidate segments based on rules
     let candidateSegments = allSegments.filter((seg) => {
@@ -423,20 +423,24 @@ export class LuckyWheelService {
         },
       });
 
-      // Record Spin Log
-      const spinRecord = await tx.luckyWheelSpin.create({
-        data: {
-          userId,
-          segmentId: selectedSegment.id,
-          prizeType: selectedSegment.prizeType,
-          prizeValue: new Prisma.Decimal(wonAmount),
-          spinSource: hasWonCashToday ? 'UNLIMITED_SPIN' : 'DAILY_SPIN',
-        },
-      });
-
-      // If CASH prize won, credit user's wallet
+      let spinRecordId: string | null = null;
       let updatedBalance: number | null = null;
+
+      // Crucial: Only insert a database record into luckyWheelSpin if it is an actual CASH win!
+      // Unlimited spins with empty / non-cash messages do NOT insert rows into the database,
+      // which completely prevents database table bloat and ensures the website runs blazing fast!
       if (wonAmount > 0 && selectedSegment.prizeType === 'CASH') {
+        const spinRecord = await tx.luckyWheelSpin.create({
+          data: {
+            userId,
+            segmentId: selectedSegment.id,
+            prizeType: selectedSegment.prizeType,
+            prizeValue: new Prisma.Decimal(wonAmount),
+            spinSource: hasWonCashToday ? 'UNLIMITED_SPIN' : 'DAILY_SPIN',
+          },
+        });
+        spinRecordId = spinRecord.id;
+
         let wallet = await tx.wallet.findUnique({
           where: { userId },
         });
@@ -480,10 +484,19 @@ export class LuckyWheelService {
       }
 
       return {
-        spinId: spinRecord.id,
+        spinId: spinRecordId,
         updatedBalance,
       };
     });
+
+    // Background cleanup: Purge any non-cash spin records to keep database clean
+    this.prisma.luckyWheelSpin
+      .deleteMany({
+        where: {
+          prizeType: { not: 'CASH' },
+        },
+      })
+      .catch(() => {});
 
     return {
       success: true,
