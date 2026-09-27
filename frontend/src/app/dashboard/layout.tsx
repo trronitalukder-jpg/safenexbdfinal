@@ -546,23 +546,6 @@ export default function DashboardLayout({
         )}
       </div>
 
-      {/* Floating Universal Quick Spin Button (Accessible on Phone, Tablet, & Desktop at any scroll level) */}
-      <div className="fixed bottom-5 right-5 z-40">
-        <button
-          type="button"
-          onClick={() => setShowSpinModal(true)}
-          className="group relative flex items-center gap-2 px-3.5 py-2 rounded-full bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white font-black text-xs shadow-xl shadow-amber-500/35 hover:shadow-rose-500/50 border border-white/30 active:scale-90 transition-all hover:scale-105 cursor-pointer backdrop-blur-sm"
-          title={lang === 'bn' ? 'লাকি স্পিন (Spin & Win)' : 'Lucky Spin & Win'}
-        >
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400"></span>
-          </span>
-          <span className="text-sm">🎡</span>
-          <span className="font-extrabold tracking-wider uppercase text-[11px]">{lang === 'bn' ? 'স্পিন' : 'Spin'}</span>
-        </button>
-      </div>
-
       {/* Lucky Wheel Modal */}
       <LuckyWheelModal
         isOpen={showSpinModal}
