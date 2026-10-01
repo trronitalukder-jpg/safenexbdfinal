@@ -661,7 +661,7 @@ export default function AdminMicroJobsPage() {
               value={adminAdvFeatures.microJobAutoApproval?.autoApproveHours ?? 48}
               onChange={(e) => {
                 const val = Math.max(1, Number(e.target.value) || 48);
-                setAdminAdvFeatures((prev) => ({
+                setAdminAdvFeatures((prev: any) => ({
                   ...prev,
                   microJobAutoApproval: {
                     ...prev.microJobAutoApproval,
@@ -1677,7 +1677,7 @@ export default function AdminMicroJobsPage() {
                     ⚡ কুইক রিজেক্ট টেমপ্লেট (ক্লিক করে সিলেক্ট করুন):
                   </p>
                   <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
-                    {adminAdvFeatures.quickRejectTemplates.reasons.map((r, idx) => (
+                    {adminAdvFeatures.quickRejectTemplates.reasons.map((r: string, idx: number) => (
                       <button
                         key={idx}
                         type="button"
@@ -1747,7 +1747,7 @@ export default function AdminMicroJobsPage() {
                     ⚡ কুইক রিজেক্ট টেমপ্লেট (ক্লিক করে সিলেক্ট করুন):
                   </p>
                   <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
-                    {adminAdvFeatures.quickRejectTemplates.reasons.map((r, idx) => (
+                    {adminAdvFeatures.quickRejectTemplates.reasons.map((r: string, idx: number) => (
                       <button
                         key={idx}
                         type="button"
