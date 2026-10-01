@@ -32,6 +32,7 @@ import {
   Briefcase,
   Search,
   Sparkles,
+  Headset,
 } from 'lucide-react';
 import { DashboardSidebar } from '@/components/layout/DashboardSidebar';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -103,6 +104,7 @@ export default function DashboardLayout({
     { href: '/dashboard', label: lang === 'bn' ? 'ওভারভিউ' : 'Overview', icon: LayoutDashboard },
     { href: '/dashboard/wallet', label: lang === 'bn' ? 'ওয়ালেট ও লেজার' : 'Wallet & Ledger', icon: Wallet },
     { href: '/dashboard/chat', label: lang === 'bn' ? 'মেসেজ ও লাইভ চ্যাট' : 'Live Chat & Deals', icon: MessageSquare },
+    { href: '/dashboard/admin-chat', label: lang === 'bn' ? 'অ্যাডমিন চ্যাট' : 'Admin Chat', icon: Headset },
     { href: '/dashboard/notifications', label: lang === 'bn' ? 'নোটিফিকেশন' : 'Notifications', icon: Bell },
     { href: '/dashboard/lucky-wheel', label: lang === 'bn' ? '🎡 লাকি স্পিন' : '🎡 Lucky Spin', icon: Sparkles },
     { href: '/dashboard/affiliate', label: lang === 'bn' ? '🎁 রেফার ও আয়' : '🎁 Refer & Earn', icon: Gift },
@@ -473,7 +475,7 @@ export default function DashboardLayout({
         </header>
 
         {/* Workspace Body Area */}
-        {pathname === '/dashboard/chat' ? (
+        {pathname === '/dashboard/chat' || pathname === '/dashboard/admin-chat' ? (
           <main className="flex-1 h-full min-h-0 overflow-hidden p-0 m-0 bg-slate-50/70 dark:bg-slate-950/70">
             {children}
           </main>

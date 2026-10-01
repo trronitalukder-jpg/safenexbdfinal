@@ -32,6 +32,7 @@ import {
   Gift,
   Briefcase,
   Sparkles,
+  Headset,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguage } from '@/context/LanguageContext';
@@ -54,6 +55,7 @@ export const DashboardSidebar = () => {
     { href: '/dashboard', label: lang === 'bn' ? 'ওভারভিউ' : 'Overview', icon: LayoutDashboard },
     { href: '/dashboard/wallet', label: lang === 'bn' ? 'ওয়ালেট ও লেজার' : 'Wallet & Ledger', icon: Wallet },
     { href: '/dashboard/chat', label: lang === 'bn' ? 'মেসেজ ও লাইভ চ্যাট' : 'Live Chat & Deals', icon: MessageSquare },
+    { href: '/dashboard/admin-chat', label: lang === 'bn' ? 'অ্যাডমিন চ্যাট' : 'Admin Chat', icon: Headset },
     { href: '/dashboard/notifications', label: lang === 'bn' ? 'নোটিফিকেশন' : 'Notifications', icon: Bell },
     { href: '/dashboard/lucky-wheel', label: lang === 'bn' ? '🎡 লাকি স্পিন' : '🎡 Lucky Spin', icon: Sparkles },
     { href: '/dashboard/affiliate', label: lang === 'bn' ? '🎁 রেফার ও আয়' : '🎁 Refer & Earn', icon: Gift },

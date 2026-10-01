@@ -1203,5 +1203,160 @@ export class AdminService {
 
     return { success: true, message: 'Product restored successfully' };
   }
+
+  /**
+   * ---------------- Admin Sidebar Live Notification Badges & Seen Tracking ----------------
+   */
+  async getSectionSeenTimestamps(): Promise<Record<string, string>> {
+    try {
+      const setting = await this.prisma.systemSetting.findUnique({
+        where: { key: 'admin_section_seen_timestamps' },
+      });
+      if (!setting || !setting.value) {
+        const initial = { users: new Date().toISOString() };
+        await this.prisma.systemSetting.upsert({
+          where: { key: 'admin_section_seen_timestamps' },
+          create: {
+            key: 'admin_section_seen_timestamps',
+            value: initial,
+            category: 'ADMIN',
+            isPublic: false,
+            description: 'Last seen timestamps for admin sidebar sections',
+          },
+          update: { value: initial },
+        });
+        return initial;
+      }
+      const val = typeof setting.value === 'string' ? JSON.parse(setting.value) : setting.value;
+      return val || {};
+    } catch {
+      return { users: new Date().toISOString() };
+    }
+  }
+
+  async markSectionSeen(section: string) {
+    const timestamps = await this.getSectionSeenTimestamps();
+    const now = new Date().toISOString();
+    timestamps[section] = now;
+
+    await this.prisma.systemSetting.upsert({
+      where: { key: 'admin_section_seen_timestamps' },
+      create: {
+        key: 'admin_section_seen_timestamps',
+        value: timestamps,
+        category: 'ADMIN',
+        isPublic: false,
+        description: 'Last seen timestamps for admin sidebar sections',
+      },
+      update: {
+        value: timestamps,
+      },
+    });
+
+    return { success: true, section, seenAt: now };
+  }
+
+  async getSidebarCounts() {
+    const [seenTimestamps, liveSessionsSetting] = await Promise.all([
+      this.getSectionSeenTimestamps(),
+      this.prisma.systemSetting
+        .findUnique({ where: { key: 'chat_live_sessions' } })
+        .catch(() => null),
+    ]);
+
+    const lastSeenUsersAt = seenTimestamps.users ? new Date(seenTimestamps.users) : new Date();
+
+    let activeLiveChatIds: string[] = [];
+    try {
+      if (liveSessionsSetting?.value) {
+        const map =
+          typeof liveSessionsSetting.value === 'string'
+            ? JSON.parse(liveSessionsSetting.value)
+            : (liveSessionsSetting.value as Record<string, any>);
+        activeLiveChatIds = Object.keys(map || {}).filter((cid) => map[cid]?.isLive === true);
+      }
+    } catch {
+      activeLiveChatIds = [];
+    }
+
+    const [
+      newUsersCount,
+      pendingRechargesCount,
+      pendingWithdrawalsCount,
+      pendingMicroJobsCount,
+      pendingMicroJobSubmissionsCount,
+      liveChatCount,
+      pendingDisputesCount,
+      pendingComplaintsCount,
+      pendingScammersCount,
+      pendingProductsCount,
+      pendingPasswordResetsCount,
+    ] = await Promise.all([
+      this.prisma.user.count({
+        where: {
+          deletedAt: null,
+          createdAt: { gt: lastSeenUsersAt },
+        },
+      }),
+      this.prisma.rechargeRequest.count({
+        where: { status: 'PENDING' },
+      }),
+      this.prisma.withdrawalRequest.count({
+        where: { status: 'PENDING' },
+      }),
+      this.prisma.microJob.count({
+        where: { status: 'PENDING' },
+      }),
+      this.prisma.microJobSubmission.count({
+        where: { status: 'SUBMITTED' },
+      }),
+      activeLiveChatIds.length > 0
+        ? this.prisma.conversation.count({
+            where: { id: { in: activeLiveChatIds } },
+          })
+        : Promise.resolve(0),
+      this.prisma.dispute.count({
+        where: { status: { in: ['ACTIVE_CALL', 'UNRESOLVED'] } },
+      }),
+      this.prisma.complaint.count({
+        where: { status: { in: ['PENDING', 'IN_REVIEW'] } },
+      }),
+      this.prisma.scammerRecord.count({
+        where: { status: 'PENDING' },
+      }),
+      this.prisma.product.count({
+        where: { status: 'PENDING', deletedAt: null },
+      }),
+      this.prisma.passwordResetRequest.count({
+        where: { status: 'PENDING' },
+      }),
+    ]);
+
+    const microJobsTotal = pendingMicroJobsCount + pendingMicroJobSubmissionsCount;
+
+    return {
+      counts: {
+        users: newUsersCount,
+        recharges: pendingRechargesCount,
+        withdrawals: pendingWithdrawalsCount,
+        micro_jobs: microJobsTotal,
+        cms: liveChatCount,
+        disputes: pendingDisputesCount,
+        complaints: pendingComplaintsCount,
+        scammers: pendingScammersCount,
+        products: pendingProductsCount,
+        password_reset: pendingPasswordResetsCount,
+      },
+      details: {
+        lastSeenUsersAt: lastSeenUsersAt.toISOString(),
+        microJobs: {
+          pendingJobs: pendingMicroJobsCount,
+          pendingSubmissions: pendingMicroJobSubmissionsCount,
+          total: microJobsTotal,
+        },
+        liveChatCount,
+      },
+    };
+  }
 }
 

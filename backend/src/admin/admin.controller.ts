@@ -48,6 +48,16 @@ export class AdminController {
     return this.adminService.getDashboardAnalytics();
   }
 
+  @Get('sidebar-counts')
+  async getSidebarCounts() {
+    return this.adminService.getSidebarCounts();
+  }
+
+  @Post('sidebar-counts/mark-seen')
+  async markSectionSeen(@Body() body: { section: string }) {
+    return this.adminService.markSectionSeen(body?.section || 'users');
+  }
+
   @Permissions('USER_VIEW')
   @Get('users')
   async getUsersList(@Query() query: any) {

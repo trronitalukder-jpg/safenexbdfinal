@@ -34,7 +34,7 @@ export class ChatController {
   @Roles('SUPER_ADMIN', 'ADMIN', 'SUPPORT_ADMIN', 'EMPLOYEE')
   async getAllConversationsAdmin(
     @CurrentUser() user: any,
-    @Query('filter') filter?: 'ALL' | 'ACTIVE_ESCROW' | 'DISPUTED' | 'REQUESTS',
+    @Query('filter') filter?: 'ALL' | 'LIVE_CHAT' | 'ACTIVE_ESCROW' | 'DISPUTED' | 'REQUESTS',
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -107,16 +107,90 @@ export class ChatController {
       body,
     );
 
-    const serialized = JSON.parse(
-      JSON.stringify(saved, (key, value) =>
-        typeof value === 'bigint' ? value.toString() : value,
-      ),
+    const maskedForUser = {
+      ...saved,
+      sender: {
+        id: saved.sender?.id || user.id,
+        uniqueUserId: 'SafnexBD_Admin',
+        firstName: 'SafnexBD',
+        lastName: 'Admin',
+        avatarUrl: null,
+      },
+    };
+
+    return this.chatGateway.broadcastNewMessage(maskedForUser, conversationId, user.id);
+  }
+
+  /**
+   * Super Admin & Staff: Turn Live Chat status ON/OFF for a conversation
+   * When turned OFF, removes the conversation from the "Live Chat" filter tab and stops red blink
+   */
+  @Patch('admin/conversations/:id/live-status')
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'SUPPORT_ADMIN', 'EMPLOYEE')
+  async toggleConversationLiveStatus(
+    @Param('id') conversationId: string,
+    @CurrentUser() user: any,
+    @Body() body: { isLive: boolean },
+  ) {
+    if (
+      user.roles?.includes('EMPLOYEE') &&
+      !user.roles?.includes('SUPER_ADMIN') &&
+      !user.roles?.includes('ADMIN')
+    ) {
+      const perms: string[] = user.adminPermissions || [];
+      if (!perms.includes('*') && !perms.includes('cms')) {
+        throw new ForbiddenException('Access denied: missing Live Chat permission');
+      }
+    }
+
+    const result = await this.chatService.setConversationLiveStatus(
+      conversationId,
+      Boolean(body.isLive),
     );
 
-    // Broadcast to everyone in conversation room via socket
-    this.chatGateway.server?.to(conversationId).emit('message:receive', serialized);
+    this.chatGateway.notifyAdminsAndStaff('chat:live_status', result);
+    return result;
+  }
 
-    return serialized;
+  /**
+   * Admin: Get SafnexBD Admin Chat Settings (ON/OFF + Customizable Welcome Message)
+   */
+  @Get('admin/settings')
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'SUPPORT_ADMIN', 'EMPLOYEE')
+  async getAdminChatSettings() {
+    return this.chatService.getAdminChatSettings();
+  }
+
+  /**
+   * Admin: Update SafnexBD Admin Chat Settings (ON/OFF + Customizable Welcome Message)
+   */
+  @Patch('admin/settings')
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  async updateAdminChatSettings(
+    @Body()
+    body: {
+      isEnabled?: boolean;
+      welcomeMessageEnabled?: boolean;
+      welcomeMessageTemplate?: string;
+    },
+    @CurrentUser('id') adminId: string,
+  ) {
+    const updated = await this.chatService.updateAdminChatSettings(body, adminId);
+    this.chatGateway.server?.emit('chat:admin_settings_changed', {
+      isEnabled: updated.isEnabled,
+    });
+    return updated;
+  }
+
+  /**
+   * User: Get or create official "SafnexBD Admin" support conversation
+   */
+  @Get('support/conversation')
+  async getOrCreateSupportConversation(@CurrentUser('id') userId: string) {
+    return this.chatService.getOrCreateAdminSupportConversation(userId);
   }
 
   /**

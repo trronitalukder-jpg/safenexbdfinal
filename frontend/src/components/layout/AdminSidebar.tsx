@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -24,6 +24,7 @@ import {
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuthStore } from '@/store/useAuthStore';
 import { adminMenuRegistry, AdminMenuItem } from '@/config/adminMenuRegistry';
+import { api } from '@/lib/api';
 
 interface AdminSidebarProps {
   onClose?: () => void;
@@ -75,9 +76,48 @@ export const AdminSidebar = ({ onClose, isMobile = false }: AdminSidebarProps) =
   const { lang } = useLanguage();
   const { user, isSuperAdmin, hasAdminPermission, logout } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
 
   // Dropdown section collapse state: key -> boolean (true = collapsed, false/undefined = expanded)
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+  const fetchSidebarCounts = useCallback(async () => {
+    try {
+      const res: any = await api.get('/admin/sidebar-counts');
+      const data = res?.data !== undefined ? res.data : res;
+      if (data?.counts) {
+        setBadgeCounts(data.counts);
+      }
+    } catch {
+      // Ignore transient errors
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSidebarCounts();
+    const interval = setInterval(fetchSidebarCounts, 10000);
+    const handleRefresh = () => fetchSidebarCounts();
+    window.addEventListener('admin-sidebar-counts-refresh', handleRefresh);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('admin-sidebar-counts-refresh', handleRefresh);
+    };
+  }, [fetchSidebarCounts]);
+
+  // Automatically clear the new user registration badge when admin visits /admin/users
+  useEffect(() => {
+    if (pathname && pathname.startsWith('/admin/users')) {
+      setBadgeCounts((prev) => ({ ...prev, users: 0 }));
+      api
+        .post('/admin/sidebar-counts/mark-seen', { section: 'users' })
+        .then(() => {
+          fetchSidebarCounts();
+        })
+        .catch(() => null);
+    } else {
+      fetchSidebarCounts();
+    }
+  }, [pathname, fetchSidebarCounts]);
 
   // Toggle individual section dropdown
   const toggleSection = (catKey: string) => {
@@ -257,6 +297,12 @@ export const AdminSidebar = ({ onClose, isMobile = false }: AdminSidebarProps) =
               (item) => pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href))
             );
 
+            // Sum of pending badge counts in this category
+            const groupBadgeTotal = group.items.reduce(
+              (acc, item) => acc + (badgeCounts[item.key] || 0),
+              0,
+            );
+
             return (
               <div
                 key={group.key}
@@ -297,6 +343,11 @@ export const AdminSidebar = ({ onClose, isMobile = false }: AdminSidebarProps) =
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
+                    {groupBadgeTotal > 0 && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-sm shadow-rose-600/50 animate-pulse">
+                        {groupBadgeTotal}
+                      </span>
+                    )}
                     <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono font-bold border border-slate-700/60">
                       {group.items.length}
                     </span>
@@ -318,6 +369,7 @@ export const AdminSidebar = ({ onClose, isMobile = false }: AdminSidebarProps) =
                       const isActive =
                         pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
                       const label = lang === 'bn' ? item.labelBn : item.labelEn;
+                      const itemBadgeCount = badgeCounts[item.key] || 0;
 
                       return (
                         <Link
@@ -333,14 +385,25 @@ export const AdminSidebar = ({ onClose, isMobile = false }: AdminSidebarProps) =
                           <div className="flex items-center gap-3 min-w-0">
                             <Icon
                               className={`w-4.5 h-4.5 shrink-0 transition-transform group-hover:scale-110 ${
-                                isActive ? 'text-amber-400' : 'text-slate-400 group-hover:text-amber-400'
+                                itemBadgeCount > 0
+                                  ? 'text-rose-400'
+                                  : isActive
+                                    ? 'text-amber-400'
+                                    : 'text-slate-400 group-hover:text-amber-400'
                               }`}
                             />
                             <span className="truncate">{label}</span>
                           </div>
-                          {isActive && (
-                            <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0 shadow-xs shadow-amber-400/60" />
-                          )}
+                          <div className="flex items-center gap-2 shrink-0">
+                            {itemBadgeCount > 0 && (
+                              <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-rose-600 text-white text-[11px] font-black shadow-md shadow-rose-600/50 animate-pulse border border-rose-400/50">
+                                {itemBadgeCount}
+                              </span>
+                            )}
+                            {isActive && itemBadgeCount === 0 && (
+                              <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0 shadow-xs shadow-amber-400/60" />
+                            )}
+                          </div>
                         </Link>
                       );
                     })}

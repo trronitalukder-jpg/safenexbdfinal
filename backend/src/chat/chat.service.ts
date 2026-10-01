@@ -213,8 +213,10 @@ export class ChatService {
       ['SUPER_ADMIN', 'ADMIN', 'SUPPORT_ADMIN', 'EMPLOYEE'].includes(ur.role.name),
     );
 
+    const adminChatSettings = await this.getAdminChatSettings();
+
     const filteredParticipants =
-      !isSuperAdminVisible && !isCurrentAdminOrStaff
+      !isSuperAdminVisible && !adminChatSettings.isEnabled && !isCurrentAdminOrStaff
         ? participants.filter((p) => {
             const otherParticipant = p.conversation.participants.find(
               (cp) => cp.userId !== userId,
@@ -222,7 +224,7 @@ export class ChatService {
             const isOtherSuperAdmin = otherParticipant?.user?.userRoles?.some(
               (ur) => ur.role.name === 'SUPER_ADMIN',
             );
-            return !isOtherSuperAdmin;
+            return !isOtherSuperAdmin || p.conversation.messages.length > 0;
           })
         : participants;
 
@@ -256,9 +258,28 @@ export class ChatService {
         const lastMessageAt = lastMessage?.createdAt || p.conversation.updatedAt;
         const unreadCount = unreadMap.get(p.conversationId) || 0;
 
+        let otherUserObj: any = otherParticipant?.user;
+        const isOtherAdminOrStaff = otherUserObj?.userRoles?.some((ur: any) =>
+          ['SUPER_ADMIN', 'ADMIN', 'SUPPORT_ADMIN', 'EMPLOYEE'].includes(ur.role.name),
+        );
+
+        if (otherUserObj && !isCurrentAdminOrStaff && isOtherAdminOrStaff) {
+          otherUserObj = {
+            ...otherUserObj,
+            firstName: 'SafnexBD',
+            lastName: 'Admin',
+            uniqueUserId: 'SafnexBD_Admin',
+            avatarUrl: null,
+            phone: null,
+            email: null,
+            isVerified: true,
+            isSafnexAdmin: true,
+          };
+        }
+
         return {
           conversationId: p.conversationId,
-          otherUser: otherParticipant?.user,
+          otherUser: otherUserObj,
           lastMessage,
           activeTransaction,
           updatedAt: p.conversation.updatedAt,
@@ -309,33 +330,42 @@ export class ChatService {
    * Fetch single conversation by ID with otherUser
    */
   async getConversationById(conversationId: string, userId: string) {
-    const conv = await this.prisma.conversation.findUnique({
-      where: { id: conversationId },
-      include: {
-        participants: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                uniqueUserId: true,
-                firstName: true,
-                lastName: true,
-                avatarUrl: true,
-                phone: true,
-                email: true,
-                isVerified: true,
-                isActive: true,
-                deletedAt: true,
+    const [conv, currentUser] = await Promise.all([
+      this.prisma.conversation.findUnique({
+        where: { id: conversationId },
+        include: {
+          participants: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  uniqueUserId: true,
+                  firstName: true,
+                  lastName: true,
+                  avatarUrl: true,
+                  phone: true,
+                  email: true,
+                  isVerified: true,
+                  isActive: true,
+                  deletedAt: true,
+                  userRoles: {
+                    select: { role: { select: { name: true } } },
+                  },
+                },
               },
             },
           },
+          transactions: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
         },
-        transactions: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
-      },
-    });
+      }),
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { userRoles: { include: { role: true } } },
+      }),
+    ]);
 
     if (!conv) {
       throw new NotFoundException('Conversation not found');
@@ -346,10 +376,32 @@ export class ChatService {
       throw new NotFoundException('Conversation participant is no longer available');
     }
 
+    const isCurrentAdminOrStaff = currentUser?.userRoles?.some((ur) =>
+      ['SUPER_ADMIN', 'ADMIN', 'SUPPORT_ADMIN', 'EMPLOYEE'].includes(ur.role.name),
+    );
+    const isOtherAdminOrStaff = otherParticipant.user.userRoles?.some((ur) =>
+      ['SUPER_ADMIN', 'ADMIN', 'SUPPORT_ADMIN', 'EMPLOYEE'].includes(ur.role.name),
+    );
+
+    const otherUserObj =
+      !isCurrentAdminOrStaff && isOtherAdminOrStaff
+        ? {
+            ...otherParticipant.user,
+            firstName: 'SafnexBD',
+            lastName: 'Admin',
+            uniqueUserId: 'SafnexBD_Admin',
+            avatarUrl: null,
+            phone: null,
+            email: null,
+            isVerified: true,
+            isSafnexAdmin: true,
+          }
+        : otherParticipant.user;
+
     return {
       ...conv,
       conversationId: conv.id,
-      otherUser: otherParticipant?.user,
+      otherUser: otherUserObj,
       activeTransaction: (conv as any).transactions?.[0] || null,
     };
   }
@@ -401,27 +453,61 @@ export class ChatService {
         ) || false;
     }
 
+    const [adminChatSettings, liveSessionsMap] = await Promise.all([
+      this.getAdminChatSettings(),
+      this.getLiveChatSessions(),
+    ]);
+
     let isLocked = lockInfo.isLocked;
     let lockReason = lockInfo.reason;
 
-    if (hasSuperAdmin && !isSuperAdminVisible && !isRequestingAdminOrStaff) {
+    if (hasSuperAdmin && !adminChatSettings.isEnabled && !isRequestingAdminOrStaff) {
+      isLocked = true;
+      lockReason = 'SafnexBD অ্যাডমিন চ্যাট বর্তমানে বন্ধ রয়েছে। অনুগ্রহ করে পরবর্তীতে চেষ্টা করুন।';
+    } else if (hasSuperAdmin && !isSuperAdminVisible && !isRequestingAdminOrStaff && convParticipants.every((p) => (p.user as any)?.id !== requestingUserId)) {
       isLocked = true;
       lockReason = 'সুপার অ্যাডমিনের সাথে চ্যাট বর্তমানে সাময়িকভাবে বন্ধ রয়েছে।';
     }
 
-    const serializedMessages = messages.map((m) => ({
-      ...m,
-      attachments: m.attachments.map((att) => ({
-        ...att,
-        fileSize: Number(att.fileSize || 0),
-      })),
-    }));
+    const serializedMessages = messages.map((m) => {
+      const isSenderNotRequester = requestingUserId && m.senderId !== requestingUserId;
+      const senderParticipant = convParticipants.find((cp) => cp.userId === m.senderId);
+      const isSenderAdminOrStaff =
+        senderParticipant?.user?.userRoles?.some((ur) =>
+          ['SUPER_ADMIN', 'ADMIN', 'SUPPORT_ADMIN', 'EMPLOYEE'].includes(ur.role.name),
+        ) || Boolean((m.metadata as any)?.isSafnexAdmin);
+
+      // Mask admin/staff name as "SafnexBD Admin" when viewed by a regular user in an admin chat
+      const shouldMaskSender =
+        !isRequestingAdminOrStaff &&
+        isSenderNotRequester &&
+        (hasSuperAdmin || isSenderAdminOrStaff);
+
+      return {
+        ...m,
+        sender: shouldMaskSender
+          ? {
+              id: m.sender?.id || m.senderId,
+              uniqueUserId: 'SafnexBD_Admin',
+              firstName: 'SafnexBD',
+              lastName: 'Admin',
+              avatarUrl: null,
+            }
+          : m.sender,
+        attachments: m.attachments.map((att) => ({
+          ...att,
+          fileSize: Number(att.fileSize || 0),
+        })),
+      };
+    });
 
     return {
       messages: serializedMessages,
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
       isLocked,
       lockReason,
+      isAdminChatEnabled: adminChatSettings.isEnabled,
+      isLiveChat: Boolean(liveSessionsMap[conversationId]?.isLive),
     };
   }
 
@@ -436,10 +522,11 @@ export class ChatService {
     metadata?: any;
     attachments?: Array<{ fileUrl: string; fileType: string; fileSize: number }>;
   }) {
-    // Check if conversation participants include Super Admin while Super Admin chat visibility is OFF
-    const [lockInfo, isSuperAdminVisible, convParticipants] = await Promise.all([
+    // Check if conversation participants include Super Admin while Admin Chat is OFF
+    const [lockInfo, isSuperAdminVisible, adminChatSettings, convParticipants] = await Promise.all([
       this.isConversationLocked(params.conversationId),
       this.getSuperAdminChatVisibility(),
+      this.getAdminChatSettings(),
       this.prisma.conversationParticipant.findMany({
         where: { conversationId: params.conversationId },
         include: { user: { include: { userRoles: { include: { role: true } } } } },
@@ -470,10 +557,12 @@ export class ChatService {
       senderRoles.includes('SUPPORT_ADMIN') ||
       senderRoles.includes('EMPLOYEE');
 
-    if (hasSuperAdmin && !isSuperAdminVisible && !isStaffOrAdmin) {
-      throw new BadRequestException(
-        'সুপার অ্যাডমিনের সাথে চ্যাট বর্তমানে সাময়িকভাবে বন্ধ রয়েছে। প্রয়োজনে হেল্পলাইন বা ডিসপ্যুট কিউ ব্যবহার করুন।',
-      );
+    if (hasSuperAdmin && !isStaffOrAdmin) {
+      if (!adminChatSettings.isEnabled) {
+        throw new BadRequestException(
+          'SafnexBD অ্যাডমিন চ্যাট বর্তমানে বন্ধ রয়েছে। এই মুহূর্তে মেসেজ পাঠানো যাবে না।',
+        );
+      }
     }
 
     // Check if conversation is locked by Super Admin
@@ -535,11 +624,21 @@ export class ChatService {
       };
     });
 
+    // If a regular user sends a message (and it's not a welcome message), mark this conversation as active Live Chat
+    if (!isStaffOrAdmin && !params.metadata?.isWelcomeMessage) {
+      await this.setConversationLiveStatus(params.conversationId, true, params.senderId).catch(
+        () => null,
+      );
+    }
+
     // Trigger Telegram Notification for recipient if connected
     if (this.telegramService) {
       const recipient = convParticipants.find((p) => p.userId !== params.senderId);
       if (recipient?.userId) {
-        const senderName = `${sender.firstName} ${sender.lastName}`.trim();
+        const senderName =
+          isStaffOrAdmin && hasSuperAdmin
+            ? 'SafnexBD Admin'
+            : `${sender.firstName} ${sender.lastName}`.trim();
         const snippet =
           params.content.length > 80
             ? params.content.slice(0, 77) + '...'
@@ -550,12 +649,12 @@ export class ChatService {
             'chatMessage',
             {
               senderName,
-              senderUniqueId: sender.uniqueUserId,
+              senderUniqueId: isStaffOrAdmin && hasSuperAdmin ? 'SafnexBD_Admin' : sender.uniqueUserId,
               messageSnippet: snippet,
             },
             [
               {
-                text: `💬 চ্যাট দেখুন (@${sender.uniqueUserId})`,
+                text: `💬 চ্যাট দেখুন`,
                 callback_data: `chat_with_${sender.id}`,
               },
             ],
@@ -629,7 +728,7 @@ export class ChatService {
    * Super Admin & Staff: Fetch all platform conversations with live deal and escrow telemetry
    */
   async getAllConversationsAdmin(query: {
-    filter?: 'ALL' | 'ACTIVE_ESCROW' | 'DISPUTED' | 'REQUESTS';
+    filter?: 'ALL' | 'LIVE_CHAT' | 'ACTIVE_ESCROW' | 'DISPUTED' | 'REQUESTS';
     search?: string;
     page?: number;
     limit?: number;
@@ -640,6 +739,11 @@ export class ChatService {
     const filter = query.filter || 'ALL';
     const search = query.search?.trim();
 
+    const liveSessionsMap = await this.getLiveChatSessions();
+    const activeLiveIds = Object.keys(liveSessionsMap).filter(
+      (cid) => liveSessionsMap[cid]?.isLive === true,
+    );
+
     // 1. Calculate platform-wide live telemetry stats
     const [
       totalConversations,
@@ -647,6 +751,7 @@ export class ChatService {
       heldTransactions,
       activeDisputesCount,
       pendingRequestsCount,
+      liveChatCount,
     ] = await Promise.all([
       this.prisma.conversation.count(),
       this.prisma.transaction.count({
@@ -666,6 +771,11 @@ export class ChatService {
       this.prisma.transaction.count({
         where: { status: 'REQUESTED' },
       }),
+      activeLiveIds.length > 0
+        ? this.prisma.conversation.count({
+            where: { id: { in: activeLiveIds } },
+          })
+        : Promise.resolve(0),
     ]);
 
     const totalEscrowHeld = heldTransactions.reduce(
@@ -710,7 +820,9 @@ export class ChatService {
       ];
     }
 
-    if (filter === 'ACTIVE_ESCROW') {
+    if (filter === 'LIVE_CHAT') {
+      where.id = { in: activeLiveIds.length > 0 ? activeLiveIds : ['__no_live_chat__'] };
+    } else if (filter === 'ACTIVE_ESCROW') {
       where.transactions = {
         some: {
           status: { in: ['HOLD', 'WORKING'] },
@@ -726,7 +838,7 @@ export class ChatService {
         },
       };
     } else if (filter === 'REQUESTS') {
-      where.OR = [
+      const reqFilter: Prisma.ConversationWhereInput[] = [
         {
           transactions: {
             some: {
@@ -742,6 +854,12 @@ export class ChatService {
           },
         },
       ];
+      if (where.OR) {
+        where.AND = [{ OR: where.OR }, { OR: reqFilter }];
+        delete where.OR;
+      } else {
+        where.OR = reqFilter;
+      }
     }
 
     // 3. Query matching conversations
@@ -762,6 +880,9 @@ export class ChatService {
                   avatarUrl: true,
                   isVerified: true,
                   isActive: true,
+                  userRoles: {
+                    select: { role: { select: { name: true } } },
+                  },
                 },
               },
             },
@@ -822,9 +943,10 @@ export class ChatService {
       this.prisma.conversation.count({ where }),
     ]);
 
-    const [lockedMap, isSuperAdminVisible] = await Promise.all([
+    const [lockedMap, isSuperAdminVisible, adminChatSettings] = await Promise.all([
       this.getLockedConversations(),
       this.getSuperAdminChatVisibility(),
+      this.getAdminChatSettings(),
     ]);
 
     // Format & enrich conversations
@@ -848,6 +970,8 @@ export class ChatService {
       const dispute = activeTransaction?.dispute || null;
 
       const lockItem = lockedMap[conv.id];
+      const liveItem = liveSessionsMap[conv.id];
+      const isLiveChat = Boolean(liveItem?.isLive);
 
       return {
         id: conv.id,
@@ -857,6 +981,9 @@ export class ChatService {
         participantCount: conv.participants.length,
         user1: p1,
         user2: p2,
+        isLiveChat,
+        liveStartedAt: liveItem?.startedAt || null,
+        liveUpdatedAt: liveItem?.updatedAt || null,
         isLocked: Boolean(lockItem?.isLocked),
         lockedReason: lockItem?.reason || null,
         lockedBy: lockItem?.lockedBy || null,
@@ -904,12 +1031,14 @@ export class ChatService {
     return {
       stats: {
         totalConversations,
+        liveChatCount,
         activeEscrowDeals: activeEscrowDealsCount,
         totalEscrowHeld,
         activeDisputes: activeDisputesCount,
         pendingRequests: pendingRequestsCount,
       },
       isSuperAdminChatVisible: isSuperAdminVisible,
+      adminChatSettings,
       conversations: items,
       meta: {
         total,
@@ -951,8 +1080,10 @@ export class ChatService {
       messageType: msgType,
       metadata: {
         isAdminNotice: isNotice,
+        isSafnexAdmin: true,
         adminTitle: dto.adminTitle || 'SafnexBD Authority Notice',
-        adminName: `${adminUser.firstName} ${adminUser.lastName}`.trim(),
+        adminName: 'SafnexBD Admin',
+        staffName: `${adminUser.firstName} ${adminUser.lastName}`.trim(),
         adminUniqueId: adminUser.uniqueUserId,
         sentAt: new Date().toISOString(),
       },
@@ -1187,7 +1318,360 @@ export class ChatService {
 
     return { success: true, message: 'Conversation removed successfully' };
   }
+
+  /**
+   * Fetch all active live chat sessions dictionary
+   */
+  async getLiveChatSessions(): Promise<
+    Record<string, { isLive: boolean; startedAt?: string; updatedAt?: string; userId?: string }>
+  > {
+    try {
+      const setting = await this.prisma.systemSetting.findUnique({
+        where: { key: 'chat_live_sessions' },
+      });
+      if (!setting || !setting.value) return {};
+      const val = typeof setting.value === 'string' ? JSON.parse(setting.value) : setting.value;
+      return val || {};
+    } catch {
+      return {};
+    }
+  }
+
+  /**
+   * Count active live chat sessions
+   */
+  async getActiveLiveChatCount(): Promise<number> {
+    const sessions = await this.getLiveChatSessions();
+    const activeIds = Object.keys(sessions).filter((cid) => sessions[cid]?.isLive === true);
+    if (activeIds.length === 0) return 0;
+    return this.prisma.conversation.count({
+      where: { id: { in: activeIds } },
+    });
+  }
+
+  /**
+   * Toggle or set whether a conversation is in active Live Chat
+   */
+  async setConversationLiveStatus(
+    conversationId: string,
+    isLive: boolean,
+    userId?: string,
+  ) {
+    const sessions = await this.getLiveChatSessions();
+    const now = new Date().toISOString();
+
+    if (isLive) {
+      sessions[conversationId] = {
+        isLive: true,
+        startedAt: sessions[conversationId]?.startedAt || now,
+        updatedAt: now,
+        userId: userId || sessions[conversationId]?.userId,
+      };
+    } else {
+      delete sessions[conversationId];
+    }
+
+    await this.prisma.systemSetting.upsert({
+      where: { key: 'chat_live_sessions' },
+      create: {
+        key: 'chat_live_sessions',
+        value: sessions,
+        category: 'CHAT',
+        isPublic: false,
+        description: 'Active live chat sessions map',
+      },
+      update: {
+        value: sessions,
+      },
+    });
+
+    return {
+      conversationId,
+      isLive,
+      updatedAt: now,
+    };
+  }
+
+  /**
+   * Get Admin Chat Settings (ON/OFF status + customizable Welcome Message template)
+   */
+  async getAdminChatSettings(): Promise<{
+    isEnabled: boolean;
+    welcomeMessageEnabled: boolean;
+    welcomeMessageTemplate: string;
+  }> {
+    try {
+      const setting = await this.prisma.systemSetting.findUnique({
+        where: { key: 'admin_chat_settings' },
+      });
+      if (!setting || !setting.value) {
+        return DEFAULT_ADMIN_CHAT_SETTINGS;
+      }
+      const val = typeof setting.value === 'string' ? JSON.parse(setting.value) : setting.value;
+      return {
+        isEnabled: val.isEnabled ?? DEFAULT_ADMIN_CHAT_SETTINGS.isEnabled,
+        welcomeMessageEnabled:
+          val.welcomeMessageEnabled ?? DEFAULT_ADMIN_CHAT_SETTINGS.welcomeMessageEnabled,
+        welcomeMessageTemplate:
+          typeof val.welcomeMessageTemplate === 'string' && val.welcomeMessageTemplate.trim()
+            ? val.welcomeMessageTemplate
+            : DEFAULT_ADMIN_CHAT_SETTINGS.welcomeMessageTemplate,
+      };
+    } catch {
+      return DEFAULT_ADMIN_CHAT_SETTINGS;
+    }
+  }
+
+  /**
+   * Update Admin Chat Settings (ON/OFF + Welcome Message template)
+   */
+  async updateAdminChatSettings(
+    payload: {
+      isEnabled?: boolean;
+      welcomeMessageEnabled?: boolean;
+      welcomeMessageTemplate?: string;
+    },
+    adminId?: string,
+  ) {
+    const current = await this.getAdminChatSettings();
+    const updated = {
+      isEnabled: payload.isEnabled ?? current.isEnabled,
+      welcomeMessageEnabled: payload.welcomeMessageEnabled ?? current.welcomeMessageEnabled,
+      welcomeMessageTemplate:
+        typeof payload.welcomeMessageTemplate === 'string' && payload.welcomeMessageTemplate.trim()
+          ? payload.welcomeMessageTemplate
+          : current.welcomeMessageTemplate,
+    };
+
+    await this.prisma.systemSetting.upsert({
+      where: { key: 'admin_chat_settings' },
+      create: {
+        key: 'admin_chat_settings',
+        value: updated,
+        category: 'CHAT',
+        isPublic: true,
+        description: 'SafnexBD Admin Chat ON/OFF & Auto Welcome Message configuration',
+      },
+      update: {
+        value: updated,
+      },
+    });
+
+    if (adminId) {
+      await this.prisma.auditLog
+        .create({
+          data: {
+            actorId: adminId,
+            actorType: 'ADMIN',
+            action: 'ADMIN_CHAT_SETTINGS_UPDATE',
+            targetEntity: 'SystemSetting',
+            targetId: 'admin_chat_settings',
+            beforeState: current,
+            afterState: updated,
+            reason: 'Updated SafnexBD Admin Chat & Welcome Message settings',
+          },
+        })
+        .catch(() => null);
+    }
+
+    return updated;
+  }
+
+  /**
+   * Get or create the official "SafnexBD Admin" support conversation for a user
+   */
+  async getOrCreateAdminSupportConversation(userId: string) {
+    const caller = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { userRoles: { include: { role: true } } },
+    });
+
+    if (!caller || !caller.isActive || caller.deletedAt) {
+      throw new ForbiddenException('আপনার অ্যাকাউন্টটি নিষ্ক্রিয় করা হয়েছে।');
+    }
+
+    // Find primary Super Admin or Admin user
+    let adminAccount = await this.prisma.user.findFirst({
+      where: {
+        isActive: true,
+        deletedAt: null,
+        id: { not: userId },
+        userRoles: {
+          some: {
+            role: { name: 'SUPER_ADMIN' },
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (!adminAccount) {
+      adminAccount = await this.prisma.user.findFirst({
+        where: {
+          isActive: true,
+          deletedAt: null,
+          id: { not: userId },
+          userRoles: {
+            some: {
+              role: { name: { in: ['ADMIN', 'SUPPORT_ADMIN'] } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+    }
+
+    if (!adminAccount) {
+      throw new NotFoundException('SafnexBD অ্যাডমিন সাপোর্ট বর্তমানে উপলব্ধ নেই।');
+    }
+
+    let conv = await this.prisma.conversation.findFirst({
+      where: {
+        AND: [
+          { participants: { some: { userId } } },
+          { participants: { some: { userId: adminAccount.id } } },
+        ],
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    if (!conv) {
+      conv = await this.prisma.conversation.create({
+        data: {
+          type: 'DIRECT',
+          participants: {
+            create: [{ userId }, { userId: adminAccount.id }],
+          },
+        },
+      });
+    }
+
+    const [settings, lockInfo, liveSessions] = await Promise.all([
+      this.getAdminChatSettings(),
+      this.isConversationLocked(conv.id),
+      this.getLiveChatSessions(),
+    ]);
+
+    return {
+      conversationId: conv.id,
+      isAdminChatEnabled: settings.isEnabled,
+      isLocked: lockInfo.isLocked || !settings.isEnabled,
+      lockReason: !settings.isEnabled
+        ? 'SafnexBD অ্যাডমিন চ্যাট বর্তমানে বন্ধ রয়েছে। অনুগ্রহ করে পরবর্তীতে চেষ্টা করুন।'
+        : lockInfo.reason || null,
+      isLiveChat: Boolean(liveSessions[conv.id]?.isLive),
+      otherUser: {
+        id: adminAccount.id,
+        uniqueUserId: 'SafnexBD_Admin',
+        firstName: 'SafnexBD',
+        lastName: 'Admin',
+        avatarUrl: null,
+        isVerified: true,
+      },
+    };
+  }
+
+  /**
+   * Automatically send Welcome Message from "SafnexBD Admin" to a newly registered user
+   * when Admin Chat and Welcome Message are ON
+   */
+  async sendWelcomeMessageToNewUser(user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    uniqueUserId?: string;
+  }) {
+    try {
+      const settings = await this.getAdminChatSettings();
+      if (!settings.isEnabled || !settings.welcomeMessageEnabled) {
+        return null;
+      }
+
+      const supportConv = await this.getOrCreateAdminSupportConversation(user.id);
+      if (!supportConv?.conversationId || !supportConv.otherUser?.id) {
+        return null;
+      }
+
+      const firstName = (user.firstName || '').trim();
+      const lastName = (user.lastName || '').trim();
+      const fullName = `${firstName} ${lastName}`.trim();
+
+      const welcomeText = (settings.welcomeMessageTemplate || DEFAULT_ADMIN_CHAT_SETTINGS.welcomeMessageTemplate)
+        .replace(/\{First Name\}\s*\{Last Name\}/gi, fullName)
+        .replace(/\{First Name\}/gi, firstName)
+        .replace(/\{Last Name\}/gi, lastName)
+        .replace(/\{firstName\}/gi, firstName)
+        .replace(/\{lastName\}/gi, lastName);
+
+      const saved = await this.saveMessage({
+        conversationId: supportConv.conversationId,
+        senderId: supportConv.otherUser.id,
+        content: welcomeText,
+        messageType: MessageType.TEXT,
+        metadata: {
+          isWelcomeMessage: true,
+          isSafnexAdmin: true,
+          adminName: 'SafnexBD Admin',
+          sentAt: new Date().toISOString(),
+        },
+      });
+
+      return {
+        conversationId: supportConv.conversationId,
+        message: saved,
+      };
+    } catch (err) {
+      console.error('Failed to send welcome message to new user:', err);
+      return null;
+    }
+  }
 }
+
+export const DEFAULT_ADMIN_CHAT_SETTINGS = {
+  isEnabled: true,
+  welcomeMessageEnabled: true,
+  welcomeMessageTemplate: `🎉 **Welcome to SafnexBD, {First Name} {Last Name}!**
+
+আসসালামু আলাইকুম।
+**SafnexBD-এ আপনাকে আন্তরিকভাবে স্বাগতম।** ❤️
+
+আপনি এখন SafnexBD-এর একজন নতুন User। এখানে আপনি বিভিন্ন ধরনের কাজ, লেনদেন ও অনলাইন আয়ের সুযোগ সম্পর্কে জানতে পারবেন।
+
+### 🚀 SafnexBD-তে আপনি যা করতে পারবেন
+
+🔹 **Micro Job** — বিভিন্ন ছোট ছোট কাজ সম্পন্ন করে আয় করার সুযোগ।
+🔹 **Affiliate Program** — আপনার Affiliate Link শেয়ার করে কমিশন আয়ের সুযোগ।
+🔹 **Buy & Sell** — Product ও Service কেনাবেচা করতে পারবেন।
+🔹 **Secure Transaction** — নিরাপদভাবে অনলাইন লেনদেন করার সুবিধা।
+🔹 **Marketplace** — আপনার Product বা Service প্রচার ও বিক্রি করার সুযোগ।
+
+### 💰 Affiliate দিয়ে আয়ের সুযোগ
+
+আপনার বন্ধু, পরিচিতজন বা অন্যদের আপনার **Affiliate Link**-এর মাধ্যমে SafnexBD-তে নিয়ে আসুন।
+
+তারা আপনার Link ব্যবহার করে SafnexBD-তে লেনদেন করলে, সেই লেনদেন থেকে কোম্পানির অর্জিত Profit-এর **২০% আপনি কমিশন হিসেবে পাওয়ার সুযোগ পাবেন।**
+
+অর্থাৎ, আপনার Referral Network-এর কেউ লেনদেন করলে আপনি প্রতিটি লেনদেনের জন্য নিজে কাজ না করেও কমিশন পেতে পারেন।
+
+**আপনার Link → তাদের Transaction → Company Profit → আপনার 20% Commission 💰**
+
+আপনি তখন অনলাইনে না থাকলেও বা ঘুমিয়ে থাকলেও, আপনার Referral-এর মাধ্যমে যোগ্য লেনদেন হলে কমিশন জমা হতে পারে।
+আপনার Network যত বাড়বে, কমিশন আয়ের সম্ভাবনাও তত বাড়বে। 🚀
+
+### 📚 নতুন User হিসেবে কী করবেন?
+
+SafnexBD-এর বিভিন্ন Feature, নিয়ম, নতুন Update এবং কীভাবে কাজ করবেন—এসব বিস্তারিত জানতে নিয়মিত **Menu → Guides & Tutorials** সেকশনটি দেখুন।
+
+আপনার কোনো প্রশ্ন থাকলে, কোনো Feature বুঝতে সমস্যা হলে অথবা SafnexBD সম্পর্কে আরও কিছু জানতে চাইলে **আমাদের Chat-এ Message করুন।** 💬
+
+আমরা আপনাকে সাহায্য করার জন্য আছি।
+
+🎊 **আবারও SafnexBD পরিবারে আপনাকে স্বাগতম!**
+
+**শিখুন → কাজ করুন → Share করুন → আপনার Network তৈরি করুন → কমিশনের সুযোগ তৈরি করুন।**
+
+**— SafnexBD Team**`,
+};
 
 export const DEFAULT_CHAT_SAFETY_AND_TEMPLATES = {
   isEnabled: true,

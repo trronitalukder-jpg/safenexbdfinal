@@ -51,6 +51,7 @@ export default function SingleMicroJobPage() {
   const [submitError, setSubmitError] = useState('');
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [editingRejected, setEditingRejected] = useState(false);
 
   const isEnabled = settings.microJob?.enabled !== false;
 
@@ -133,6 +134,7 @@ export default function SingleMicroJobPage() {
         proofScreenshots: screenshots,
       });
       setSubmitSuccess(true);
+      setEditingRejected(false);
       fetchJobDetails();
     } catch (err: any) {
       console.error('Submit proof failed:', err);
@@ -344,27 +346,47 @@ export default function SingleMicroJobPage() {
             <span>{lang === 'bn' ? 'আমার পোস্ট করা কাজ দেখুন' : 'Go to My Posted Tasks'}</span>
           </Link>
         </div>
-      ) : job.mySubmission ? (
+      ) : job.mySubmission && !editingRejected ? (
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
             <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <span>{lang === 'bn' ? 'আপনার জমা দেওয়া প্রমাণ' : 'Your Submitted Proof'}</span>
             </h3>
-            <span
-              className={`text-xs font-black px-3 py-1 rounded-full border ${
-                job.mySubmission.status === 'APPROVED'
-                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-xs font-black px-3 py-1 rounded-full border ${
+                  job.mySubmission.status === 'APPROVED'
+                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                    : job.mySubmission.status === 'REJECTED'
+                    ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                    : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                }`}
+              >
+                {job.mySubmission.status === 'APPROVED'
+                  ? '✅ অনুমোদিত (টাকা ওয়ালেটে যোগ হয়েছে)'
                   : job.mySubmission.status === 'REJECTED'
-                  ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                  : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-              }`}
-            >
-              {job.mySubmission.status === 'APPROVED'
-                ? '✅ অনুমোদিত (টাকা ওয়ালেটে যোগ হয়েছে)'
-                : job.mySubmission.status === 'REJECTED'
-                ? '❌ প্রত্যাখ্যাত (Rejected)'
-                : '⏳ রিভিউ পেন্ডিং (Pending Approval)'}
-            </span>
+                  ? '❌ প্রত্যাখ্যাত (Rejected)'
+                  : '⏳ রিভিউ পেন্ডিং (Pending Approval)'}
+              </span>
+
+              {job.mySubmission.status === 'REJECTED' && !isSlotsFull && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProofText(job.mySubmission.proofText || '');
+                    setScreenshots(
+                      Array.isArray(job.mySubmission.proofScreenshots)
+                        ? job.mySubmission.proofScreenshots
+                        : [],
+                    );
+                    setEditingRejected(true);
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs transition shadow-2xs"
+                >
+                  {lang === 'bn' ? '✏️ এডিট ও পুনরায় সাবমিট করুন' : '✏️ Edit & Re-submit'}
+                </button>
+              )}
+            </div>
           </div>
 
           {job.mySubmission.rejectReason && (

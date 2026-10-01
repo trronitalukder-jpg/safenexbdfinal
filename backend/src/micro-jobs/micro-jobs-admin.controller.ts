@@ -33,18 +33,22 @@ export class MicroJobsAdminController {
   async getAdminStats() {
     const [
       totalJobs,
+      pendingJobs,
       activeJobs,
       completedJobs,
       cancelledJobs,
+      rejectedJobs,
       totalSubmissions,
       pendingSubmissions,
       approvedSubmissions,
       rejectedSubmissions,
     ] = await Promise.all([
       this.prisma.microJob.count(),
+      this.prisma.microJob.count({ where: { status: 'PENDING' } }),
       this.prisma.microJob.count({ where: { status: 'ACTIVE' } }),
       this.prisma.microJob.count({ where: { status: 'COMPLETED' } }),
       this.prisma.microJob.count({ where: { status: 'CANCELLED' } }),
+      this.prisma.microJob.count({ where: { status: 'REJECTED' } }),
       this.prisma.microJobSubmission.count(),
       this.prisma.microJobSubmission.count({ where: { status: 'SUBMITTED' } }),
       this.prisma.microJobSubmission.count({ where: { status: 'APPROVED' } }),
@@ -53,9 +57,11 @@ export class MicroJobsAdminController {
 
     return {
       totalJobs,
+      pendingJobs,
       activeJobs,
       completedJobs,
       cancelledJobs,
+      rejectedJobs,
       totalSubmissions,
       pendingSubmissions,
       approvedSubmissions,
@@ -160,6 +166,18 @@ export class MicroJobsAdminController {
   }
 
   /**
+   * Admin: Review (Approve / Reject with reason) a MicroJob post
+   */
+  @Post(':id/review')
+  async adminReviewJob(
+    @Param('id') id: string,
+    @CurrentUser('id') adminId: string,
+    @Body() dto: { action: 'APPROVE' | 'REJECT'; rejectReason?: string },
+  ) {
+    return this.microJobsService.adminReviewJob(id, adminId || 'admin', dto);
+  }
+
+  /**
    * Admin: Cancel a job and refund employer
    */
   @Post(':id/cancel')
@@ -182,15 +200,15 @@ export class MicroJobsAdminController {
   }
 
   /**
-   * Admin: Update job status explicitly (ACTIVE, PAUSED, CANCELLED, COMPLETED)
+   * Admin: Update job status explicitly (PENDING, ACTIVE, PAUSED, CANCELLED, COMPLETED, REJECTED)
    */
   @Patch(':id/status')
   async adminUpdateJobStatus(
     @Param('id') id: string,
-    @Body() body: { status: any },
+    @Body() body: { status: any; rejectReason?: string },
     @CurrentUser('id') adminId: string,
   ) {
-    return this.microJobsService.adminUpdateJobStatus(id, body.status, adminId || 'admin');
+    return this.microJobsService.adminUpdateJobStatus(id, body.status, adminId || 'admin', body.rejectReason);
   }
 
   /**

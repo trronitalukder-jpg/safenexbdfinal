@@ -49,9 +49,11 @@ export default function AdminMicroJobsPage() {
   // Stats
   const [stats, setStats] = useState<any>({
     totalJobs: 0,
+    pendingJobs: 0,
     activeJobs: 0,
     completedJobs: 0,
     cancelledJobs: 0,
+    rejectedJobs: 0,
     totalSubmissions: 0,
     pendingSubmissions: 0,
     approvedSubmissions: 0,
@@ -67,6 +69,9 @@ export default function AdminMicroJobsPage() {
   const [jobPage, setJobPage] = useState(1);
   const [jobTotalPages, setJobTotalPages] = useState(1);
   const [cancellingJobId, setCancellingJobId] = useState<string | null>(null);
+  const [reviewingJobId, setReviewingJobId] = useState<string | null>(null);
+  const [rejectModalJob, setRejectModalJob] = useState<any | null>(null);
+  const [jobRejectReason, setJobRejectReason] = useState('');
 
   // Tab 2: Submissions Queue
   const [queueSubmissions, setQueueSubmissions] = useState<any[]>([]);
@@ -96,6 +101,12 @@ export default function AdminMicroJobsPage() {
   // Auto approve action
   const [triggeringCron, setTriggeringCron] = useState(false);
   const [togglingMaster, setTogglingMaster] = useState(false);
+
+  const notifySidebarRefresh = () => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('admin-sidebar-counts-refresh'));
+    }
+  };
 
   // Load Stats
   const fetchStats = async () => {
@@ -225,6 +236,7 @@ export default function AdminMicroJobsPage() {
       const data = unwrap(res);
       alert(`অটো-অ্যাপ্রুভাল সম্পন্ন হয়েছে! মোট ${data?.processedCount || 0} টি কাজ অটো-অ্যাপ্রুভ করা হয়েছে।`);
       fetchStats();
+      notifySidebarRefresh();
       if (activeTab === 'queue') fetchQueue();
       if (activeTab === 'jobs') fetchJobs();
     } catch (err: any) {
@@ -252,6 +264,31 @@ export default function AdminMicroJobsPage() {
     }
   };
 
+  // Admin Review Job Post (Approve / Reject with reason)
+  const handleAdminReviewJob = async (jobId: string, action: 'APPROVE' | 'REJECT', reason?: string) => {
+    setReviewingJobId(jobId);
+    try {
+      await api.post(`/admin/micro-jobs/${jobId}/review`, {
+        action,
+        rejectReason: reason,
+      });
+      setRejectModalJob(null);
+      setJobRejectReason('');
+      await Promise.all([fetchJobs(), fetchStats()]);
+      notifySidebarRefresh();
+      alert(
+        action === 'APPROVE'
+          ? 'মাইক্রো জব পোস্টটি সফলভাবে অনুমোদন (Approve) করা হয়েছে এবং এখন লাইভ আছে!'
+          : 'মাইক্রো জব পোস্টটি কারণসহ ডিক্লাইন (Reject) করা হয়েছে। ইউজার তার প্যানেল থেকে এডিট করে পুনরায় সাবমিট করতে পারবেন।',
+      );
+    } catch (err: any) {
+      console.error('Job review failed:', err);
+      alert(err?.response?.data?.message || 'জব রিভিউ সম্পন্ন করা যায়নি');
+    } finally {
+      setReviewingJobId(null);
+    }
+  };
+
   // Admin Review Submission (Approve / Reject)
   const handleAdminReview = async (submissionId: string, action: 'APPROVE' | 'REJECT', reason?: string) => {
     setReviewingId(submissionId);
@@ -270,6 +307,7 @@ export default function AdminMicroJobsPage() {
       setRejectModalSub(null);
       setRejectReason('');
       fetchStats();
+      notifySidebarRefresh();
       alert(action === 'APPROVE' ? 'সাবমিশনটি অনুমোদন করা হয়েছে এবং কর্মীর ওয়ালেটে টাকা যোগ হয়েছে!' : 'সাবমিশনটি বাতিল করা হয়েছে!');
     } catch (err: any) {
       console.error('Review failed:', err);
@@ -292,6 +330,7 @@ export default function AdminMicroJobsPage() {
       alert(`কাজটি বাতিল করা হয়েছে! নিয়োগকর্তাকে ৳${Number(data?.refundAmount || 0).toFixed(2)} টাকা ফেরত দেওয়া হয়েছে।`);
       fetchJobs();
       fetchStats();
+      notifySidebarRefresh();
     } catch (err: any) {
       console.error('Cancel job failed:', err);
       alert(err?.response?.data?.message || 'কাজ বাতিল করা যায়নি');
@@ -503,7 +542,7 @@ export default function AdminMicroJobsPage() {
       {/* ========================================================================= */}
       {/* 3. SUMMARY METRICS CARDS                                                  */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {/* Total Jobs */}
         <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
           <div className="flex items-center justify-between">
@@ -517,6 +556,32 @@ export default function AdminMicroJobsPage() {
           </div>
           <span className="text-[11px] text-slate-400 mt-1 block">
             {stats.activeJobs} টি চলমান • {stats.completedJobs} টি সমাপ্ত
+          </span>
+        </div>
+
+        {/* Pending Job Post Approval */}
+        <div
+          onClick={() => {
+            setActiveTab('jobs');
+            setJobStatusFilter('PENDING');
+            setJobPage(1);
+          }}
+          className="cursor-pointer p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs hover:border-rose-400 transition"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-rose-600 dark:text-rose-400">পেন্ডিং জব অনুমোদন</span>
+            <div className="p-2 rounded-xl bg-rose-500/15 text-rose-600 relative">
+              <Briefcase className="w-4 h-4" />
+              {stats.pendingJobs > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
+              )}
+            </div>
+          </div>
+          <div className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-2">
+            {stats.pendingJobs || 0}
+          </div>
+          <span className="text-[11px] text-slate-400 mt-1 block">
+            জব অ্যাপ্রুভ করতে ক্লিক করুন →
           </span>
         </div>
 
@@ -590,6 +655,11 @@ export default function AdminMicroJobsPage() {
         >
           <Briefcase className="w-4 h-4" />
           <span>সকল মাইক্রো জব ({stats.totalJobs})</span>
+          {stats.pendingJobs > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full font-black text-[10px] bg-rose-500 text-white animate-pulse">
+              {stats.pendingJobs} পেন্ডিং
+            </span>
+          )}
         </button>
 
         <button
@@ -633,7 +703,7 @@ export default function AdminMicroJobsPage() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             {/* Status Filter Pills */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              {['ALL', 'ACTIVE', 'PAUSED', 'COMPLETED', 'CANCELLED'].map((st) => (
+              {['ALL', 'PENDING', 'ACTIVE', 'REJECTED', 'PAUSED', 'COMPLETED', 'CANCELLED'].map((st) => (
                 <button
                   key={st}
                   type="button"
@@ -641,21 +711,32 @@ export default function AdminMicroJobsPage() {
                     setJobStatusFilter(st);
                     setJobPage(1);
                   }}
-                  className={`px-3 py-1.5 rounded-xl font-bold text-xs transition ${
+                  className={`px-3 py-1.5 rounded-xl font-bold text-xs transition flex items-center gap-1.5 ${
                     jobStatusFilter === st
                       ? 'bg-amber-500 text-slate-950 shadow-2xs'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
                   }`}
                 >
-                  {st === 'ALL'
-                    ? 'সব জব'
-                    : st === 'ACTIVE'
-                    ? 'চলমান (Active)'
-                    : st === 'PAUSED'
-                    ? 'নিষ্ক্রিয় (Paused)'
-                    : st === 'COMPLETED'
-                    ? 'সম্পন্ন'
-                    : 'বাতিল'}
+                  <span>
+                    {st === 'ALL'
+                      ? 'সব জব'
+                      : st === 'PENDING'
+                      ? 'পেন্ডিং অনুমোদন'
+                      : st === 'ACTIVE'
+                      ? 'চলমান (Active)'
+                      : st === 'REJECTED'
+                      ? 'রিজেক্টেড'
+                      : st === 'PAUSED'
+                      ? 'নিষ্ক্রিয় (Paused)'
+                      : st === 'COMPLETED'
+                      ? 'সম্পন্ন'
+                      : 'বাতিল'}
+                  </span>
+                  {st === 'PENDING' && stats.pendingJobs > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-black">
+                      {stats.pendingJobs}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -721,6 +802,11 @@ export default function AdminMicroJobsPage() {
                             <span>•</span>
                             <span className="font-mono text-[10px]">{job.id.slice(-6)}</span>
                           </div>
+                          {job.rejectReason && job.status === 'REJECTED' && (
+                            <div className="mt-1.5 p-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[10px] text-rose-500">
+                              <span className="font-bold">রিজেক্টের কারণ:</span> {job.rejectReason}
+                            </div>
+                          )}
                         </td>
 
                         <td className="py-3.5 px-3">
@@ -782,6 +868,10 @@ export default function AdminMicroJobsPage() {
                             className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
                               job.status === 'ACTIVE'
                                 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                : job.status === 'PENDING'
+                                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 animate-pulse'
+                                : job.status === 'REJECTED'
+                                ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
                                 : job.status === 'PAUSED'
                                 ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
                                 : job.status === 'COMPLETED'
@@ -791,6 +881,10 @@ export default function AdminMicroJobsPage() {
                           >
                             {job.status === 'ACTIVE'
                               ? 'চলমান'
+                              : job.status === 'PENDING'
+                              ? 'পেন্ডিং অনুমোদন'
+                              : job.status === 'REJECTED'
+                              ? 'রিজেক্টেড'
                               : job.status === 'PAUSED'
                               ? 'নিষ্ক্রিয়'
                               : job.status === 'COMPLETED'
@@ -804,7 +898,38 @@ export default function AdminMicroJobsPage() {
                         </td>
 
                         <td className="py-3.5 px-3 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                            {/* Approve Job Button (For PENDING or REJECTED jobs) */}
+                            {(job.status === 'PENDING' || job.status === 'REJECTED') && (
+                              <button
+                                type="button"
+                                onClick={() => handleAdminReviewJob(job.id, 'APPROVE')}
+                                disabled={reviewingJobId === job.id}
+                                className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] flex items-center gap-1 transition shadow-2xs"
+                                title="জব অনুমোদন করুন (Approve Job)"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Approve</span>
+                              </button>
+                            )}
+
+                            {/* Reject Job with Reason Button (For PENDING or ACTIVE jobs) */}
+                            {(job.status === 'PENDING' || job.status === 'ACTIVE') && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRejectModalJob(job);
+                                  setJobRejectReason(job.rejectReason || '');
+                                }}
+                                disabled={reviewingJobId === job.id}
+                                className="px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-500/20 font-bold text-[11px] flex items-center gap-1 transition"
+                                title="কারণসহ জব রিজেক্ট করুন (Decline with Reason)"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                                <span>Decline</span>
+                              </button>
+                            )}
+
                             {/* View Submissions */}
                             <button
                               type="button"
@@ -956,147 +1081,162 @@ export default function AdminMicroJobsPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {queueSubmissions.map((sub) => (
-                <div
-                  key={sub.id}
-                  className="p-4 sm:p-5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 space-y-3"
-                >
-                  {/* Header Row */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/60 dark:border-slate-700/60 pb-3">
-                    <div className="flex items-center gap-3">
-                      {sub.worker?.avatarUrl ? (
-                        <img
-                          src={getImageUrl(sub.worker.avatarUrl)}
-                          alt=""
-                          className="w-9 h-9 rounded-full object-cover border border-amber-500/30"
-                        />
-                      ) : (
-                        <div className="w-9 h-9 rounded-full bg-amber-500/20 text-amber-600 font-black text-xs flex items-center justify-center">
-                          {sub.worker?.firstName?.charAt(0) || 'W'}
-                        </div>
-                      )}
-                      <div>
-                        <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                          <span>{sub.worker?.firstName} {sub.worker?.lastName}</span>
-                          <span className="text-[10px] font-mono text-sky-600 dark:text-sky-400">@{sub.worker?.uniqueUserId}</span>
-                        </div>
-                        <div className="text-[11px] text-slate-400">
-                          সাবমিট করেছে: {new Date(sub.createdAt).toLocaleString()}
+              {queueSubmissions.map((sub) => {
+                const subImages = Array.isArray(sub.proofScreenshots)
+                  ? sub.proofScreenshots
+                  : Array.isArray(sub.screenshots)
+                  ? sub.screenshots
+                  : [];
+
+                return (
+                  <div
+                    key={sub.id}
+                    className="p-4 sm:p-5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 space-y-3"
+                  >
+                    {/* Header Row */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/60 dark:border-slate-700/60 pb-3">
+                      <div className="flex items-center gap-3">
+                        {sub.worker?.avatarUrl ? (
+                          <img
+                            src={getImageUrl(sub.worker.avatarUrl)}
+                            alt=""
+                            className="w-9 h-9 rounded-full object-cover border border-amber-500/30"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-amber-500/20 text-amber-600 font-black text-xs flex items-center justify-center">
+                            {sub.worker?.firstName?.charAt(0) || 'W'}
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <span>{sub.worker?.firstName} {sub.worker?.lastName}</span>
+                            <span className="text-[10px] font-mono text-sky-600 dark:text-sky-400">@{sub.worker?.uniqueUserId}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400">
+                            সাবমিট করেছে: {new Date(sub.createdAt).toLocaleString()}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2.5">
-                      <div className="text-right">
-                        <span className="text-[10px] text-slate-400 block font-semibold">কাজের পারিশ্রমিক</span>
-                        <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
-                          ৳ {Number(sub.job?.rewardPerWorker || 0).toFixed(2)}
+                      <div className="flex items-center gap-2.5">
+                        <div className="text-right">
+                          <span className="text-[10px] text-slate-400 block font-semibold">কাজের পারিশ্রমিক</span>
+                          <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                            ৳ {Number(sub.job?.rewardPerWorker || 0).toFixed(2)}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${
+                            sub.status === 'SUBMITTED'
+                              ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                              : sub.status === 'APPROVED'
+                              ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                              : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                          }`}
+                        >
+                          {sub.status === 'SUBMITTED' ? 'পেন্ডিং রিভিউ' : sub.status === 'APPROVED' ? 'অনুমোদিত' : 'বাতিল'}
                         </span>
                       </div>
-                      <span
-                        className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${
-                          sub.status === 'SUBMITTED'
-                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                            : sub.status === 'APPROVED'
-                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                            : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                        }`}
-                      >
-                        {sub.status === 'SUBMITTED' ? 'পেন্ডিং রিভিউ' : sub.status === 'APPROVED' ? 'অনুমোদিত' : 'বাতিল'}
-                      </span>
                     </div>
-                  </div>
 
-                  {/* Task details */}
-                  <div className="space-y-1.5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                      কাজের শিরোনাম ও আইডি
-                    </span>
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                        {sub.job?.title}
-                      </h4>
-                      <Link
-                        href={`/micro-jobs/${sub.job?.id}`}
-                        target="_blank"
-                        className="text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1"
-                      >
-                        <span>কাজটি দেখুন</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </Link>
-                    </div>
-                  </div>
-
-                  {/* Proof Text */}
-                  {sub.proofText && (
-                    <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/60 text-xs text-slate-700 dark:text-slate-300">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                        কর্মীর দাখিলকৃত প্রমাণ / নোট:
-                      </span>
-                      <p className="whitespace-pre-wrap">{sub.proofText}</p>
-                    </div>
-                  )}
-
-                  {/* Screenshots gallery */}
-                  {Array.isArray(sub.screenshots) && sub.screenshots.length > 0 && (
+                    {/* Task details */}
                     <div className="space-y-1.5">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                        স্ক্রিনশট প্রমাণসমূহ (জুম করতে ক্লিক করুন):
+                        কাজের শিরোনাম ও আইডি
                       </span>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {sub.screenshots.map((imgUrl: string, idx: number) => (
-                          <div
-                            key={idx}
-                            onClick={() => setZoomedImage(getImageUrl(imgUrl))}
-                            className="relative group w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 cursor-pointer shadow-2xs hover:border-amber-400 transition"
-                          >
-                            <img
-                              src={getImageUrl(imgUrl)}
-                              alt="Proof screenshot"
-                              className="w-full h-full object-cover group-hover:scale-105 transition"
-                            />
-                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
-                              <Maximize2 className="w-4 h-4" />
-                            </div>
-                          </div>
-                        ))}
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          {sub.job?.title}
+                        </h4>
+                        <Link
+                          href={`/micro-jobs/${sub.job?.id}`}
+                          target="_blank"
+                          className="text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1"
+                        >
+                          <span>কাজটি দেখুন</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </Link>
                       </div>
                     </div>
-                  )}
 
-                  {/* Action Buttons for Pending */}
-                  {sub.status === 'SUBMITTED' && (
-                    <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRejectModalSub(sub);
-                          setRejectReason('');
-                        }}
-                        disabled={reviewingId === sub.id}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 border border-rose-200 dark:border-rose-900/50 text-xs font-bold transition"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                        <span>বাতিল করুন (Reject)</span>
-                      </button>
+                    {/* Proof Text */}
+                    {sub.proofText && (
+                      <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/60 text-xs text-slate-700 dark:text-slate-300">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                          কর্মীর দাখিলকৃত প্রমাণ / নোট:
+                        </span>
+                        <p className="whitespace-pre-wrap">{sub.proofText}</p>
+                      </div>
+                    )}
 
-                      <button
-                        type="button"
-                        onClick={() => handleAdminReview(sub.id, 'APPROVE')}
-                        disabled={reviewingId === sub.id}
-                        className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-xs"
-                      >
-                        {reviewingId === sub.id ? (
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Check className="w-3.5 h-3.5" />
-                        )}
-                        <span>অনুমোদন ও টাকা রিলিজ (Approve)</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    {/* Reject Reason if Rejected */}
+                    {sub.rejectReason && sub.status === 'REJECTED' && (
+                      <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-600 dark:text-rose-400">
+                        <span className="font-bold">বাতিলের কারণ:</span> {sub.rejectReason}
+                      </div>
+                    )}
+
+                    {/* Screenshots gallery */}
+                    {subImages.length > 0 && (
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          স্ক্রিনশট প্রমাণসমূহ (জুম করতে ক্লিক করুন):
+                        </span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {subImages.map((imgUrl: string, idx: number) => (
+                            <div
+                              key={idx}
+                              onClick={() => setZoomedImage(getImageUrl(imgUrl))}
+                              className="relative group w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 cursor-pointer shadow-2xs hover:border-amber-400 transition"
+                            >
+                              <img
+                                src={getImageUrl(imgUrl)}
+                                alt="Proof screenshot"
+                                className="w-full h-full object-cover group-hover:scale-105 transition"
+                              />
+                              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
+                                <Maximize2 className="w-4 h-4" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action Buttons for Pending */}
+                    {sub.status === 'SUBMITTED' && (
+                      <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRejectModalSub(sub);
+                            setRejectReason('');
+                          }}
+                          disabled={reviewingId === sub.id}
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 border border-rose-200 dark:border-rose-900/50 text-xs font-bold transition"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>বাতিল করুন (Decline)</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleAdminReview(sub.id, 'APPROVE')}
+                          disabled={reviewingId === sub.id}
+                          className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-xs"
+                        >
+                          {reviewingId === sub.id ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5" />
+                          )}
+                          <span>অনুমোদন ও টাকা রিলিজ (Approve)</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -1231,96 +1371,104 @@ export default function AdminMicroJobsPage() {
                   <p>এই কাজের জন্য এখনো কোনো প্রমাণ জমা পড়েনি।</p>
                 </div>
               ) : (
-                jobModalSubmissions.map((sub) => (
-                  <div
-                    key={sub.id}
-                    className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-3"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        {sub.worker?.avatarUrl ? (
-                          <img
-                            src={getImageUrl(sub.worker.avatarUrl)}
-                            alt=""
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-xs font-bold flex items-center justify-center">
-                            {sub.worker?.firstName?.charAt(0) || 'W'}
-                          </div>
-                        )}
-                        <div>
-                          <div className="font-bold text-xs text-slate-900 dark:text-white">
-                            {sub.worker?.firstName} {sub.worker?.lastName}
-                          </div>
-                          <div className="text-[10px] font-mono text-sky-600 dark:text-sky-400">
-                            @{sub.worker?.uniqueUserId}
-                          </div>
-                        </div>
-                      </div>
+                jobModalSubmissions.map((sub) => {
+                  const subModalImages = Array.isArray(sub.proofScreenshots)
+                    ? sub.proofScreenshots
+                    : Array.isArray(sub.screenshots)
+                    ? sub.screenshots
+                    : [];
 
-                      <span
-                        className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${
-                          sub.status === 'SUBMITTED'
-                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                            : sub.status === 'APPROVED'
-                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                            : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                        }`}
-                      >
-                        {sub.status === 'SUBMITTED' ? 'পেন্ডিং' : sub.status === 'APPROVED' ? 'অনুমোদিত' : 'বাতিল'}
-                      </span>
-                    </div>
-
-                    {sub.proofText && (
-                      <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs">
-                        <span className="text-[10px] font-bold text-slate-400 block mb-1">প্রমাণ বিবরণ:</span>
-                        <p className="whitespace-pre-wrap">{sub.proofText}</p>
-                      </div>
-                    )}
-
-                    {Array.isArray(sub.screenshots) && sub.screenshots.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {sub.screenshots.map((img: string, i: number) => (
-                          <div
-                            key={i}
-                            onClick={() => setZoomedImage(getImageUrl(img))}
-                            className="relative group w-20 h-20 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 cursor-pointer"
-                          >
-                            <img src={getImageUrl(img)} alt="" className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white">
-                              <Maximize2 className="w-4 h-4" />
+                  return (
+                    <div
+                      key={sub.id}
+                      className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-3"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          {sub.worker?.avatarUrl ? (
+                            <img
+                              src={getImageUrl(sub.worker.avatarUrl)}
+                              alt=""
+                              className="w-8 h-8 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-xs font-bold flex items-center justify-center">
+                              {sub.worker?.firstName?.charAt(0) || 'W'}
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-bold text-xs text-slate-900 dark:text-white">
+                              {sub.worker?.firstName} {sub.worker?.lastName}
+                            </div>
+                            <div className="text-[10px] font-mono text-sky-600 dark:text-sky-400">
+                              @{sub.worker?.uniqueUserId}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        </div>
 
-                    {sub.status === 'SUBMITTED' && (
-                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setRejectModalSub(sub);
-                            setRejectReason('');
-                          }}
-                          disabled={reviewingId === sub.id}
-                          className="px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 text-xs font-bold"
+                        <span
+                          className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${
+                            sub.status === 'SUBMITTED'
+                              ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                              : sub.status === 'APPROVED'
+                              ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                              : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                          }`}
                         >
-                          বাতিল
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleAdminReview(sub.id, 'APPROVE')}
-                          disabled={reviewingId === sub.id}
-                          className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-xs"
-                        >
-                          অনুমোদন
-                        </button>
+                          {sub.status === 'SUBMITTED' ? 'পেন্ডিং' : sub.status === 'APPROVED' ? 'অনুমোদিত' : 'বাতিল'}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                ))
+
+                      {sub.proofText && (
+                        <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs">
+                          <span className="text-[10px] font-bold text-slate-400 block mb-1">প্রমাণ বিবরণ:</span>
+                          <p className="whitespace-pre-wrap">{sub.proofText}</p>
+                        </div>
+                      )}
+
+                      {subModalImages.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {subModalImages.map((img: string, i: number) => (
+                            <div
+                              key={i}
+                              onClick={() => setZoomedImage(getImageUrl(img))}
+                              className="relative group w-20 h-20 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 cursor-pointer"
+                            >
+                              <img src={getImageUrl(img)} alt="" className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white">
+                                <Maximize2 className="w-4 h-4" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {sub.status === 'SUBMITTED' && (
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRejectModalSub(sub);
+                              setRejectReason('');
+                            }}
+                            disabled={reviewingId === sub.id}
+                            className="px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 text-xs font-bold"
+                          >
+                            বাতিল
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAdminReview(sub.id, 'APPROVE')}
+                            disabled={reviewingId === sub.id}
+                            className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-xs"
+                          >
+                            অনুমোদন
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
@@ -1335,12 +1483,15 @@ export default function AdminMicroJobsPage() {
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                সাবমিশন বাতিলের কারণ লিখুন
+                কাজের প্রুফ বাতিলের কারণ লিখুন (Decline Reason)
               </h3>
               <button onClick={() => setRejectModalSub(null)} className="p-1 text-slate-400 hover:text-slate-600">
                 <X className="w-4 h-4" />
               </button>
             </div>
+            <p className="text-xs text-slate-500">
+              কেন এই প্রুফটি বাতিল করা হলো তা লিখুন। ইউজার তার প্যানেল থেকে কারণটি দেখতে পারবে এবং সংশোধন করে পুনরায় সাবমিট করতে পারবে।
+            </p>
             <textarea
               rows={3}
               value={rejectReason}
@@ -1354,7 +1505,7 @@ export default function AdminMicroJobsPage() {
                 onClick={() => setRejectModalSub(null)}
                 className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs"
               >
-                বাতিল
+                ফিরে যান
               </button>
               <button
                 type="button"
@@ -1362,7 +1513,52 @@ export default function AdminMicroJobsPage() {
                 disabled={reviewingId === rejectModalSub.id}
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition"
               >
-                বাতিল নিশ্চিত করুন
+                প্রুফ বাতিল নিশ্চিত করুন
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: REJECT JOB POST REASON                                             */}
+      {/* ========================================================================= */}
+      {rejectModalJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                মাইক্রো জব রিজেক্ট করার কারণ লিখুন
+              </h3>
+              <button onClick={() => setRejectModalJob(null)} className="p-1 text-slate-400 hover:text-slate-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-500">
+              জব: <span className="font-bold text-slate-800 dark:text-slate-200">{rejectModalJob.title}</span>। কেন রিজেক্ট করা হলো তা লিখে দিন, যাতে ইউজার এডিট করে পুনরায় সাবমিট করতে পারে।
+            </p>
+            <textarea
+              rows={3}
+              value={jobRejectReason}
+              onChange={(e) => setJobRejectReason(e.target.value)}
+              placeholder="যেমন: কাজের নির্দেশনা স্পষ্ট নয় অথবা লিংক কাজ করছে না..."
+              className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500"
+            />
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setRejectModalJob(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs"
+              >
+                ফিরে যান
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAdminReviewJob(rejectModalJob.id, 'REJECT', jobRejectReason)}
+                disabled={reviewingJobId === rejectModalJob.id}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition"
+              >
+                জব রিজেক্ট নিশ্চিত করুন
               </button>
             </div>
           </div>

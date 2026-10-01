@@ -162,7 +162,7 @@ export class MicroJobsService {
         },
       });
 
-      // Create MicroJob
+      // Create MicroJob (starts in PENDING status until Admin approves)
       const job = await tx.microJob.create({
         data: {
           employerId,
@@ -175,7 +175,7 @@ export class MicroJobsService {
           totalWorkersNeeded: dto.totalWorkersNeeded,
           totalBudget: workerBudget,
           platformFee,
-          status: 'ACTIVE',
+          status: 'PENDING',
           isPinned,
           pinnedUntil: isPinned ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : null,
           minKycRequired: Boolean(dto.minKycRequired),
@@ -370,6 +370,9 @@ export class MicroJobsService {
     });
 
     if (existing) {
+      if (existing.status === 'REJECTED') {
+        return this.resubmitSubmission(existing.id, workerId, dto);
+      }
       throw new BadRequestException('আপনি ইতোমধ্যে এই কাজের প্রমাণ জমা দিয়েছেন');
     }
 
@@ -762,7 +765,7 @@ export class MicroJobsService {
 
     return this.prisma.$transaction(async (tx) => {
       let refundAmount = 0;
-      if ((job.status === 'ACTIVE' || job.status === 'PAUSED') && remainingSlots > 0) {
+      if ((job.status === 'ACTIVE' || job.status === 'PAUSED' || job.status === 'PENDING' || job.status === 'REJECTED') && remainingSlots > 0) {
         const unitReward = Number(job.rewardPerWorker);
         const workerBudgetRefund = remainingSlots * unitReward;
         const totalBudget = Number(job.totalBudget);
@@ -818,7 +821,7 @@ export class MicroJobsService {
   }
 
   /**
-   * Admin permanently deletes any job (refunds remaining slots if active/paused)
+   * Admin permanently deletes any job (refunds remaining slots if active/paused/pending/rejected)
    */
   async adminDeleteJob(jobId: string, adminId: string) {
     const job = await this.prisma.microJob.findUnique({
@@ -833,7 +836,7 @@ export class MicroJobsService {
 
     return this.prisma.$transaction(async (tx) => {
       let refundAmount = 0;
-      if ((job.status === 'ACTIVE' || job.status === 'PAUSED') && remainingSlots > 0) {
+      if ((job.status === 'ACTIVE' || job.status === 'PAUSED' || job.status === 'PENDING' || job.status === 'REJECTED') && remainingSlots > 0) {
         const unitReward = Number(job.rewardPerWorker);
         const workerBudgetRefund = remainingSlots * unitReward;
         const totalBudget = Number(job.totalBudget);
@@ -889,9 +892,9 @@ export class MicroJobsService {
   }
 
   /**
-   * Admin updates job status (ACTIVE, PAUSED, CANCELLED, COMPLETED)
+   * Admin updates job status (PENDING, ACTIVE, PAUSED, CANCELLED, COMPLETED, REJECTED)
    */
-  async adminUpdateJobStatus(jobId: string, status: any, adminId: string) {
+  async adminUpdateJobStatus(jobId: string, status: any, adminId: string, rejectReason?: string) {
     const job = await this.prisma.microJob.findUnique({
       where: { id: jobId },
     });
@@ -904,15 +907,187 @@ export class MicroJobsService {
       return this.adminCancelJob(jobId, adminId);
     }
 
+    const data: any = { status };
+    if (status === 'ACTIVE') {
+      data.rejectReason = null;
+    } else if (status === 'REJECTED') {
+      data.rejectReason =
+        rejectReason?.trim() ||
+        'অ্যাডমিন কর্তৃক জব পোস্টটি রিজেক্ট করা হয়েছে। অনুগ্রহ করে নির্দেশনা অনুযায়ী সংশোধন করে পুনরায় সাবমিট করুন।';
+    }
+
     return this.prisma.microJob.update({
       where: { id: jobId },
-      data: { status },
+      data,
       include: {
         category: true,
         employer: {
           select: { id: true, firstName: true, lastName: true, uniqueUserId: true },
         },
       },
+    });
+  }
+
+  /**
+   * Admin reviews a micro job post (APPROVE -> ACTIVE, REJECT -> REJECTED with rejectReason)
+   */
+  async adminReviewJob(
+    jobId: string,
+    adminId: string,
+    dto: { action: 'APPROVE' | 'REJECT'; rejectReason?: string },
+  ) {
+    const job = await this.prisma.microJob.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      throw new NotFoundException('কাজটি খুঁজে পাওয়া যায়নি');
+    }
+
+    if (dto.action === 'APPROVE') {
+      return this.prisma.microJob.update({
+        where: { id: jobId },
+        data: {
+          status: 'ACTIVE',
+          rejectReason: null,
+        },
+        include: {
+          category: true,
+          employer: {
+            select: { id: true, firstName: true, lastName: true, uniqueUserId: true },
+          },
+        },
+      });
+    } else {
+      const reason =
+        dto.rejectReason?.trim() ||
+        'অ্যাডমিন কর্তৃক জব পোস্টটি রিজেক্ট করা হয়েছে। অনুগ্রহ করে নির্দেশনা অনুযায়ী সংশোধন করে পুনরায় সাবমিট করুন।';
+      return this.prisma.microJob.update({
+        where: { id: jobId },
+        data: {
+          status: 'REJECTED',
+          rejectReason: reason,
+        },
+        include: {
+          category: true,
+          employer: {
+            select: { id: true, firstName: true, lastName: true, uniqueUserId: true },
+          },
+        },
+      });
+    }
+  }
+
+  /**
+   * Employer edits & re-submits a REJECTED or PENDING micro job for Admin approval
+   */
+  async resubmitJob(
+    jobId: string,
+    employerId: string,
+    dto: {
+      title?: string;
+      description?: string;
+      categoryId?: string;
+      steps?: string[];
+      proofRequirements?: string[];
+    },
+  ) {
+    const job = await this.prisma.microJob.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      throw new NotFoundException('কাজটি খুঁজে পাওয়া যায়নি');
+    }
+
+    if (job.employerId !== employerId) {
+      throw new ForbiddenException('এই কাজটি এডিট করার অনুমতি আপনার নেই');
+    }
+
+    if (job.status !== 'REJECTED' && job.status !== 'PENDING') {
+      throw new BadRequestException('শুধুমাত্র পেন্ডিং বা রিজেক্ট হওয়া কাজ এডিট ও পুনরায় সাবমিট করা যাবে');
+    }
+
+    const updateData: any = {
+      status: 'PENDING',
+      rejectReason: null,
+    };
+
+    if (dto.title?.trim()) updateData.title = dto.title.trim();
+    if (dto.description?.trim()) updateData.description = dto.description.trim();
+    if (dto.categoryId) updateData.categoryId = dto.categoryId;
+    if (Array.isArray(dto.steps)) updateData.steps = dto.steps.filter((s) => s && s.trim());
+    if (Array.isArray(dto.proofRequirements)) {
+      updateData.proofRequirements = dto.proofRequirements.filter((p) => p && p.trim());
+    }
+
+    return this.prisma.microJob.update({
+      where: { id: jobId },
+      data: updateData,
+      include: {
+        category: true,
+      },
+    });
+  }
+
+  /**
+   * Worker edits & re-submits a REJECTED (or SUBMITTED) task submission
+   */
+  async resubmitSubmission(submissionId: string, workerId: string, dto: SubmitMicroJobDto) {
+    const submission = await this.prisma.microJobSubmission.findUnique({
+      where: { id: submissionId },
+      include: {
+        job: true,
+      },
+    });
+
+    if (!submission) {
+      throw new NotFoundException('সাবমিশনটি খুঁজে পাওয়া যায়নি');
+    }
+
+    if (submission.workerId !== workerId) {
+      throw new ForbiddenException('এই সাবমিশনটি এডিট করার অনুমতি আপনার নেই');
+    }
+
+    if (submission.status !== 'REJECTED' && submission.status !== 'SUBMITTED') {
+      throw new BadRequestException('শুধুমাত্র রিজেক্ট বা পেন্ডিং সাবমিশন পুনরায় সাবমিট করা যাবে');
+    }
+
+    if (submission.job.status !== 'ACTIVE') {
+      throw new BadRequestException('এই কাজটি বর্তমানে সক্রিয় নেই বা সম্পন্ন হয়ে গেছে');
+    }
+
+    if (submission.job.approvedCount >= submission.job.totalWorkersNeeded) {
+      throw new BadRequestException('এই কাজের সমস্ত কর্মী কোটা পূরণ হয়ে গেছে');
+    }
+
+    const wasRejected = submission.status === 'REJECTED';
+    const autoApproveHours = submission.job.autoApproveHours || 48;
+    const autoApproveAt = new Date(Date.now() + autoApproveHours * 60 * 60 * 1000);
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.microJobSubmission.update({
+        where: { id: submissionId },
+        data: {
+          proofText: dto.proofText?.trim() || null,
+          proofScreenshots: dto.proofScreenshots || [],
+          status: 'SUBMITTED',
+          rejectReason: null,
+          reviewedAt: null,
+          autoApproveAt,
+        },
+      });
+
+      if (wasRejected) {
+        await tx.microJob.update({
+          where: { id: submission.jobId },
+          data: {
+            pendingCount: { increment: 1 },
+          },
+        });
+      }
+
+      return updated;
     });
   }
 
@@ -928,6 +1103,10 @@ export class MicroJobsService {
           select: {
             id: true,
             title: true,
+            description: true,
+            steps: true,
+            proofRequirements: true,
+            status: true,
             rewardPerWorker: true,
             category: {
               select: { name: true, icon: true },

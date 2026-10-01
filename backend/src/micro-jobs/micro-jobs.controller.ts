@@ -128,6 +128,32 @@ export class MicroJobsController {
   }
 
   /**
+   * Worker: Edit and re-submit a rejected or pending task submission
+   */
+  @UseGuards(JwtAuthGuard)
+  @Patch('submissions/:id/resubmit')
+  async resubmitSubmission(
+    @Param('id') submissionId: string,
+    @CurrentUser('id') workerId: string,
+    @Body() dto: SubmitMicroJobDto,
+  ) {
+    return this.microJobsService.resubmitSubmission(submissionId, workerId, dto);
+  }
+
+  /**
+   * Employer: Edit and re-submit a rejected or pending micro job post
+   */
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/resubmit')
+  async resubmitJob(
+    @Param('id') jobId: string,
+    @CurrentUser('id') employerId: string,
+    @Body() dto: any,
+  ) {
+    return this.microJobsService.resubmitJob(jobId, employerId, dto);
+  }
+
+  /**
    * Employer: Cancel job and get refund of unused budget
    */
   @UseGuards(JwtAuthGuard)

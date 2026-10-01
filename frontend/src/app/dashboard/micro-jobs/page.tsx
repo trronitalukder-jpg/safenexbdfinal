@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useSettings } from '@/context/SettingsContext';
 import { useAuthStore } from '@/store/useAuthStore';
+import { compressImage } from '@/lib/imageUtils';
 import {
   Briefcase,
   PlusCircle,
@@ -31,6 +32,9 @@ import {
   ExternalLink,
   Pause,
   Play,
+  UploadCloud,
+  Edit3,
+  Send,
 } from 'lucide-react';
 import ImageLightbox from '@/components/common/ImageLightbox';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
@@ -93,6 +97,24 @@ export default function MicroJobsDashboardPage() {
   // Cancel Job State
   const [cancellingJobId, setCancellingJobId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+
+  // Edit & Resubmit Rejected Job Post Modal State
+  const [editingJob, setEditingJob] = useState<any | null>(null);
+  const [editJobForm, setEditJobForm] = useState({
+    categoryId: '',
+    title: '',
+    description: '',
+    steps: [''],
+    proofRequirements: [''],
+  });
+  const [resubmittingJob, setResubmittingJob] = useState(false);
+
+  // Edit & Resubmit Rejected Worker Submission Modal State
+  const [editingTaskSub, setEditingTaskSub] = useState<any | null>(null);
+  const [editSubProofText, setEditSubProofText] = useState('');
+  const [editSubScreenshots, setEditSubScreenshots] = useState<string[]>([]);
+  const [uploadingEditSubImage, setUploadingEditSubImage] = useState(false);
+  const [resubmittingTaskSub, setResubmittingTaskSub] = useState(false);
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -267,6 +289,121 @@ export default function MicroJobsDashboardPage() {
       alert(err?.response?.data?.message || (lang === 'bn' ? 'কাজটি ডিলিট করা সম্ভব হয়নি' : 'Failed to delete job'));
     } finally {
       setDeletingJobId(null);
+    }
+  };
+
+  // Open Edit & Resubmit Rejected Job Modal
+  const openEditRejectedJobModal = (job: any) => {
+    setEditingJob(job);
+    setEditJobForm({
+      categoryId: job.categoryId || (categories[0]?.id ?? ''),
+      title: job.title || '',
+      description: job.description || '',
+      steps: Array.isArray(job.steps) && job.steps.length > 0 ? job.steps : [''],
+      proofRequirements:
+        Array.isArray(job.proofRequirements) && job.proofRequirements.length > 0
+          ? job.proofRequirements
+          : [''],
+    });
+  };
+
+  const handleResubmitJob = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingJob) return;
+    if (!editJobForm.title.trim()) {
+      alert(lang === 'bn' ? 'কাজের শিরোনাম লিখুন' : 'Please enter job title');
+      return;
+    }
+    setResubmittingJob(true);
+    try {
+      await api.patch(`/micro-jobs/${editingJob.id}/resubmit`, {
+        categoryId: editJobForm.categoryId,
+        title: editJobForm.title.trim(),
+        description: editJobForm.description.trim(),
+        steps: editJobForm.steps.filter((s) => s.trim() !== ''),
+        proofRequirements: editJobForm.proofRequirements.filter((p) => p.trim() !== ''),
+      });
+      alert(
+        lang === 'bn'
+          ? 'কাজটি সফলভাবে এডিট ও পুনরায় সাবমিট করা হয়েছে! অ্যাডমিন রিভিউ করার পর এটি চালু হবে।'
+          : 'Job edited and re-submitted for admin review!',
+      );
+      setEditingJob(null);
+      fetchMyPostedJobs();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'পুনরায় সাবমিট করা সম্ভব হয়নি');
+    } finally {
+      setResubmittingJob(false);
+    }
+  };
+
+  // Open Edit & Resubmit Rejected Worker Submission Modal
+  const openEditRejectedSubmissionModal = (sub: any) => {
+    setEditingTaskSub(sub);
+    setEditSubProofText(sub.proofText || '');
+    setEditSubScreenshots(
+      Array.isArray(sub.proofScreenshots)
+        ? sub.proofScreenshots
+        : Array.isArray(sub.screenshots)
+        ? sub.screenshots
+        : [],
+    );
+  };
+
+  const handleEditSubImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    if (editSubScreenshots.length >= 5) {
+      alert(lang === 'bn' ? 'সর্বোচ্চ ৫টি স্ক্রিনশট আপলোড করতে পারবেন' : 'You can upload maximum 5 screenshots');
+      return;
+    }
+
+    setUploadingEditSubImage(true);
+    try {
+      const file = files[0];
+      const compressed = await compressImage(file, 1600, 1600, 0.8);
+      const res: any = await api.post('/uploads', {
+        base64Data: compressed.base64Data,
+        fileName: compressed.fileName,
+        folder: 'micro-jobs',
+      });
+      const url = res?.data?.url || res?.url;
+      if (url) {
+        setEditSubScreenshots((prev) => [...prev, url]);
+      }
+    } catch (err) {
+      alert(lang === 'bn' ? 'স্ক্রিনশট আপলোড ব্যর্থ হয়েছে' : 'Failed to upload screenshot');
+    } finally {
+      setUploadingEditSubImage(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleResubmitWorkerSubmission = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTaskSub) return;
+    if (!editSubProofText.trim() && editSubScreenshots.length === 0) {
+      alert(lang === 'bn' ? 'লিখিত প্রমাণ অথবা স্ক্রিনশট যেকোনো একটি দিন' : 'Provide text proof or screenshot');
+      return;
+    }
+    setResubmittingTaskSub(true);
+    try {
+      await api.patch(`/micro-jobs/submissions/${editingTaskSub.id}/resubmit`, {
+        proofText: editSubProofText.trim(),
+        proofScreenshots: editSubScreenshots,
+      });
+      alert(
+        lang === 'bn'
+          ? 'আপনার কাজের প্রুফ সফলভাবে এডিট ও পুনরায় সাবমিট করা হয়েছে!'
+          : 'Your proof has been edited and re-submitted for review!',
+      );
+      setEditingTaskSub(null);
+      fetchMyTasks();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'পুনরায় সাবমিট করা সম্ভব হয়নি');
+    } finally {
+      setResubmittingTaskSub(false);
     }
   };
 
@@ -519,6 +656,10 @@ export default function MicroJobsDashboardPage() {
                           className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
                             job.status === 'ACTIVE'
                               ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                              : job.status === 'PENDING'
+                              ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 animate-pulse'
+                              : job.status === 'REJECTED'
+                              ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
                               : job.status === 'PAUSED'
                               ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
                               : job.status === 'COMPLETED'
@@ -528,6 +669,10 @@ export default function MicroJobsDashboardPage() {
                         >
                           {job.status === 'ACTIVE'
                             ? (lang === 'bn' ? 'সক্রিয়' : 'ACTIVE')
+                            : job.status === 'PENDING'
+                            ? (lang === 'bn' ? '⏳ অ্যাডমিন রিভিউ পেন্ডিং' : 'PENDING REVIEW')
+                            : job.status === 'REJECTED'
+                            ? (lang === 'bn' ? '❌ রিজেক্ট হয়েছে' : 'REJECTED')
                             : job.status === 'PAUSED'
                             ? (lang === 'bn' ? 'নিষ্ক্রিয় (পজ)' : 'PAUSED')
                             : job.status === 'COMPLETED'
@@ -539,6 +684,23 @@ export default function MicroJobsDashboardPage() {
                       <h3 className="text-sm font-bold text-slate-900 dark:text-white line-clamp-2">
                         {job.title}
                       </h3>
+
+                      {job.status === 'REJECTED' && (
+                        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 space-y-2">
+                          <div className="text-xs text-rose-600 dark:text-rose-400">
+                            <span className="font-bold">অ্যাডমিন রিজেক্টের কারণ: </span>
+                            <span>{job.rejectReason || 'কাজের নির্দেশনা স্পষ্ট নয়, অনুগ্রহ করে সংশোধন করুন।'}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => openEditRejectedJobModal(job)}
+                            className="w-full py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 transition shadow-2xs"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>{lang === 'bn' ? 'এডিট ও পুনরায় সাবমিট করুন' : 'Edit & Re-submit'}</span>
+                          </button>
+                        </div>
+                      )}
 
                       <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1">
                         <span>প্রতি কর্মীর রেট: ৳{Number(job.rewardPerWorker).toFixed(2)}</span>
@@ -981,19 +1143,25 @@ export default function MicroJobsDashboardPage() {
                 <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
                   <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 text-[11px] uppercase tracking-wider">
                     <tr>
-                      <th className="py-3.5 px-4 font-bold">কাজের নাম</th>
+                      <th className="py-3.5 px-4 font-bold">কাজের নাম ও রিভিউ নোট</th>
                       <th className="py-3.5 px-4 font-bold">পারিশ্রমিক</th>
                       <th className="py-3.5 px-4 font-bold">জমা দেওয়ার সময়</th>
-                      <th className="py-3.5 px-4 font-bold">স্ট্যাটাস</th>
+                      <th className="py-3.5 px-4 font-bold">স্ট্যাটাস ও অ্যাকশন</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
                     {myTasks.map((t) => (
                       <tr key={t.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                        <td className="py-3.5 px-4">
-                          <Link href={`/micro-jobs/${t.jobId}`} className="font-bold text-slate-900 dark:text-white hover:text-amber-500 transition">
+                        <td className="py-3.5 px-4 max-w-md">
+                          <Link href={`/micro-jobs/${t.jobId}`} className="font-bold text-slate-900 dark:text-white hover:text-amber-500 transition block">
                             {t.job?.title}
                           </Link>
+                          {t.status === 'REJECTED' && (
+                            <div className="mt-1.5 p-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-[11px] text-rose-600 dark:text-rose-400">
+                              <span className="font-bold">রিজেক্টের কারণ: </span>
+                              <span>{t.rejectReason || 'সঠিক প্রমাণ জমা দেওয়া হয়নি। অনুগ্রহ করে এডিট করে পুনরায় জমা দিন।'}</span>
+                            </div>
+                          )}
                         </td>
                         <td className="py-3.5 px-4 font-black text-emerald-600 dark:text-emerald-400">
                           ৳ {Number(t.job?.rewardPerWorker || 0).toFixed(2)}
@@ -1002,21 +1170,34 @@ export default function MicroJobsDashboardPage() {
                           {new Date(t.createdAt).toLocaleDateString()} {new Date(t.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </td>
                         <td className="py-3.5 px-4">
-                          <span
-                            className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
-                              t.status === 'APPROVED'
-                                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                                t.status === 'APPROVED'
+                                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                  : t.status === 'REJECTED'
+                                  ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                                  : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                              }`}
+                            >
+                              {t.status === 'APPROVED'
+                                ? 'অনুমোদিত'
                                 : t.status === 'REJECTED'
-                                ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                                : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                            }`}
-                          >
-                            {t.status === 'APPROVED'
-                              ? 'অনুমোদিত'
-                              : t.status === 'REJECTED'
-                              ? 'প্রত্যাখ্যাত'
-                              : 'পেন্ডিং'}
-                          </span>
+                                ? 'প্রত্যাখ্যাত'
+                                : 'পেন্ডিং'}
+                            </span>
+
+                            {t.status === 'REJECTED' && (
+                              <button
+                                type="button"
+                                onClick={() => openEditRejectedSubmissionModal(t)}
+                                className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[11px] flex items-center gap-1 transition shadow-2xs"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                                <span>{lang === 'bn' ? 'এডিট ও পুনরায় সাবমিট' : 'Edit & Re-submit'}</span>
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1202,6 +1383,318 @@ export default function MicroJobsDashboardPage() {
       )}
 
       {/* ========================================================================= */}
+      {/* MODAL: EDIT & RESUBMIT REJECTED JOB POST                                  */}
+      {/* ========================================================================= */}
+      {editingJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in">
+          <form
+            onSubmit={handleResubmitJob}
+            className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl"
+          >
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Edit3 className="w-4 h-4 text-amber-500" />
+                  <span>{lang === 'bn' ? 'মাইক্রো জব এডিট ও পুনরায় সাবমিট করুন' : 'Edit & Re-submit Micro Job'}</span>
+                </h3>
+                {editingJob.rejectReason && (
+                  <p className="text-xs text-rose-500 mt-1">
+                    <strong>রিজেক্টের কারণ:</strong> {editingJob.rejectReason}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingJob(null)}
+                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-1">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    ক্যাটাগরি
+                  </label>
+                  <select
+                    value={editJobForm.categoryId}
+                    onChange={(e) => setEditJobForm({ ...editJobForm, categoryId: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    কাজের শিরোনাম (Title) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editJobForm.title}
+                    onChange={(e) => setEditJobForm({ ...editJobForm, title: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  কাজের বিবরণ (Description) *
+                </label>
+                <textarea
+                  rows={3}
+                  value={editJobForm.description}
+                  onChange={(e) => setEditJobForm({ ...editJobForm, description: e.target.value })}
+                  className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                />
+              </div>
+
+              {/* Steps */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    ধাপভিত্তিক নির্দেশনা (Steps)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setEditJobForm((prev) => ({ ...prev, steps: [...prev.steps, ''] }))}
+                    className="text-[11px] font-bold text-amber-600"
+                  >
+                    + ধাপ যোগ করুন
+                  </button>
+                </div>
+                {editJobForm.steps.map((st, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-400 w-5">{idx + 1}.</span>
+                    <input
+                      type="text"
+                      value={st}
+                      onChange={(e) =>
+                        setEditJobForm((prev) => ({
+                          ...prev,
+                          steps: prev.steps.map((s, i) => (i === idx ? e.target.value : s)),
+                        }))
+                      }
+                      className="flex-1 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                    />
+                    {editJobForm.steps.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditJobForm((prev) => ({
+                            ...prev,
+                            steps: prev.steps.filter((_, i) => i !== idx),
+                          }))
+                        }
+                        className="text-slate-400 hover:text-rose-500"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Proof Requirements */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    প্রমাণের তালিকা (Proof Requirements)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditJobForm((prev) => ({
+                        ...prev,
+                        proofRequirements: [...prev.proofRequirements, ''],
+                      }))
+                    }
+                    className="text-[11px] font-bold text-amber-600"
+                  >
+                    + প্রুফ যোগ করুন
+                  </button>
+                </div>
+                {editJobForm.proofRequirements.map((pr, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-400 w-5">•</span>
+                    <input
+                      type="text"
+                      value={pr}
+                      onChange={(e) =>
+                        setEditJobForm((prev) => ({
+                          ...prev,
+                          proofRequirements: prev.proofRequirements.map((p, i) =>
+                            i === idx ? e.target.value : p,
+                          ),
+                        }))
+                      }
+                      className="flex-1 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                    />
+                    {editJobForm.proofRequirements.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditJobForm((prev) => ({
+                            ...prev,
+                            proofRequirements: prev.proofRequirements.filter((_, i) => i !== idx),
+                          }))
+                        }
+                        className="text-slate-400 hover:text-rose-500"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingJob(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs"
+              >
+                বাতিল
+              </button>
+              <button
+                type="submit"
+                disabled={resubmittingJob}
+                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center gap-1.5 transition"
+              >
+                {resubmittingJob ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                <span>আপডেট ও পুনরায় সাবমিট করুন</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: EDIT & RESUBMIT REJECTED WORKER PROOF                              */}
+      {/* ========================================================================= */}
+      {editingTaskSub && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in">
+          <form
+            onSubmit={handleResubmitWorkerSubmission}
+            className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 space-y-4 shadow-2xl"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Edit3 className="w-4 h-4 text-amber-500" />
+                  <span>কাজের প্রুফ এডিট ও পুনরায় সাবমিট করুন</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{editingTaskSub.job?.title}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingTaskSub(null)}
+                className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {editingTaskSub.rejectReason && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-600 dark:text-rose-400">
+                <span className="font-bold">বাতিলের কারণ: </span>
+                <span>{editingTaskSub.rejectReason}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
+                সংশোধিত লিখিত প্রমাণ (Proof Text):
+              </label>
+              <textarea
+                rows={4}
+                value={editSubProofText}
+                onChange={(e) => setEditSubProofText(e.target.value)}
+                placeholder="প্রয়োজনীয় তথ্য স্পষ্টভাবে লিখুন..."
+                className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                <span>স্ক্রিনশট প্রমাণসমূহ (সর্বোচ্চ ৫টি):</span>
+                <span className="text-[11px] text-slate-400">{editSubScreenshots.length} / 5</span>
+              </label>
+              <div className="flex flex-wrap items-center gap-2.5">
+                {editSubScreenshots.map((url, idx) => (
+                  <div
+                    key={idx}
+                    className="relative w-20 h-20 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+                  >
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditSubScreenshots((prev) => prev.filter((_, i) => i !== idx))
+                      }
+                      className="absolute top-1 right-1 p-1 rounded-full bg-rose-600 text-white"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+
+                {editSubScreenshots.length < 5 && (
+                  <label className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500 flex flex-col items-center justify-center cursor-pointer transition p-2 text-center bg-slate-50/50 dark:bg-slate-800/40">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleEditSubImageUpload}
+                      disabled={uploadingEditSubImage}
+                      className="hidden"
+                    />
+                    {uploadingEditSubImage ? (
+                      <RefreshCw className="w-4 h-4 text-amber-500 animate-spin" />
+                    ) : (
+                      <>
+                        <UploadCloud className="w-4 h-4 text-slate-400" />
+                        <span className="text-[10px] font-bold text-slate-500 mt-1">ছবি দিন</span>
+                      </>
+                    )}
+                  </label>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setEditingTaskSub(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs"
+              >
+                বাতিল
+              </button>
+              <button
+                type="submit"
+                disabled={resubmittingTaskSub || uploadingEditSubImage}
+                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center gap-1.5 transition"
+              >
+                {resubmittingTaskSub ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                <span>পুনরায় সাবমিট করুন</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
       {/* FULLSCREEN LIGHTBOX / ZOOM MODAL                                          */}
       {/* ========================================================================= */}
       <ImageLightbox
@@ -1226,12 +1719,12 @@ export default function MicroJobsDashboardPage() {
             </div>
             <div className="space-y-2">
               <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
-                {lang === 'bn' ? '🎉 অভিনন্দন! কাজটি সফলভাবে পোস্ট হয়েছে!' : '🎉 Success! Job Posted Successfully!'}
+                {lang === 'bn' ? '🎉 কাজটি রিভিউয়ের জন্য জমা হয়েছে!' : '🎉 Job Submitted for Admin Review!'}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {lang === 'bn'
-                  ? 'আপনার কাজটি এখন পাবলিক মাইক্রো জব মার্কেটপ্লেসে সরাসরি লাইভ রয়েছে। কর্মীরা কাজ সম্পন্ন করে প্রুফ জমা দিলে আপনি এখানে দেখতে ও রিভিউ করতে পারবেন।'
-                  : 'Your job is now live on the public marketplace. You can review worker submissions right here.'}
+                  ? 'আপনার কাজটি অ্যাডমিন অনুমোদনের জন্য পাঠানো হয়েছে। অ্যাডমিন অ্যাপ্রুভ করলেই এটি পাবলিক মাইক্রো জব মার্কেটপ্লেসে লাইভ হয়ে যাবে।'
+                  : 'Your job has been submitted for admin approval and will go live on the marketplace once approved.'}
               </p>
             </div>
 

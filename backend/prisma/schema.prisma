@@ -1394,10 +1394,12 @@ model TaskHandoffLog {
 // -----------------------------------------------------------------------------
 
 enum MicroJobStatus {
+  PENDING
   ACTIVE
   PAUSED
   COMPLETED
   CANCELLED
+  REJECTED
 }
 
 enum SubmissionStatus {
@@ -1437,7 +1439,8 @@ model MicroJob {
   pendingCount       Int                  @default(0)
   totalBudget        Decimal              @db.Decimal(18, 4)
   platformFee        Decimal              @default(0.0000) @db.Decimal(18, 4)
-  status             MicroJobStatus       @default(ACTIVE)
+  status             MicroJobStatus       @default(PENDING)
+  rejectReason       String?              @db.Text
   isPinned           Boolean              @default(false)
   pinnedUntil        DateTime?
   minKycRequired     Boolean              @default(false)

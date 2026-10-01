@@ -12,6 +12,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChatGateway } from '../chat/chat.gateway';
+import { ChatService } from '../chat/chat.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -30,6 +31,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     @Optional() private chatGateway?: ChatGateway,
+    @Optional() private chatService?: ChatService,
     @Optional() private otpService?: OtpService,
     @Optional() private smsService?: SmsService,
     @Optional()
@@ -200,6 +202,18 @@ export class AuthService {
         },
         createdAt: new Date().toISOString(),
       });
+    }
+
+    // Automatically send Welcome Message in Admin Chat if Admin Chat is ON
+    if (this.chatService && newUser) {
+      this.chatService
+        .sendWelcomeMessageToNewUser({
+          id: newUser.id,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          uniqueUserId: newUser.uniqueUserId,
+        })
+        .catch((err) => this.logger.warn(`Failed to send welcome chat message: ${err?.message}`));
     }
 
     // Send Alert to Admin Telegram Group

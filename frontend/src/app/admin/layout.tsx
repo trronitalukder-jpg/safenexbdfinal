@@ -129,10 +129,17 @@ export default function AdminLayout({
 
     socket.on('connect', handleConnect);
 
+    const triggerSidebarRefresh = () => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('admin-sidebar-counts-refresh'));
+      }
+    };
+
     const handleAdminNotification = (data: any) => {
       if (!data) return;
 
       playNotificationSound();
+      triggerSidebarRefresh();
 
       setAdminNotifications((prev) => [
         { ...data, id: data.id || Date.now(), receivedAt: new Date().toLocaleTimeString() },
@@ -158,6 +165,7 @@ export default function AdminLayout({
     const handleComplaintNew = (data: any) => {
       setUnreadComplaintCount((prev) => prev + 1);
       playNotificationSound();
+      triggerSidebarRefresh();
       if (notifPermission === 'granted') {
         sendNotification(
           data?.title || 'নতুন অভিযোগ দাখিল হয়েছে',
@@ -173,15 +181,19 @@ export default function AdminLayout({
 
     const handleComplaintRead = () => {
       fetchUnreadComplaintCount();
+      triggerSidebarRefresh();
     };
 
     const handleComplaintUpdate = () => {
       fetchUnreadComplaintCount();
+      triggerSidebarRefresh();
     };
 
     socket.on('complaint:new', handleComplaintNew);
     socket.on('complaint:read', handleComplaintRead);
     socket.on('complaint:update', handleComplaintUpdate);
+    socket.on('chat:live_status', triggerSidebarRefresh);
+    socket.on('message:receive', triggerSidebarRefresh);
 
     return () => {
       socket.off('connect', handleConnect);
@@ -189,6 +201,8 @@ export default function AdminLayout({
       socket.off('complaint:new', handleComplaintNew);
       socket.off('complaint:read', handleComplaintRead);
       socket.off('complaint:update', handleComplaintUpdate);
+      socket.off('chat:live_status', triggerSidebarRefresh);
+      socket.off('message:receive', triggerSidebarRefresh);
     };
   }, [user?.id, notifPermission, playNotificationSound, sendNotification, fetchUnreadComplaintCount]);
 

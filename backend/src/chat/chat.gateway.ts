@@ -314,6 +314,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
       }
 
+      // Also emit to admin & staff rooms so Live Chat Supervision (/admin/cms) and Sidebar badges update in real-time
+      this.notifyAdminsAndStaff('message:receive', serialized);
+      if (!savedMessage.metadata?.isSafnexAdmin && !savedMessage.metadata?.isWelcomeMessage) {
+        this.notifyAdminsAndStaff('chat:live_status', {
+          conversationId,
+          isLive: true,
+          updatedAt: savedMessage.createdAt,
+        });
+      }
+
       // If pay or receive request, also broadcast to admins
       if (savedMessage.messageType === 'PAY_REQUEST') {
         this.notifyAdmins('notification:admin', {

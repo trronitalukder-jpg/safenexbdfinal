@@ -95,6 +95,8 @@ interface ConversationItem {
   dealAmount: number;
   trackingNumber: string | null;
   hasDispute: boolean;
+  isLiveChat?: boolean;
+  liveChatAt?: string | null;
   isLocked?: boolean;
   lockedReason?: string | null;
   lockedBy?: string | null;
@@ -114,6 +116,7 @@ interface PlatformStats {
   totalEscrowHeld: number;
   activeDisputes: number;
   pendingRequests: number;
+  liveChatCount?: number;
 }
 
 interface ChatMessage {
@@ -152,12 +155,13 @@ export default function AdminLiveChatPage() {
     totalEscrowHeld: 0,
     activeDisputes: 0,
     pendingRequests: 0,
+    liveChatCount: 0,
   });
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [selectedConv, setSelectedConv] = useState<ConversationItem | null>(null);
 
   // Filters & Search
-  const [activeFilter, setActiveFilter] = useState<'ALL' | 'ACTIVE_ESCROW' | 'REQUESTS' | 'DISPUTED'>('ALL');
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'LIVE_CHAT' | 'ACTIVE_ESCROW' | 'REQUESTS' | 'DISPUTED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Inside Chat Room State
@@ -165,7 +169,7 @@ export default function AdminLiveChatPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [adminInput, setAdminInput] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [isNoticeMode, setIsNoticeMode] = useState(true); // Toggle: Official Admin Notice vs General Message
+  const [isNoticeMode, setIsNoticeMode] = useState(false); // Default to normal chat so Admin/Staff can chat smoothly as SafnexBD Admin
   const [copiedTracking, setCopiedTracking] = useState(false);
   const [socketConnected, setSocketConnected] = useState(false);
 
@@ -175,6 +179,16 @@ export default function AdminLiveChatPage() {
   const [lockingLoading, setLockingLoading] = useState(false);
   const [lockModalOpen, setLockModalOpen] = useState(false);
   const [lockReasonInput, setLockReasonInput] = useState('');
+
+  // Live Chat Status & Admin Chat Settings State
+  const [togglingLiveId, setTogglingLiveId] = useState<string | null>(null);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [savingAdminChatSettings, setSavingAdminChatSettings] = useState(false);
+  const [adminChatSettings, setAdminChatSettings] = useState({
+    isEnabled: true,
+    welcomeMessageEnabled: true,
+    welcomeMessageTemplate: '',
+  });
 
   // Refs to prevent duplicate messages and race conditions
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -235,6 +249,13 @@ export default function AdminLiveChatPage() {
         if (payload.isSuperAdminChatVisible !== undefined) {
           setIsSuperAdminVisible(Boolean(payload.isSuperAdminChatVisible));
         }
+        if (payload.adminChatSettings) {
+          setAdminChatSettings({
+            isEnabled: payload.adminChatSettings.isEnabled !== false,
+            welcomeMessageEnabled: payload.adminChatSettings.welcomeMessageEnabled !== false,
+            welcomeMessageTemplate: payload.adminChatSettings.welcomeMessageTemplate || '',
+          });
+        }
         setStats(
           payload.stats || {
             totalConversations: 0,
@@ -242,6 +263,7 @@ export default function AdminLiveChatPage() {
             totalEscrowHeld: 0,
             activeDisputes: 0,
             pendingRequests: 0,
+            liveChatCount: 0,
           }
         );
         setConversations(payload.conversations || []);
@@ -326,26 +348,32 @@ export default function AdminLiveChatPage() {
         addMessageSafely(newMsg);
       }
 
-      // Also silently update conversation list preview
-      setConversations((prev) =>
-        prev.map((c) => {
-          if (c.id === newMsg.conversationId) {
-            return {
-              ...c,
-              updatedAt: newMsg.createdAt,
-              lastMessage: {
-                id: newMsg.id,
-                content: newMsg.content,
-                messageType: newMsg.messageType,
-                createdAt: newMsg.createdAt,
-                sender: newMsg.sender as any,
-                metadata: newMsg.metadata,
-              },
-            };
-          }
-          return c;
-        })
+      // Refresh conversations list & live chat counts silently
+      fetchConversations(true);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('admin-sidebar-counts-refresh'));
+      }
+    };
+
+    const handleLiveStatus = (data: { conversationId: string; isLive: boolean; liveChatCount?: number }) => {
+      if (!data || !data.conversationId) return;
+      if (typeof data.liveChatCount === 'number') {
+        setStats((prev) => ({ ...prev, liveChatCount: data.liveChatCount }));
+      }
+      setConversations((prev) => {
+        const updated = prev.map((c) =>
+          c.id === data.conversationId ? { ...c, isLiveChat: data.isLive } : c,
+        );
+        return activeFilter === 'LIVE_CHAT' && !data.isLive
+          ? updated.filter((c) => c.id !== data.conversationId)
+          : updated;
+      });
+      setSelectedConv((prev) =>
+        prev && prev.id === data.conversationId ? { ...prev, isLiveChat: data.isLive } : prev,
       );
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('admin-sidebar-counts-refresh'));
+      }
     };
 
     const handleLockStatus = (data: { conversationId: string; isLocked: boolean; reason?: string; lockedBy?: string; lockedAt?: string }) => {
@@ -368,15 +396,71 @@ export default function AdminLiveChatPage() {
     };
 
     socket.on('message:receive', handleMessageReceive);
+    socket.on('chat:live_status', handleLiveStatus);
     socket.on('chat:lock_status', handleLockStatus);
 
     return () => {
       socket.off('message:receive', handleMessageReceive);
+      socket.off('chat:live_status', handleLiveStatus);
       socket.off('chat:lock_status', handleLockStatus);
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
     };
-  }, []);
+  }, [activeFilter]);
+
+  // Handler: Toggle Live Chat Status (Turn OFF/ON red blink & remove from LIVE_CHAT tab)
+  const handleToggleLiveChatStatus = async (convId: string, isLive: boolean, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setTogglingLiveId(convId);
+    try {
+      const res: any = await api.patch(`/chat/admin/conversations/${convId}/live-status`, {
+        isLive,
+      });
+      const data = res?.data || res;
+      if (typeof data?.liveChatCount === 'number') {
+        setStats((prev) => ({ ...prev, liveChatCount: data.liveChatCount }));
+      }
+      setConversations((prev) => {
+        const updated = prev.map((c) => (c.id === convId ? { ...c, isLiveChat: isLive } : c));
+        return activeFilter === 'LIVE_CHAT' && !isLive
+          ? updated.filter((c) => c.id !== convId)
+          : updated;
+      });
+      setSelectedConv((prev) => (prev && prev.id === convId ? { ...prev, isLiveChat: isLive } : prev));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('admin-sidebar-counts-refresh'));
+      }
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Failed to update live chat status');
+    } finally {
+      setTogglingLiveId(null);
+    }
+  };
+
+  // Handler: Save Admin Chat & Welcome Message Settings
+  const handleSaveAdminChatSettings = async (customPatch?: Partial<typeof adminChatSettings>) => {
+    setSavingAdminChatSettings(true);
+    try {
+      const payloadToSave = customPatch ? { ...adminChatSettings, ...customPatch } : adminChatSettings;
+      const res: any = await api.patch('/chat/admin/settings', payloadToSave);
+      const data = res?.data || res;
+      if (data) {
+        setAdminChatSettings({
+          isEnabled: data.isEnabled !== false,
+          welcomeMessageEnabled: data.welcomeMessageEnabled !== false,
+          welcomeMessageTemplate: data.welcomeMessageTemplate || payloadToSave.welcomeMessageTemplate,
+        });
+      }
+      if (!customPatch) {
+        setSettingsModalOpen(false);
+        alert(lang === 'bn' ? 'অ্যাডমিন চ্যাট ও ওয়েলকাম মেসেজ সেটিংস সংরক্ষিত হয়েছে!' : 'Admin Chat settings saved!');
+      }
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Failed to save Admin Chat settings');
+    } finally {
+      setSavingAdminChatSettings(false);
+    }
+  };
 
   // Handler: Toggle Super Admin Chat Visibility
   const handleToggleSuperAdminVisibility = async () => {
@@ -526,38 +610,91 @@ export default function AdminLiveChatPage() {
       {/* Top Header Bar & Control Action Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
+          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0 relative">
             <MessageSquare className="w-5 h-5" />
+            {(stats.liveChatCount || 0) > 0 && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-rose-500 animate-ping" />
+            )}
           </div>
           <div>
-            <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+            <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
               <span>{lang === 'bn' ? 'লাইভ চ্যাট ও এসক্রো সুপারভিশন' : 'Live Chat & Escrow Supervision'}</span>
-              <span className="hidden md:inline-flex text-[10px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 font-bold">
-                PRO
-              </span>
+              <button
+                type="button"
+                onClick={() => setActiveFilter('LIVE_CHAT')}
+                className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-0.5 rounded-full font-black transition cursor-pointer ${
+                  (stats.liveChatCount || 0) > 0
+                    ? 'bg-rose-600 text-white shadow-sm shadow-rose-500/30 animate-pulse'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                <span>
+                  {lang === 'bn'
+                    ? `লাইভ চ্যাট: ${stats.liveChatCount || 0} জন`
+                    : `Live Chat: ${stats.liveChatCount || 0}`}
+                </span>
+              </button>
             </h1>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
               {lang === 'bn'
-                ? 'রিয়েল-টাইমে ইউজারদের চ্যাট পর্যবেক্ষণ করুন এবং প্রয়োজন অনুযায়ী প্রশাসনিক নোটিশ দিন।'
-                : 'Supervise live user negotiations in real-time and post official administrative notices.'}
+                ? 'রিয়েল-টাইমে ইউজারদের চ্যাট পর্যবেক্ষণ করুন, SafnexBD Admin নামে চ্যাট করুন এবং প্রশাসনিক নোটিশ দিন।'
+                : 'Supervise live user negotiations in real-time, chat as SafnexBD Admin, and post official notices.'}
             </p>
           </div>
         </div>
 
         {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* Admin Chat Master ON/OFF & Welcome Message Settings Button */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-xs">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                adminChatSettings.isEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+              }`}
+            />
+            <span className="font-bold text-[11px] text-slate-800 dark:text-slate-200">
+              {lang === 'bn' ? 'অ্যাডমিন চ্যাট:' : 'Admin Chat:'}
+            </span>
+            <button
+              type="button"
+              disabled={savingAdminChatSettings}
+              onClick={() =>
+                handleSaveAdminChatSettings({ isEnabled: !adminChatSettings.isEnabled })
+              }
+              className={`px-2 py-0.5 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs ${
+                adminChatSettings.isEnabled
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                  : 'bg-rose-600 hover:bg-rose-500 text-white'
+              }`}
+              title={
+                adminChatSettings.isEnabled
+                  ? 'অ্যাডমিন চ্যাট চালু আছে (বন্ধ করতে ক্লিক করুন)'
+                  : 'অ্যাডমিন চ্যাট বন্ধ আছে (চালু করতে ক্লিক করুন)'
+              }
+            >
+              <Power className="w-2.5 h-2.5" />
+              <span>{adminChatSettings.isEnabled ? 'ON' : 'OFF'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSettingsModalOpen(true)}
+              className="px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[10px] flex items-center gap-1 transition"
+              title="ওয়েলকাম মেসেজ ও অ্যাডমিন চ্যাট সেটিংস কাস্টমাইজ করুন"
+            >
+              <SlidersHorizontal className="w-2.5 h-2.5" />
+              <span>{lang === 'bn' ? 'ওয়েলকাম মেসেজ' : 'Welcome Msg'}</span>
+            </button>
+          </div>
+
           {/* Super Admin Chat Presence Switch */}
           {currentUser?.roles?.includes('SUPER_ADMIN') && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-xs">
               <div className="flex items-center gap-1.5">
                 <span className={`w-2 h-2 rounded-full ${isSuperAdminVisible ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
                 <span className="font-bold text-[11px] text-slate-800 dark:text-slate-200">
-                  {lang === 'bn' ? 'সুপার অ্যাডমিন চ্যাট:' : 'Admin Chat:'}
-                </span>
-                <span className={`text-[11px] font-black ${isSuperAdminVisible ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500'}`}>
-                  {isSuperAdminVisible
-                    ? (lang === 'bn' ? 'অন (দৃশ্যমান)' : 'ON (Visible)')
-                    : (lang === 'bn' ? 'অফ (গোপন)' : 'OFF (Hidden)')}
+                  {lang === 'bn' ? 'সার্চ ভিজিবিলিটি:' : 'Search Visible:'}
                 </span>
               </div>
 
@@ -567,17 +704,12 @@ export default function AdminLiveChatPage() {
                 onClick={handleToggleSuperAdminVisibility}
                 className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-xs ${
                   isSuperAdminVisible
-                    ? 'bg-rose-500 hover:bg-rose-600 text-white'
-                    : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                    : 'bg-slate-500 hover:bg-slate-600 text-white'
                 }`}
-                title={
-                  isSuperAdminVisible
-                    ? (lang === 'bn' ? 'অফ করুন (সাধারণ ইউজাররা সার্চে আপনাকে খুঁজে পাবে না)' : 'Turn OFF (Hidden from search)')
-                    : (lang === 'bn' ? 'অন করুন (ইউজাররা আপনাকে সার্চ করতে পারবে)' : 'Turn ON (Visible in search)')
-                }
               >
                 <Power className="w-2.5 h-2.5" />
-                <span>{isSuperAdminVisible ? (lang === 'bn' ? 'অফ করুন' : 'Turn OFF') : (lang === 'bn' ? 'অন করুন' : 'Turn ON')}</span>
+                <span>{isSuperAdminVisible ? 'ON' : 'OFF'}</span>
               </button>
             </div>
           )}
@@ -779,6 +911,11 @@ export default function AdminLiveChatPage() {
             <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px]">
               {[
                 { key: 'ALL', labelBn: 'সব', labelEn: 'All' },
+                {
+                  key: 'LIVE_CHAT',
+                  labelBn: `🔴 লাইভ চ্যাট (${stats.liveChatCount || 0})`,
+                  labelEn: `🔴 Live Chat (${stats.liveChatCount || 0})`,
+                },
                 { key: 'ACTIVE_ESCROW', labelBn: '🔒 এসক্রো', labelEn: '🔒 Escrow' },
                 { key: 'REQUESTS', labelBn: '💸 রিকোয়েস্ট', labelEn: '💸 Req' },
                 { key: 'DISPUTED', labelBn: '⚠️ ডিসপ্যুট', labelEn: '⚠️ Dispute' },
@@ -786,9 +923,13 @@ export default function AdminLiveChatPage() {
                 <button
                   key={f.key}
                   onClick={() => setActiveFilter(f.key as any)}
-                  className={`px-2.5 py-1 rounded-xl font-semibold whitespace-nowrap transition text-xs ${
+                  className={`px-2.5 py-1 rounded-xl font-bold whitespace-nowrap transition text-xs ${
                     activeFilter === f.key
-                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-xs'
+                      ? f.key === 'LIVE_CHAT'
+                        ? 'bg-rose-600 text-white shadow-xs'
+                        : 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-xs'
+                      : f.key === 'LIVE_CHAT' && (stats.liveChatCount || 0) > 0
+                      ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                   }`}
                 >
@@ -807,13 +948,16 @@ export default function AdminLiveChatPage() {
               </div>
             ) : conversations.length === 0 ? (
               <div className="p-8 text-center text-xs text-slate-400">
-                {lang === 'bn' ? 'কোনো চ্যাট পাওয়া যায়নি' : 'No conversations found'}
+                {activeFilter === 'LIVE_CHAT'
+                  ? (lang === 'bn' ? 'বর্তমানে কেউ লাইভ চ্যাট করছে না' : 'No active live chat users right now')
+                  : (lang === 'bn' ? 'কোনো চ্যাট পাওয়া যায়নি' : 'No conversations found')}
               </div>
             ) : (
               conversations.map((conv) => {
                 const isSelected = selectedConv?.id === conv.id;
                 const buyer = conv.user1;
                 const seller = conv.user2;
+                const isLive = Boolean(conv.isLiveChat);
 
                 return (
                   <div
@@ -822,59 +966,95 @@ export default function AdminLiveChatPage() {
                     className={`p-3 cursor-pointer transition-all ${
                       isSelected
                         ? 'bg-amber-500/10 dark:bg-amber-500/15 border-l-4 border-l-amber-500'
+                        : isLive
+                        ? 'bg-rose-500/5 hover:bg-rose-500/10 border-l-4 border-l-rose-500'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
                     }`}
                   >
                     {/* Participants & Status */}
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <div className="flex -space-x-1.5 overflow-hidden shrink-0">
-                          <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 border border-white dark:border-slate-900 flex items-center justify-center text-[10px] font-bold">
+                    <div className="flex items-center justify-between mb-1 gap-1.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="relative flex -space-x-1.5 shrink-0">
+                          <div
+                            className={`w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 border flex items-center justify-center text-[10px] font-bold ${
+                              isLive
+                                ? 'ring-2 ring-rose-500 border-rose-500 animate-pulse text-rose-600 dark:text-rose-300'
+                                : 'border-white dark:border-slate-900'
+                            }`}
+                          >
                             {buyer?.firstName?.[0] || 'B'}
                           </div>
-                          <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-white dark:border-slate-900 flex items-center justify-center text-[10px] font-bold">
+                          <div
+                            className={`w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border flex items-center justify-center text-[10px] font-bold ${
+                              isLive
+                                ? 'ring-2 ring-rose-500 border-rose-500 animate-pulse'
+                                : 'border-white dark:border-slate-900'
+                            }`}
+                          >
                             {seller?.firstName?.[0] || 'S'}
                           </div>
+                          {isLive && (
+                            <span
+                              className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-rose-600 ring-2 ring-white dark:ring-slate-900 animate-ping"
+                              title="সক্রিয় লাইভ চ্যাট (Live Chatting)"
+                            />
+                          )}
                         </div>
 
-                        <div className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[140px]">
+                        <div className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[130px]">
                           <span>{getUserName(buyer)}</span>
                           <span className="text-slate-400 font-normal mx-1">↔</span>
                           <span>{getUserName(seller)}</span>
                         </div>
                       </div>
 
-                      {/* Escrow Status Pill */}
-                      {conv.dealStatus ? (
-                        <span
-                          className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                            conv.dealStatus === 'HOLD'
-                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/80 dark:text-blue-300'
-                              : conv.dealStatus === 'WORKING'
-                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/80 dark:text-purple-300'
-                              : conv.dealStatus === 'DISPUTED'
-                              ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 animate-pulse'
-                              : conv.dealStatus === 'REQUESTED'
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
-                              : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300'
-                          }`}
-                        >
-                          {conv.dealStatus === 'HOLD' && '🔒 '}
-                          {conv.dealStatus === 'DISPUTED' && '⚠️ '}
-                          {conv.dealStatus}
-                        </span>
-                      ) : (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-400 font-mono">
-                          CHAT
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {/* Live Chat OFF quick button */}
+                        {isLive && (
+                          <button
+                            type="button"
+                            disabled={togglingLiveId === conv.id}
+                            onClick={(e) => handleToggleLiveChatStatus(conv.id, false, e)}
+                            className="text-[9px] px-1.5 py-0.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white font-black flex items-center gap-0.5 shadow-2xs transition"
+                            title="লাইভ চ্যাট অফ করুন (লাইভ চ্যাট লিস্ট থেকে সরে যাবে ও লাল ব্লিংক বন্ধ হবে)"
+                          >
+                            <Power className="w-2.5 h-2.5" />
+                            <span>Live Off</span>
+                          </button>
+                        )}
 
-                      {conv.isLocked && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 font-bold flex items-center gap-0.5 shrink-0">
-                          <Lock className="w-2.5 h-2.5" />
-                          <span>{lang === 'bn' ? 'লক' : 'Locked'}</span>
-                        </span>
-                      )}
+                        {/* Escrow Status Pill */}
+                        {conv.dealStatus ? (
+                          <span
+                            className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                              conv.dealStatus === 'HOLD'
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/80 dark:text-blue-300'
+                                : conv.dealStatus === 'WORKING'
+                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/80 dark:text-purple-300'
+                                : conv.dealStatus === 'DISPUTED'
+                                ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 animate-pulse'
+                                : conv.dealStatus === 'REQUESTED'
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                                : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300'
+                            }`}
+                          >
+                            {conv.dealStatus === 'HOLD' && '🔒 '}
+                            {conv.dealStatus === 'DISPUTED' && '⚠️ '}
+                            {conv.dealStatus}
+                          </span>
+                        ) : (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-400 font-mono">
+                            CHAT
+                          </span>
+                        )}
+
+                        {conv.isLocked && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 font-bold flex items-center gap-0.5 shrink-0">
+                            <Lock className="w-2.5 h-2.5" />
+                            <span>{lang === 'bn' ? 'লক' : 'Locked'}</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Middle Row: Amount & Tracking */}
@@ -970,8 +1150,17 @@ export default function AdminLiveChatPage() {
 
                   {/* Buyer Avatar & Info */}
                   <div className="flex items-center gap-2">
-                    <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 flex items-center justify-center font-bold text-xs border border-blue-200 dark:border-blue-800 shrink-0">
+                    <div
+                      className={`relative w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 flex items-center justify-center font-bold text-xs border shrink-0 ${
+                        selectedConv.isLiveChat
+                          ? 'ring-2 ring-rose-500 border-rose-500 animate-pulse'
+                          : 'border-blue-200 dark:border-blue-800'
+                      }`}
+                    >
                       {selectedConv.user1?.firstName?.[0] || 'B'}
+                      {selectedConv.isLiveChat && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
+                      )}
                     </div>
                     <div>
                       <div className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
@@ -998,7 +1187,13 @@ export default function AdminLiveChatPage() {
 
                   {/* Seller Avatar & Info */}
                   <div className="flex items-center gap-2">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold text-xs border border-emerald-200 dark:border-emerald-800 shrink-0">
+                    <div
+                      className={`relative w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold text-xs border shrink-0 ${
+                        selectedConv.isLiveChat
+                          ? 'ring-2 ring-rose-500 border-rose-500 animate-pulse'
+                          : 'border-emerald-200 dark:border-emerald-800'
+                      }`}
+                    >
                       {selectedConv.user2?.firstName?.[0] || 'S'}
                     </div>
                     <div>
@@ -1023,8 +1218,33 @@ export default function AdminLiveChatPage() {
                   </div>
                 </div>
 
-                {/* Right: Lock/Unlock Chat, Expand/Focus toggle & reload */}
-                <div className="flex items-center gap-2">
+                {/* Right: Live Chat Off/On, Lock/Unlock Chat, Expand/Focus toggle & reload */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Live Chat Status Toggle Button */}
+                  {selectedConv.isLiveChat ? (
+                    <button
+                      type="button"
+                      disabled={togglingLiveId === selectedConv.id}
+                      onClick={() => handleToggleLiveChatStatus(selectedConv.id, false)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition shadow-xs disabled:opacity-50"
+                      title="লাইভ চ্যাট অফ করুন (লাইভ চ্যাট ট্যাব থেকে ইউজার সরে যাবে ও প্রোফাইল লাল ব্লিংক বন্ধ হবে)"
+                    >
+                      <Power className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? '🔴 লাইভ চ্যাট অফ করুন' : '🔴 Turn Live Chat OFF'}</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={togglingLiveId === selectedConv.id}
+                      onClick={() => handleToggleLiveChatStatus(selectedConv.id, true)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/10 text-slate-600 dark:text-slate-300 hover:text-rose-600 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 transition"
+                      title="এই চ্যাটটি লাইভ চ্যাট তালিকায় যুক্ত করুন"
+                    >
+                      <Power className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'লাইভ অন' : 'Mark Live'}</span>
+                    </button>
+                  )}
+
                   {/* Chat ON/OFF (Lock/Unlock) Toggle Button */}
                   {selectedConv.isLocked ? (
                     <button
@@ -1216,7 +1436,7 @@ export default function AdminLiveChatPage() {
                                 <span>{msg.metadata?.adminTitle || 'SafnexBD Authority Notice'}</span>
                               </div>
                               <span className="text-xs bg-amber-500/25 px-2.5 py-0.5 rounded-full font-mono text-amber-900 dark:text-amber-300 font-black">
-                                🛡️ {msg.metadata?.adminName || 'Super Admin'}
+                                🛡️ SafnexBD Admin
                               </span>
                             </div>
                             <p className="text-sm sm:text-[14.5px] text-slate-900 dark:text-slate-100 leading-relaxed whitespace-pre-wrap font-medium">
@@ -1342,7 +1562,7 @@ export default function AdminLiveChatPage() {
                           ) : (
                             <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold">
                               <ShieldCheck className="w-3.5 h-3.5" />
-                              <span>Admin ({msg.sender?.firstName || 'Staff'})</span>
+                              <span>SafnexBD Admin</span>
                             </div>
                           )}
                         </div>
@@ -1414,6 +1634,19 @@ export default function AdminLiveChatPage() {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
+                      onClick={() => setIsNoticeMode(false)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+                        !isNoticeMode
+                          ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-xs'
+                          : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'SafnexBD Admin চ্যাট' : 'SafnexBD Admin Chat'}</span>
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => setIsNoticeMode(true)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
                         isNoticeMode
@@ -1424,25 +1657,12 @@ export default function AdminLiveChatPage() {
                       <ShieldAlert className="w-3.5 h-3.5" />
                       <span>{lang === 'bn' ? 'অফিসিয়াল অ্যাডমিন নোটিশ' : 'Official Admin Notice'}</span>
                     </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setIsNoticeMode(false)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
-                        !isNoticeMode
-                          ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-xs'
-                          : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
-                      }`}
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <span>{lang === 'bn' ? 'সাধারণ মেসেজ' : 'General Message'}</span>
-                    </button>
                   </div>
 
                   <span className="text-[10px] text-slate-400 hidden sm:inline">
                     {isNoticeMode
                       ? (lang === 'bn' ? '🛡️ নোটিশ উভয় ইউজারের স্ক্রিনে হাইলাইট হবে' : '🛡️ Broadcasts as high-authority banner')
-                      : (lang === 'bn' ? '💬 সাধারণ চ্যাট বাবলে সেন্ড হবে' : '💬 Sends as admin chat bubble')}
+                      : (lang === 'bn' ? '💬 ইউজারদের কাছে আপনার নাম গোপন থেকে "SafnexBD Admin" দেখাবে' : '💬 Users always see sender as "SafnexBD Admin"')}
                   </span>
                 </div>
 
@@ -1461,7 +1681,7 @@ export default function AdminLiveChatPage() {
                     placeholder={
                       isNoticeMode
                         ? (lang === 'bn' ? 'উভয় পক্ষকে সতর্ক বা প্রশাসনিক নির্দেশনা দিতে বার্তা লিখুন (Enter চাপলে সেন্ড হবে)...' : 'Write official authority notice to both parties (Press Enter to send)...')
-                        : (lang === 'bn' ? 'ইউজারদের সাথে সাধারণ কথা বলতে মেসেজ লিখুন (Enter চাপলে সেন্ড হবে)...' : 'Type a message into this conversation (Press Enter to send)...')
+                        : (lang === 'bn' ? 'SafnexBD Admin হিসেবে ইউজারের সাথে চ্যাট করুন (Enter চাপলে সেন্ড হবে)...' : 'Type a message as SafnexBD Admin (Press Enter to send)...')
                     }
                     className="flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none resize-none text-slate-900 dark:text-white leading-relaxed"
                   />
@@ -1491,6 +1711,132 @@ export default function AdminLiveChatPage() {
           )}
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* MODAL: ADMIN CHAT & AUTO WELCOME MESSAGE SETTINGS                         */}
+      {/* ========================================================================= */}
+      {settingsModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <SlidersHorizontal className="w-4 h-4 text-amber-500" />
+                  <span>অ্যাডমিন চ্যাট ও অটো ওয়েলকাম মেসেজ সেটিংস</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  ইউজার প্যানেলের &ldquo;Admin Chat&rdquo; নিয়ন্ত্রণ এবং নতুন রেজিস্ট্রেশনে স্বয়ংক্রিয় স্বাগতম বার্তা কাস্টমাইজ করুন।
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSettingsModalOpen(false)}
+                className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto space-y-4 pr-1">
+              {/* Toggle 1: Admin Chat Master Switch */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-xs font-bold text-slate-900 dark:text-white">
+                    ১. অ্যাডমিন চ্যাট (Admin Chat Master Switch)
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    এটি OFF রাখলে ইউজার প্যানেলের &ldquo;Admin Chat&rdquo; অপশন থেকে কোনো ইউজার মেসেজ পাঠাতে পারবে না।
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAdminChatSettings((prev) => ({ ...prev, isEnabled: !prev.isEnabled }))
+                  }
+                  className={`px-4 py-2 rounded-xl font-black text-xs transition ${
+                    adminChatSettings.isEnabled
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-rose-600 text-white'
+                  }`}
+                >
+                  {adminChatSettings.isEnabled ? 'চালু আছে (ON)' : 'বন্ধ আছে (OFF)'}
+                </button>
+              </div>
+
+              {/* Toggle 2: Auto Welcome Message on Registration */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-xs font-bold text-slate-900 dark:text-white">
+                    ২. নতুন রেজিস্ট্রেশনে অটো ওয়েলকাম মেসেজ (Auto Welcome Message)
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    অ্যাডমিন চ্যাট ON থাকলে নতুন ইউজার রেজিস্ট্রেশন করার সাথে সাথে তার চ্যাটে স্বয়ংক্রিয়ভাবে স্বাগতম মেসেজ যাবে।
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAdminChatSettings((prev) => ({
+                      ...prev,
+                      welcomeMessageEnabled: !prev.welcomeMessageEnabled,
+                    }))
+                  }
+                  className={`px-4 py-2 rounded-xl font-black text-xs transition ${
+                    adminChatSettings.welcomeMessageEnabled
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-rose-600 text-white'
+                  }`}
+                >
+                  {adminChatSettings.welcomeMessageEnabled ? 'চালু আছে (ON)' : 'বন্ধ আছে (OFF)'}
+                </button>
+              </div>
+
+              {/* Welcome Message Template Editor */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    স্বাগতম মেসেজ টেমপ্লেট (Welcome Message Customize):
+                  </label>
+                  <span className="text-[11px] font-mono text-amber-600 dark:text-amber-400">
+                    Variables: {'{First Name}'}, {'{Last Name}'}
+                  </span>
+                </div>
+                <textarea
+                  rows={12}
+                  value={adminChatSettings.welcomeMessageTemplate}
+                  onChange={(e) =>
+                    setAdminChatSettings((prev) => ({
+                      ...prev,
+                      welcomeMessageTemplate: e.target.value,
+                    }))
+                  }
+                  className="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 leading-relaxed focus:outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setSettingsModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              >
+                বাতিল
+              </button>
+              <button
+                type="button"
+                disabled={savingAdminChatSettings}
+                onClick={() => handleSaveAdminChatSettings()}
+                className="px-5 py-2 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-600 text-slate-950 transition flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+              >
+                {savingAdminChatSettings && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                <span>সেটিংস সংরক্ষণ করুন</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Lock Reason Dialog Modal */}
       {lockModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
