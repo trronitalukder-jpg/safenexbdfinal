@@ -34,7 +34,8 @@ function unwrap<T = any>(res: any): T {
 export default function FloatingChatBubble() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user } = useAuthStore();
+  const isAuthenticated = Boolean(user);
   const { lang } = useLanguage();
 
   const [isOpen, setIsOpen] = useState(false);
