@@ -178,7 +178,7 @@ export const Footer = () => {
 
   return (
     <footer className="bg-slate-100/80 dark:bg-slate-950 text-slate-600 dark:text-slate-400 text-sm border-t border-slate-200 dark:border-slate-800/80 transition-colors">
-      <div className="max-w-[1650px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
+      <div className="max-w-[1650px] w-full mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-24 md:py-12">
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 sm:gap-8">
           {/* Col 1: Brand & Escrow Trust (Spans 2 cols on mobile & lg) */}
           <div className="col-span-2 sm:col-span-2 lg:col-span-2 space-y-4">

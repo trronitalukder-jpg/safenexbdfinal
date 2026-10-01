@@ -118,22 +118,96 @@ function ShopContent() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 w-full md:w-auto">
             <Link
               href="/dashboard/products/new"
-              className="px-5 py-3 rounded-2xl bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs sm:text-sm shadow-md transition flex items-center gap-2"
+              className="flex-1 md:flex-initial justify-center px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs sm:text-sm shadow-md transition flex items-center gap-2 active:scale-95 whitespace-nowrap"
             >
-              <Plus className="w-4 h-4" />
-              <span>{lang === 'bn' ? 'প্রোডাক্ট আপলোড করুন' : 'Sell a Product'}</span>
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>{lang === 'bn' ? 'প্রোডাক্ট আপলোড' : 'Sell a Product'}</span>
             </Link>
             <Link
               href="/dashboard/bids"
-              className="px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm shadow-md transition flex items-center gap-2"
+              className="flex-1 md:flex-initial justify-center px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm shadow-md transition flex items-center gap-2 active:scale-95 whitespace-nowrap"
             >
-              <TrendingUp className="w-4 h-4" />
+              <TrendingUp className="w-4 h-4 shrink-0" />
               <span>{lang === 'bn' ? 'পজিশন বিড দিন' : 'Boost / Bid Now'}</span>
             </Link>
           </div>
+        </div>
+      </div>
+
+      {/* Mobile & Tablet Search + Quick Type Bar */}
+      <div className="lg:hidden space-y-3">
+        <div className="flex items-center gap-2">
+          <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-0">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={lang === 'bn' ? 'শপ প্রোডাক্ট খুঁজুন...' : 'Search shop products...'}
+              className="w-full pl-9 pr-16 py-2.5 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-sky-500 shadow-xs"
+            />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            <button
+              type="submit"
+              className="absolute right-1.5 top-1.5 px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-[11px] font-bold transition"
+            >
+              {lang === 'bn' ? 'খুঁজুন' : 'Search'}
+            </button>
+          </form>
+
+          <button
+            type="button"
+            onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
+            className={`p-2.5 rounded-2xl border text-xs font-bold flex items-center gap-1.5 transition shrink-0 active:scale-95 ${
+              mobileFiltersOpen
+                ? 'bg-sky-600 text-white border-sky-600 shadow-sm'
+                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800'
+            }`}
+          >
+            <Filter className="w-4 h-4" />
+            <span className="hidden xs:inline">{lang === 'bn' ? 'ফিল্টার' : 'Filter'}</span>
+          </button>
+        </div>
+
+        {/* Quick Product Type Pills on Mobile/Tablet */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <button
+            type="button"
+            onClick={() => setSelectedType('')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 border ${
+              selectedType === ''
+                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 border-slate-900 dark:border-white shadow-xs'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800'
+            }`}
+          >
+            <span>{lang === 'bn' ? 'সকল টাইপ' : 'All Types'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedType('DIGITAL_DOWNLOAD')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 border ${
+              selectedType === 'DIGITAL_DOWNLOAD'
+                ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800'
+            }`}
+          >
+            <DownloadCloud className="w-3.5 h-3.5" />
+            <span>{lang === 'bn' ? 'ডিজিটাল প্রোডাক্ট' : 'Digital'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedType('PHYSICAL')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 border ${
+              selectedType === 'PHYSICAL'
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800'
+            }`}
+          >
+            <Cpu className="w-3.5 h-3.5" />
+            <span>{lang === 'bn' ? 'ফিজিক্যাল পণ্য' : 'Physical'}</span>
+          </button>
         </div>
       </div>
 

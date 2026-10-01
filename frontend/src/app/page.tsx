@@ -20,6 +20,8 @@ import {
   Package,
   Briefcase,
   PlusCircle,
+  ShieldAlert,
+  BookOpen,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useSettings } from '@/context/SettingsContext';
@@ -134,25 +136,25 @@ export default function HomePage() {
     const isCarousel = homeSettings.layoutStyles?.shopProducts === 'carousel';
 
     return (
-      <section key="shopProducts" className="max-w-[1650px] w-full mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-bold mb-1">
+      <section key="shopProducts" className="max-w-[1650px] w-full mx-auto px-3.5 sm:px-6 lg:px-8">
+        <div className="flex items-end justify-between gap-3 mb-4 sm:mb-6">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[11px] sm:text-xs font-bold mb-1">
               <Store className="w-3.5 h-3.5" />
               <span>{lang === 'bn' ? 'শপ মার্কেটপ্লেস' : 'Shop Marketplace'}</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+            <h2 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white truncate">
               {titleText}
             </h2>
-            <p className="text-sm text-slate-700 dark:text-slate-300 mt-1">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5 line-clamp-1">
               {subText}
             </p>
           </div>
           <Link
             href="/shop"
-            className="text-sm font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+            className="shrink-0 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 transition active:scale-95"
           >
-            <span>{lang === 'bn' ? 'সবগুলো দেখুন (SHOP)' : 'View All (SHOP)'}</span>
+            <span>{lang === 'bn' ? 'সব দেখুন' : 'View All'}</span>
             <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
@@ -260,25 +262,25 @@ export default function HomePage() {
     const isCarousel = homeSettings.layoutStyles?.digitalProducts === 'carousel';
 
     return (
-      <section key="digitalProducts" className="max-w-[1650px] w-full mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 text-xs font-bold mb-1">
+      <section key="digitalProducts" className="max-w-[1650px] w-full mx-auto px-3.5 sm:px-6 lg:px-8">
+        <div className="flex items-end justify-between gap-3 mb-4 sm:mb-6">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 text-[11px] sm:text-xs font-bold mb-1">
               <DownloadCloud className="w-3.5 h-3.5" />
               <span>{lang === 'bn' ? 'ডিজিটাল মার্কেটপ্লেস' : 'Digital Marketplace'}</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+            <h2 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white truncate">
               {titleText}
             </h2>
-            <p className="text-sm text-slate-700 dark:text-slate-300 mt-1">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5 line-clamp-1">
               {subText}
             </p>
           </div>
           <Link
             href="/digital-products"
-            className="text-sm font-bold text-sky-600 hover:underline flex items-center gap-1"
+            className="shrink-0 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-xs sm:text-sm font-bold text-sky-600 dark:text-sky-400 flex items-center gap-1 transition active:scale-95"
           >
-            <span>{lang === 'bn' ? 'সবগুলো দেখুন' : 'View All'}</span>
+            <span>{lang === 'bn' ? 'সব দেখুন' : 'View All'}</span>
             <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
@@ -386,25 +388,25 @@ export default function HomePage() {
     const isCarousel = homeSettings.layoutStyles?.physicalProducts === 'carousel';
 
     return (
-      <section key="physicalProducts" className="max-w-[1650px] w-full mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold mb-1">
+      <section key="physicalProducts" className="max-w-[1650px] w-full mx-auto px-3.5 sm:px-6 lg:px-8">
+        <div className="flex items-end justify-between gap-3 mb-4 sm:mb-6">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] sm:text-xs font-bold mb-1">
               <Cpu className="w-3.5 h-3.5" />
               <span>{lang === 'bn' ? 'স্মার্ট ডিভাইস ও গ্যাজেট' : 'Smart Devices & Hardware'}</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+            <h2 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white truncate">
               {titleText}
             </h2>
-            <p className="text-sm text-slate-700 dark:text-slate-300 mt-1">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5 line-clamp-1">
               {subText}
             </p>
           </div>
           <Link
             href="/physical-products"
-            className="text-sm font-bold text-emerald-600 hover:underline flex items-center gap-1"
+            className="shrink-0 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 transition active:scale-95"
           >
-            <span>{lang === 'bn' ? 'সবগুলো দেখুন' : 'View All'}</span>
+            <span>{lang === 'bn' ? 'সব দেখুন' : 'View All'}</span>
             <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
@@ -512,25 +514,25 @@ export default function HomePage() {
     const isCarousel = homeSettings.layoutStyles?.moneyExchange === 'carousel';
 
     return (
-      <section key="moneyExchange" className="max-w-[1650px] w-full mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-bold mb-1">
+      <section key="moneyExchange" className="max-w-[1650px] w-full mx-auto px-3.5 sm:px-6 lg:px-8">
+        <div className="flex items-end justify-between gap-3 mb-4 sm:mb-6">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[11px] sm:text-xs font-bold mb-1">
               <Coins className="w-3.5 h-3.5" />
               <span>{lang === 'bn' ? 'পিয়ার-টু-পিয়ার এসক্রো এক্সচেঞ্জ' : 'P2P Escrow Exchange'}</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+            <h2 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white truncate">
               {titleText}
             </h2>
-            <p className="text-sm text-slate-700 dark:text-slate-300 mt-1">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5 line-clamp-1">
               {subText}
             </p>
           </div>
           <Link
             href="/money-exchange"
-            className="text-sm font-bold text-amber-600 hover:underline flex items-center gap-1"
+            className="shrink-0 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 transition active:scale-95"
           >
-            <span>{lang === 'bn' ? 'সব এক্সচেঞ্জ দেখুন' : 'View All Exchanges'}</span>
+            <span>{lang === 'bn' ? 'সব দেখুন' : 'View All'}</span>
             <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
@@ -601,7 +603,7 @@ export default function HomePage() {
                 <div className="pt-3 sm:pt-4">
                   <Link
                     href={`/dashboard/chat?targetUserId=${p.seller?.id}`}
-                    className="w-full py-2 sm:py-2.5 px-4 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-500 hover:text-white text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-xs"
+                    className="w-full py-2 sm:py-2.5 px-4 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-500 hover:text-white text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-xs active:scale-95"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
                     <span>{t('chat')}</span>
@@ -625,25 +627,25 @@ export default function HomePage() {
     const isCarousel = homeSettings.layoutStyles?.users === 'carousel';
 
     return (
-      <section key="users" className="max-w-[1650px] w-full mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 text-xs font-bold mb-1">
+      <section key="users" className="max-w-[1650px] w-full mx-auto px-3.5 sm:px-6 lg:px-8">
+        <div className="flex items-end justify-between gap-3 mb-4 sm:mb-6">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 text-[11px] sm:text-xs font-bold mb-1">
               <Users className="w-3.5 h-3.5" />
               <span>{lang === 'bn' ? 'শীর্ষ প্রোফাইল' : 'Top Profiles'}</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+            <h2 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white truncate">
               {titleText}
             </h2>
-            <p className="text-sm text-slate-700 dark:text-slate-300 mt-1">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5 line-clamp-1">
               {subText}
             </p>
           </div>
           <Link
             href="/users"
-            className="text-sm font-bold text-sky-600 hover:underline flex items-center gap-1"
+            className="shrink-0 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-xs sm:text-sm font-bold text-sky-600 dark:text-sky-400 flex items-center gap-1 transition active:scale-95"
           >
-            <span>{lang === 'bn' ? 'সকল ইউজার খুঁজুন' : 'Find All Users'}</span>
+            <span>{lang === 'bn' ? 'সব ইউজার' : 'All Users'}</span>
             <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
@@ -736,7 +738,7 @@ export default function HomePage() {
               <div className="pt-3 sm:pt-4">
                 <Link
                   href={`/dashboard/chat?targetUserId=${u.id}`}
-                  className="w-full py-2 sm:py-2.5 px-4 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-sky-600 hover:text-white text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-xs"
+                  className="w-full py-2 sm:py-2.5 px-4 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-sky-600 hover:text-white text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-xs active:scale-95"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
                   <span>{lang === 'bn' ? 'চ্যাট শুরু করুন' : 'Chat Now'}</span>
@@ -769,15 +771,15 @@ export default function HomePage() {
   };
 
   return (
-    <div className="space-y-12 pb-16">
+    <div className="space-y-8 sm:space-y-12 pb-16">
       {/* 1. Hero Section & Sliders */}
       <section className="relative bg-slate-900 text-white overflow-hidden">
-        <div className="max-w-[1650px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 md:py-24 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div className="max-w-[1650px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-7 sm:py-14 md:py-20 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
             {/* Slide Content */}
-            <div className="lg:col-span-7 space-y-4 sm:space-y-6">
+            <div className="lg:col-span-7 space-y-3.5 sm:space-y-6">
               <div className="inline-flex items-center gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-sky-500/20 border border-sky-400/30 text-sky-400 text-xs sm:text-sm font-semibold">
-                <ShieldCheck className="w-4 h-4" />
+                <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span>{lang === 'bn' ? '১০০% নিরাপদ এসক্রো ট্রানজ্যাকশন প্ল্যাটফর্ম' : '100% Secure Escrow Safe Transactions'}</span>
               </div>
 
@@ -787,33 +789,33 @@ export default function HomePage() {
                   : 'Safe Transaction Marketplace & Escrow')}
               </h1>
 
-              <p className="text-sm sm:text-lg md:text-xl text-slate-300 max-w-2xl font-normal leading-relaxed">
+              <p className="text-xs sm:text-lg md:text-xl text-slate-300 max-w-2xl font-normal leading-relaxed">
                 {sliders[currentSlide]?.subtitle || (lang === 'bn'
                   ? 'পণ্য বা সার্ভিস বুঝে পেয়ে টাকা ছাড়ুন। টাকা থাকবে সুরক্ষিত Hold ব্যালেন্সে। কোনো প্রতারণার সুযোগ নেই।'
                   : 'Pay with complete peace of mind. Funds stay locked in Escrow Hold balance until you confirm delivery.')}
               </p>
 
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 pt-2">
+              <div className="flex items-center gap-2.5 sm:gap-4 pt-1 sm:pt-2">
                 <Link
                   href="/transactions"
-                  className="px-5 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm sm:text-base shadow-lg shadow-sky-600/30 flex items-center gap-2 transition"
+                  className="flex-1 sm:flex-initial justify-center px-4 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs sm:text-base shadow-lg shadow-sky-600/30 flex items-center gap-2 transition active:scale-95 whitespace-nowrap"
                 >
-                  <span>{lang === 'bn' ? 'নিরাপদ লেনদেন শুরু করুন' : 'Start Safe Transaction'}</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <span>{lang === 'bn' ? 'নিরাপদ লেনদেন' : 'Start Safe Deal'}</span>
+                  <ArrowRight className="w-4 h-4 shrink-0" />
                 </Link>
 
                 <Link
                   href="/shop"
-                  className="px-5 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm sm:text-base shadow-lg shadow-amber-500/20 transition flex items-center gap-2"
+                  className="flex-1 sm:flex-initial justify-center px-4 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-base shadow-lg shadow-amber-500/20 transition flex items-center gap-2 active:scale-95 whitespace-nowrap"
                 >
-                  <Store className="w-4 h-4" />
+                  <Store className="w-4 h-4 shrink-0" />
                   <span>{lang === 'bn' ? 'শপ দেখুন (SHOP)' : 'Visit SHOP'}</span>
                 </Link>
               </div>
 
               {/* Slider Dots */}
               {sliders.length > 1 && (
-                <div className="flex items-center gap-2 pt-4">
+                <div className="flex items-center gap-2 pt-2 sm:pt-4">
                   {sliders.map((_, idx) => (
                     <button
                       key={idx}
@@ -829,9 +831,9 @@ export default function HomePage() {
 
             {/* Hero Visual Card: Escrow Simulation */}
             <div className="lg:col-span-5">
-              <div className="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-6 shadow-2xl space-y-4 backdrop-blur">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-700">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <div className="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-4 sm:p-6 shadow-2xl space-y-3 sm:space-y-4 backdrop-blur">
+                <div className="flex items-center justify-between pb-2.5 sm:pb-3 border-b border-slate-700">
+                  <span className="text-[11px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">
                     {lang === 'bn' ? 'এসক্রো লেনদেন সুরক্ষা' : 'Escrow Protection Flow'}
                   </span>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
@@ -839,9 +841,9 @@ export default function HomePage() {
                   </span>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-700/50">
-                    <div className="w-7 h-7 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                <div className="space-y-2 sm:space-y-3">
+                  <div className="flex items-start gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl bg-slate-900/60 border border-slate-700/50">
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
                       1
                     </div>
                     <div>
@@ -850,8 +852,8 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-700/50">
-                    <div className="w-7 h-7 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                  <div className="flex items-start gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl bg-slate-900/60 border border-slate-700/50">
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
                       2
                     </div>
                     <div>
@@ -860,8 +862,8 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-700/50">
-                    <div className="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                  <div className="flex items-start gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl bg-slate-900/60 border border-slate-700/50">
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
                       3
                     </div>
                     <div>
@@ -871,7 +873,7 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="pt-2 text-center">
+                <div className="pt-1 sm:pt-2 text-center">
                   <span className="text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                     <span>{lang === 'bn' ? 'জিরো ফ্রড গ্যারান্টি ও সেন্ট্রালাইজড লেজার' : 'Zero Fraud Guarantee & Immutable Ledger'}</span>
@@ -880,6 +882,110 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* 1.5 Quick Service Navigation Grid (Mobile, Tablet & Desktop Comfort) */}
+      <section className="max-w-[1650px] w-full mx-auto px-3.5 sm:px-6 lg:px-8 -mt-4 sm:-mt-6 relative z-20">
+        <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3 bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-md">
+          <Link
+            href="/shop"
+            className="flex flex-col items-center justify-center gap-1.5 p-2 sm:p-3 rounded-xl sm:rounded-2xl hover:bg-amber-50 dark:hover:bg-amber-950/30 transition active:scale-95 text-center group"
+          >
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition">
+              <Store className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 truncate w-full">
+              {lang === 'bn' ? 'শপ (SHOP)' : 'Shop'}
+            </span>
+          </Link>
+
+          <Link
+            href="/micro-jobs"
+            className="flex flex-col items-center justify-center gap-1.5 p-2 sm:p-3 rounded-xl sm:rounded-2xl hover:bg-amber-50 dark:hover:bg-amber-950/30 transition active:scale-95 text-center group relative"
+          >
+            <span className="absolute top-1 right-1 sm:right-2 px-1 py-0.2 rounded-full bg-amber-500 text-slate-950 text-[7px] font-black">
+              HOT
+            </span>
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition">
+              <Briefcase className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 truncate w-full">
+              {lang === 'bn' ? 'মাইক্রো জব' : 'Micro Jobs'}
+            </span>
+          </Link>
+
+          <Link
+            href="/money-exchange"
+            className="flex flex-col items-center justify-center gap-1.5 p-2 sm:p-3 rounded-xl sm:rounded-2xl hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition active:scale-95 text-center group"
+          >
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition">
+              <Coins className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 truncate w-full">
+              {lang === 'bn' ? 'মানি এক্সচেঞ্জ' : 'Exchange'}
+            </span>
+          </Link>
+
+          <Link
+            href="/check"
+            className="flex flex-col items-center justify-center gap-1.5 p-2 sm:p-3 rounded-xl sm:rounded-2xl hover:bg-rose-50 dark:hover:bg-rose-950/30 transition active:scale-95 text-center group"
+          >
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center group-hover:scale-105 transition">
+              <ShieldAlert className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 truncate w-full">
+              {lang === 'bn' ? 'স্ক্যামার চেক' : 'Trust Check'}
+            </span>
+          </Link>
+
+          <Link
+            href="/digital-products"
+            className="flex flex-col items-center justify-center gap-1.5 p-2 sm:p-3 rounded-xl sm:rounded-2xl hover:bg-sky-50 dark:hover:bg-sky-950/30 transition active:scale-95 text-center group"
+          >
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center group-hover:scale-105 transition">
+              <DownloadCloud className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 truncate w-full">
+              {lang === 'bn' ? 'ডিজিটাল পণ্য' : 'Digital'}
+            </span>
+          </Link>
+
+          <Link
+            href="/physical-products"
+            className="flex flex-col items-center justify-center gap-1.5 p-2 sm:p-3 rounded-xl sm:rounded-2xl hover:bg-violet-50 dark:hover:bg-violet-950/30 transition active:scale-95 text-center group"
+          >
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-violet-500/15 text-violet-600 dark:text-violet-400 flex items-center justify-center group-hover:scale-105 transition">
+              <Package className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 truncate w-full">
+              {lang === 'bn' ? 'ফিজিক্যাল পণ্য' : 'Physical'}
+            </span>
+          </Link>
+
+          <Link
+            href="/transactions"
+            className="flex flex-col items-center justify-center gap-1.5 p-2 sm:p-3 rounded-xl sm:rounded-2xl hover:bg-teal-50 dark:hover:bg-teal-950/30 transition active:scale-95 text-center group"
+          >
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center group-hover:scale-105 transition">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 truncate w-full">
+              {lang === 'bn' ? 'নিরাপদ লেনদেন' : 'Safe Deals'}
+            </span>
+          </Link>
+
+          <Link
+            href="/users"
+            className="flex flex-col items-center justify-center gap-1.5 p-2 sm:p-3 rounded-xl sm:rounded-2xl hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition active:scale-95 text-center group"
+          >
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center group-hover:scale-105 transition">
+              <Users className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 truncate w-full">
+              {lang === 'bn' ? 'টপ ইউজার' : 'Top Users'}
+            </span>
+          </Link>
         </div>
       </section>
 

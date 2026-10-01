@@ -37,6 +37,7 @@ export default function ProductDetailPage() {
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   // Bid Modal state
   const [bidModalOpen, setBidModalOpen] = useState(false);
@@ -64,6 +65,21 @@ export default function ProductDetailPage() {
     if (imagesList.length <= 1) return;
     const nextIdx = (currentIdx + 1) % imagesList.length;
     setSelectedImage(imagesList[nextIdx].imageUrl);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (imagesList.length <= 1) return;
+    setTouchStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null || imagesList.length <= 1) return;
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) handleNextImage();
+      else handlePrevImage();
+    }
+    setTouchStartX(null);
   };
 
   useEffect(() => {
@@ -144,20 +160,24 @@ export default function ProductDetailPage() {
   const isOwner = user?.id === product.sellerId;
 
   return (
-    <div className="max-w-[1650px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-[1650px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 pb-24 md:pb-8 space-y-6 sm:space-y-8">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-slate-400">
-        <Link href="/" className="hover:text-slate-600">{t('home')}</Link>
+      <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
+        <Link href="/" className="hover:text-slate-600 shrink-0">{t('home')}</Link>
         <span>/</span>
-        <Link href="/products" className="hover:text-slate-600">{t('products')}</Link>
+        <Link href="/products" className="hover:text-slate-600 shrink-0">{t('products')}</Link>
         <span>/</span>
-        <span className="text-slate-600 dark:text-slate-300 truncate max-w-xs">{product.title}</span>
+        <span className="text-slate-600 dark:text-slate-300 truncate">{product.title}</span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
         {/* Left Col: Interactive Image Gallery (6 cols) */}
-        <div className="lg:col-span-6 space-y-4">
-          <div className="relative group aspect-square bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-sm flex items-center justify-center select-none">
+        <div className="lg:col-span-6 space-y-3 sm:space-y-4">
+          <div
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            className="relative group aspect-square bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-sm flex items-center justify-center select-none"
+          >
             <img
               src={getImageUrl(selectedImage || imagesList[0]?.imageUrl)}
               alt={product.title}
@@ -483,7 +503,11 @@ export default function ProductDetailPage() {
 
       {/* Fullscreen Lightbox / Zoom Modal */}
       {lightboxOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in select-none">
+        <div
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in select-none"
+        >
           <button
             type="button"
             onClick={() => setLightboxOpen(false)}
@@ -528,6 +552,42 @@ export default function ProductDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Mobile Sticky Bottom Action Bar (Right above MobileBottomNav) */}
+      <div className="md:hidden fixed bottom-[58px] left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 px-4 py-2.5 shadow-[0_-6px_20px_rgba(0,0,0,0.08)] flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[10px] text-slate-400 font-semibold uppercase">
+            {lang === 'bn' ? 'প্রোডাক্ট মূল্য' : 'Price'}
+          </div>
+          {product.pricingType === 'NEGOTIABLE' || Number(product.price) === 0 ? (
+            <div className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 truncate">
+              🤝 {lang === 'bn' ? 'আলোচনাসাপেক্ষ' : 'Negotiable'}
+            </div>
+          ) : (
+            <div className="text-base font-black text-sky-600 dark:text-sky-400 truncate">
+              ৳ {Number(product.price).toLocaleString()}
+            </div>
+          )}
+        </div>
+
+        <Link
+          href={`/dashboard/chat?targetUserId=${product.seller?.id}&productId=${product.id}`}
+          onClick={() => {
+            trackEvent('Contact', {
+              content_name: product.title,
+              content_category: product.category?.name || 'General',
+              content_ids: [product.id],
+              content_type: 'product',
+              value: Number(product.price || 0),
+              currency: 'BDT',
+            });
+          }}
+          className="flex-1 max-w-[220px] py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md shadow-sky-600/25 flex items-center justify-center gap-2 transition active:scale-95 whitespace-nowrap"
+        >
+          <MessageSquare className="w-4 h-4 shrink-0" />
+          <span>{lang === 'bn' ? 'সেলার সাথে চ্যাট করুন' : 'Chat with Seller'}</span>
+        </Link>
+      </div>
     </div>
   );
 }

@@ -71,8 +71,8 @@ export default function MobileBottomNav() {
   ];
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 shadow-[0_-8px_20px_rgba(0,0,0,0.45)] safe-area-bottom">
-      <div className="flex items-center justify-around px-1 py-1.5 max-w-md mx-auto">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-t border-slate-200/90 dark:border-slate-800/80 shadow-[0_-8px_25px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_25px_rgba(0,0,0,0.45)] safe-area-bottom transition-colors">
+      <div className="flex items-center justify-around px-1.5 py-1.5 max-w-md mx-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = item.isActive;
@@ -82,15 +82,15 @@ export default function MobileBottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`relative flex flex-col items-center justify-center flex-1 py-1 px-1 transition-all duration-200 select-none ${
+              className={`relative flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-xl transition-all duration-200 select-none active:scale-95 ${
                 active
-                  ? 'text-amber-400 font-semibold scale-105'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'text-sky-600 dark:text-amber-400 font-bold bg-sky-50/80 dark:bg-amber-500/10'
+                  : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
               }`}
             >
               {/* Active Indicator Top Pill */}
               {active && (
-                <span className="absolute -top-1.5 w-6 h-0.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400" />
+                <span className="absolute -top-1.5 w-7 h-1 rounded-full bg-sky-600 dark:bg-amber-400 shadow-xs" />
               )}
 
               {/* Icon Container with Badge */}
@@ -101,7 +101,7 @@ export default function MobileBottomNav() {
                   }`}
                 />
                 {item.badge && !active && (
-                  <span className="absolute -top-1.5 -right-2 px-1 py-0.2 text-[8px] font-extrabold rounded-full bg-amber-500 text-zinc-950 leading-tight shadow-sm">
+                  <span className="absolute -top-1.5 -right-2.5 px-1.5 py-0.2 text-[8px] font-extrabold rounded-full bg-amber-500 text-slate-950 leading-tight shadow-xs">
                     {item.badge}
                   </span>
                 )}
@@ -109,8 +109,8 @@ export default function MobileBottomNav() {
 
               {/* Text label */}
               <span
-                className={`text-[10px] mt-1 tracking-tight truncate max-w-[56px] text-center ${
-                  active ? 'text-amber-400' : 'text-zinc-400'
+                className={`text-[10px] mt-0.5 tracking-tight truncate max-w-[64px] text-center ${
+                  active ? 'text-sky-600 dark:text-amber-400 font-bold' : 'text-slate-600 dark:text-zinc-400 font-medium'
                 }`}
               >
                 {label}

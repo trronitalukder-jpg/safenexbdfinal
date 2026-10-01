@@ -378,7 +378,7 @@ export const Navbar = () => {
               </div>
             )}
 
-            {/* Mobile & Tablet Header Controls: Search, Auth/User Panel, Hamburger */}
+            {/* Mobile & Tablet Header Controls: Search, Theme, Auth/User Panel, Hamburger */}
             <div className="xl:hidden flex items-center gap-1.5 sm:gap-2">
               {/* Mobile Search Toggle Button */}
               <button
@@ -396,6 +396,17 @@ export const Navbar = () => {
                 title={lang === 'bn' ? 'অনুসন্ধান' : 'Search'}
               >
                 <Search className="w-4 h-4" />
+              </button>
+
+              {/* Quick Mobile Theme Toggle */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="md:hidden p-2 sm:p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex-shrink-0 shadow-xs active:scale-95"
+                aria-label="Toggle Theme"
+                title={lang === 'bn' ? 'থিম পরিবর্তন' : 'Toggle Theme'}
+              >
+                {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
               </button>
 
               {/* Mobile & Tablet User Panel Quick Pill */}
@@ -641,7 +652,12 @@ export const Navbar = () => {
 
       {/* Mobile & Tablet Drawer */}
       {mobileMenuOpen && (
-        <div className="xl:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain px-4 pt-3 pb-24 space-y-4 shadow-2xl animate-in slide-in-from-top-2 duration-200">
+        <>
+          <div
+            className="xl:hidden fixed inset-0 top-16 bg-slate-950/35 backdrop-blur-[1px] z-40"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="xl:hidden relative z-50 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 max-h-[calc(100dvh-4.25rem)] overflow-y-auto overscroll-contain px-4 pt-3 pb-24 space-y-4 shadow-2xl animate-in slide-in-from-top-2 duration-200">
           {/* Top Section: Language Switch & Dark/Light Toggle + Search */}
           <div className="space-y-2.5">
             <div className="flex items-center gap-2">
@@ -1060,6 +1076,7 @@ export const Navbar = () => {
             )}
           </div>
         </div>
+        </>
       )}
     </header>
   );
