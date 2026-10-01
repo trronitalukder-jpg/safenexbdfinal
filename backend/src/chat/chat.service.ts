@@ -1575,12 +1575,13 @@ export class ChatService {
   }
 
   /**
-   * Get Admin Chat Settings (ON/OFF status + customizable Welcome Message template)
+   * Get Admin Chat Settings (ON/OFF status + customizable Welcome Message template + Custom Quick Replies)
    */
   async getAdminChatSettings(): Promise<{
     isEnabled: boolean;
     welcomeMessageEnabled: boolean;
     welcomeMessageTemplate: string;
+    quickReplies: Array<{ id: string; title: string; text: string }>;
   }> {
     try {
       const setting = await this.prisma.systemSetting.findUnique({
@@ -1598,6 +1599,10 @@ export class ChatService {
           typeof val.welcomeMessageTemplate === 'string' && val.welcomeMessageTemplate.trim()
             ? val.welcomeMessageTemplate
             : DEFAULT_ADMIN_CHAT_SETTINGS.welcomeMessageTemplate,
+        quickReplies:
+          Array.isArray(val.quickReplies) && val.quickReplies.length > 0
+            ? val.quickReplies
+            : DEFAULT_ADMIN_CHAT_SETTINGS.quickReplies,
       };
     } catch {
       return DEFAULT_ADMIN_CHAT_SETTINGS;
@@ -1605,13 +1610,14 @@ export class ChatService {
   }
 
   /**
-   * Update Admin Chat Settings (ON/OFF + Welcome Message template)
+   * Update Admin Chat Settings (ON/OFF + Welcome Message template + Custom Quick Replies)
    */
   async updateAdminChatSettings(
     payload: {
       isEnabled?: boolean;
       welcomeMessageEnabled?: boolean;
       welcomeMessageTemplate?: string;
+      quickReplies?: Array<{ id: string; title: string; text: string }>;
     },
     adminId?: string,
   ) {
@@ -1623,6 +1629,9 @@ export class ChatService {
         typeof payload.welcomeMessageTemplate === 'string' && payload.welcomeMessageTemplate.trim()
           ? payload.welcomeMessageTemplate
           : current.welcomeMessageTemplate,
+      quickReplies: Array.isArray(payload.quickReplies)
+        ? payload.quickReplies
+        : current.quickReplies,
     };
 
     await this.prisma.systemSetting.upsert({
@@ -1632,7 +1641,7 @@ export class ChatService {
         value: updated,
         category: 'CHAT',
         isPublic: true,
-        description: 'SafnexBD Admin Chat ON/OFF & Auto Welcome Message configuration',
+        description: 'SafnexBD Admin Chat ON/OFF, Welcome Message & Custom Quick Replies configuration',
       },
       update: {
         value: updated,
@@ -1650,7 +1659,7 @@ export class ChatService {
             targetId: 'admin_chat_settings',
             beforeState: current,
             afterState: updated,
-            reason: 'Updated SafnexBD Admin Chat & Welcome Message settings',
+            reason: 'Updated SafnexBD Admin Chat, Welcome Message & Quick Replies settings',
           },
         })
         .catch(() => null);
@@ -1853,6 +1862,48 @@ SafnexBD-এর বিভিন্ন Feature, নিয়ম, নতুন Update
 **শিখুন → কাজ করুন → Share করুন → আপনার Network তৈরি করুন → কমিশনের সুযোগ তৈরি করুন।**
 
 **— SafnexBD Team**`,
+  quickReplies: [
+    {
+      id: 'qr_greeting',
+      title: '👋 স্বাগতম ও সহায়তা',
+      text: 'আসসালামু আলাইকুম {First Name}! SafnexBD অফিসিয়াল সাপোর্টে আপনাকে স্বাগতম। আপনাকে কীভাবে সাহায্য করতে পারি জানাবেন?',
+    },
+    {
+      id: 'qr_recharge',
+      title: '💳 রিচার্জ গাইড',
+      text: 'আপনার ওয়ালেটে রিচার্জ করতে Dashboard → Wallet & Ledger পেজে গিয়ে নির্দিষ্ট নম্বরে Send Money করে Transaction ID (TrxID) ও স্ক্রিনশট দিয়ে সাবমিট করুন। ৫-১৫ মিনিটের মধ্যে ব্যালেন্স যুক্ত হয়ে যাবে ইনশাআল্লাহ।',
+    },
+    {
+      id: 'qr_withdraw',
+      title: '💸 উইথড্র আপডেট',
+      text: 'আপনার উইথড্র রিকোয়েস্টটি আমাদের ফাইন্যান্স টিম রিভিউ করছে। যাচাই সম্পন্ন হওয়া মাত্রই আপনার নির্ধারিত বিকাশ/নগদ নম্বরে পেমেন্ট পাঠিয়ে দেওয়া হবে। ধৈর্য ধরার জন্য ধন্যবাদ।',
+    },
+    {
+      id: 'qr_microjob',
+      title: '💼 মাইক্রো জব গাইড',
+      text: 'মাইক্রো জবে কাজ করতে বা নতুন কাজ পোস্ট করতে Dashboard → Micro Jobs মেনু ব্যবহার করুন। কাজের নির্দেশনা অনুযায়ী সঠিক প্রুফ ও স্ক্রিনশট সাবমিট করলে দ্রুত অ্যাপ্রুভ হবে।',
+    },
+    {
+      id: 'qr_escrow',
+      title: '🔒 এসক্রো লেনদেন গাইড',
+      text: 'SafnexBD-তে যেকোনো পণ্য বা সার্ভিস কেনাবেচার সময় চ্যাট বক্স থেকে অফিসিয়াল Escrow Pay Request ব্যবহার করুন। প্ল্যাটফর্মের বাইরে ব্যক্তিগতভাবে লেনদেন করবেন না।',
+    },
+    {
+      id: 'qr_affiliate',
+      title: '🎁 অ্যাফিলিয়েট ২০% কমিশন',
+      text: 'আপনার Dashboard → Refer & Earn পেজ থেকে আপনার Affiliate Link কপি করে বন্ধুদের শেয়ার করুন। আপনার রেফারে কেউ লেনদেন করলেই কোম্পানির প্রফিটের ২০% আজীবন কমিশন পাবেন!',
+    },
+    {
+      id: 'qr_dispute',
+      title: '⚠️ প্রুফ ও যাচাই',
+      text: 'আপনার বিষয়টি আমরা গুরুত্বের সাথে দেখছি। অনুগ্রহ করে চ্যাটে আপনার লেনদেন বা কাজের প্রুফ/স্ক্রিনশট দিন, আমাদের টিম যাচাই করে দ্রুত সমাধান দেবে।',
+    },
+    {
+      id: 'qr_resolved',
+      title: '✅ সমাধান সম্পন্ন',
+      text: 'আপনার বিষয়টি সফলভাবে সমাধান করা হয়েছে। অনুগ্রহ করে আপনার ড্যাশবোর্ড চেক করুন। SafnexBD-এর সাথে থাকার জন্য আন্তরিক ধন্যবাদ! ❤️',
+    },
+  ],
 };
 
 export const DEFAULT_CHAT_SAFETY_AND_TEMPLATES = {

@@ -172,17 +172,18 @@ export class ChatController {
   }
 
   /**
-   * Admin: Update SafnexBD Admin Chat Settings (ON/OFF + Customizable Welcome Message)
+   * Admin: Update SafnexBD Admin Chat Settings (ON/OFF + Customizable Welcome Message + Custom Quick Replies)
    */
   @Patch('admin/settings')
   @UseGuards(RolesGuard)
-  @Roles('SUPER_ADMIN', 'ADMIN')
+  @Roles('SUPER_ADMIN', 'ADMIN', 'SUPPORT_ADMIN')
   async updateAdminChatSettings(
     @Body()
     body: {
       isEnabled?: boolean;
       welcomeMessageEnabled?: boolean;
       welcomeMessageTemplate?: string;
+      quickReplies?: Array<{ id: string; title: string; text: string }>;
     },
     @CurrentUser('id') adminId: string,
   ) {

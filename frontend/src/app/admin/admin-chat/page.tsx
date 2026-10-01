@@ -17,12 +17,65 @@ import {
   Paperclip,
   FileText,
   ExternalLink,
+  Plus,
+  Trash2,
+  Edit3,
+  Sparkles,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuthStore } from '@/store/useAuthStore';
 import { getImageUrl, compressImage } from '@/lib/imageUtils';
+
+export interface QuickReplyItem {
+  id: string;
+  title: string;
+  text: string;
+}
+
+const DEFAULT_QUICK_REPLIES: QuickReplyItem[] = [
+  {
+    id: 'qr-greeting',
+    title: '👋 শুভেচ্ছা ও সহায়তা',
+    text: 'আসসালামু আলাইকুম {First Name} {Last Name}, SafnexBD Admin সাপোর্টে আপনাকে স্বাগতম! বলুন আপনাকে কীভাবে সাহায্য করতে পারি?',
+  },
+  {
+    id: 'qr-recharge',
+    title: '💳 রিচার্জ গাইড',
+    text: 'প্রিয় {First Name}, আপনার ওয়ালেটে রিচার্জ করতে ড্যাশবোর্ডের Wallet অপশন থেকে Recharge বাটনে ক্লিক করুন, পেমেন্ট মেথড সিলেক্ট করে সঠিক Transaction ID ও স্ক্রিনশট জমা দিন। ৫–১৫ মিনিটের মধ্যে ব্যালেন্স যুক্ত হয়ে যাবে ইনশাআল্লাহ।',
+  },
+  {
+    id: 'qr-withdraw',
+    title: '💸 উইথড্র আপডেট',
+    text: 'প্রিয় {First Name}, আপনার উইথড্র রিকোয়েস্টটি আমাদের টিম যাচাই করছে। সাধারণত খুব দ্রুত পেমেন্ট সম্পন্ন করা হয়। অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন, ধন্যবাদ।',
+  },
+  {
+    id: 'qr-microjob',
+    title: '💼 মাইক্রো জব গাইড',
+    text: 'প্রিয় {First Name}, মাইক্রো জব থেকে আয় করতে জবের নির্দেশনা মনোযোগ দিয়ে পড়ে কাজ সম্পন্ন করুন এবং সঠিক স্ক্রিনশট/প্রুফ জমা দিন। আপনি চাইলে নিজের কাজের জন্যও নতুন জব পোস্ট করতে পারেন!',
+  },
+  {
+    id: 'qr-escrow',
+    title: '🔒 এসক্রো লেনদেন',
+    text: 'প্রিয় {First Name}, যেকোনো কেনাবেচায় ১০০% নিরাপত্তার জন্য SafnexBD Escrow Service ব্যবহার করুন। কাজ বা পণ্য বুঝে পাওয়ার পরই কেবল পেমেন্ট রিলিজ হবে।',
+  },
+  {
+    id: 'qr-affiliate',
+    title: '🎁 ২০% অ্যাফিলিয়েট বোনাস',
+    text: 'প্রিয় {First Name}, আপনার রেফারেল লিংক বন্ধুদের সাথে শেয়ার করুন! আপনার রেফারে কেউ যুক্ত হয়ে যেকোনো লেনদেন বা কাজ করলেই প্ল্যাটফর্ম চার্জের ২০% আজীবন কমিশন আপনার মেইন ব্যালেন্সে অটোমেটিক যোগ হবে।',
+  },
+  {
+    id: 'qr-proof',
+    title: '📸 স্ক্রিনশট / তথ্য দিন',
+    text: 'প্রিয় {First Name}, আপনার বিষয়টি দ্রুত সমাধানের জন্য অনুগ্রহ করে সংশ্লিষ্ট স্ক্রিনশট অথবা Transaction ID / বিস্তারিত তথ্য এখানে পাঠান।',
+  },
+  {
+    id: 'qr-resolved',
+    title: '✅ সমস্যা সমাধান হয়েছে',
+    text: 'প্রিয় {First Name}, আপনার বিষয়টি সফলভাবে সমাধান করা হয়েছে। অনুগ্রহ করে আপনার ড্যাশবোর্ড রিফ্রেশ করে চেক করুন। SafnexBD-এর সাথে থাকার জন্য ধন্যবাদ!',
+  },
+];
 
 function unwrap<T = any>(res: any): T {
   if (res && typeof res === 'object' && res.data !== undefined) {
@@ -49,12 +102,20 @@ export default function AdminSupportChatPage() {
   const [searchingInlineUsers, setSearchingInlineUsers] = useState(false);
   const [messageInput, setMessageInput] = useState('');
 
-  // Admin Chat Master Settings (ON/OFF + Customizable Welcome Message)
+  // Admin Chat Master Settings (ON/OFF + Customizable Welcome Message + Quick Replies)
   const [adminChatEnabled, setAdminChatEnabled] = useState(true);
   const [welcomeEnabled, setWelcomeEnabled] = useState(true);
   const [welcomeTemplate, setWelcomeTemplate] = useState('');
+  const [quickReplies, setQuickReplies] = useState<QuickReplyItem[]>(DEFAULT_QUICK_REPLIES);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+
+  // Custom Quick Replies Manager Modal
+  const [showQuickRepliesModal, setShowQuickRepliesModal] = useState(false);
+  const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
+  const [customReplyTitle, setCustomReplyTitle] = useState('');
+  const [customReplyText, setCustomReplyText] = useState('');
+  const [savingQuickReplies, setSavingQuickReplies] = useState(false);
 
   // Start New Chat with User Modal
   const [showNewChatModal, setShowNewChatModal] = useState(false);
@@ -96,6 +157,9 @@ export default function AdminSupportChatPage() {
         setAdminChatEnabled(data.isEnabled !== false);
         setWelcomeEnabled(data.welcomeMessageEnabled !== false);
         setWelcomeTemplate(data.welcomeMessageTemplate || '');
+        if (Array.isArray(data.quickReplies) && data.quickReplies.length > 0) {
+          setQuickReplies(data.quickReplies);
+        }
       }
     } catch {
       // ignore
@@ -366,9 +430,110 @@ export default function AdminSupportChatPage() {
 
   const activeTargetUser = selectedConv ? getTargetUser(selectedConv) : null;
 
+  const formatReplyForUser = (rawText: string) => {
+    const fName = activeTargetUser?.firstName || 'User';
+    const lName = activeTargetUser?.lastName || '';
+    return rawText
+      .replace(/\{First Name\}/gi, fName)
+      .replace(/\{Last Name\}/gi, lName)
+      .replace(/\s+\n/g, '\n')
+      .trim();
+  };
+
+  const handleInsertQuickReply = (item: QuickReplyItem) => {
+    const formatted = formatReplyForUser(item.text);
+    setMessageInput(formatted);
+  };
+
+  const handleDirectSendQuickReply = async (item: QuickReplyItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!selectedConv?.id || sending) return;
+    const formatted = formatReplyForUser(item.text);
+    if (!formatted) return;
+
+    setSending(true);
+    try {
+      const res: any = await api.post(`/chat/admin/conversations/${selectedConv.id}/message`, {
+        content: formatted,
+        messageType: 'TEXT',
+        isAdminNotice: false,
+      });
+      const saved = unwrap(res);
+      if (saved) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === saved.id)) return prev;
+          return [...prev, saved];
+        });
+        scrollToBottom('smooth');
+      }
+      fetchConversations(true);
+      window.dispatchEvent(new Event('admin-sidebar-counts-refresh'));
+    } catch (err: any) {
+      alert(err?.message || 'Failed to send quick reply');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const persistQuickReplies = async (nextList: QuickReplyItem[]) => {
+    setSavingQuickReplies(true);
+    try {
+      await api.patch('/chat/admin/settings', { quickReplies: nextList });
+      setQuickReplies(nextList);
+    } catch (err: any) {
+      alert(err?.message || 'Failed to save custom messages');
+    } finally {
+      setSavingQuickReplies(false);
+    }
+  };
+
+  const handleAddOrUpdateQuickReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const title = customReplyTitle.trim();
+    const text = customReplyText.trim();
+    if (!title || !text) return;
+
+    let nextList: QuickReplyItem[];
+    if (editingReplyId) {
+      nextList = quickReplies.map((r) =>
+        r.id === editingReplyId ? { ...r, title, text } : r,
+      );
+    } else {
+      nextList = [
+        ...quickReplies,
+        {
+          id: `qr-${Date.now()}`,
+          title,
+          text,
+        },
+      ];
+    }
+
+    await persistQuickReplies(nextList);
+    setEditingReplyId(null);
+    setCustomReplyTitle('');
+    setCustomReplyText('');
+  };
+
+  const handleStartEditQuickReply = (item: QuickReplyItem) => {
+    setEditingReplyId(item.id);
+    setCustomReplyTitle(item.title);
+    setCustomReplyText(item.text);
+  };
+
+  const handleDeleteQuickReply = async (id: string) => {
+    const nextList = quickReplies.filter((r) => r.id !== id);
+    await persistQuickReplies(nextList);
+    if (editingReplyId === id) {
+      setEditingReplyId(null);
+      setCustomReplyTitle('');
+      setCustomReplyText('');
+    }
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-5rem)] bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xl">
-      {/* Top Bar: Title + Master ON/OFF Toggle + Welcome Message Settings + Start Chat */}
+      {/* Top Bar: Title + Master ON/OFF Toggle + Custom Messages + Welcome Message Settings + Start Chat */}
       <div className="flex-shrink-0 px-4 sm:px-6 py-3.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/20 relative">
@@ -403,6 +568,21 @@ export default function AdminSupportChatPage() {
           >
             <UserPlus className="w-4 h-4" />
             <span>{lang === 'bn' ? 'ইউজার খুঁজুন ও চ্যাট করুন' : 'Find User & Chat'}</span>
+          </button>
+
+          {/* Custom Quick Replies Manager Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setEditingReplyId(null);
+              setCustomReplyTitle('');
+              setCustomReplyText('');
+              setShowQuickRepliesModal(true);
+            }}
+            className="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>{lang === 'bn' ? 'কাস্টম মেসেজ যোগ/এডিট' : 'Custom Messages'}</span>
           </button>
 
           {/* Master Admin Chat ON / OFF Switch */}
@@ -835,13 +1015,68 @@ export default function AdminSupportChatPage() {
                 <div ref={messagesEndRef} />
               </div>
 
+              {/* Quick Custom Messages Bar */}
+              <div className="px-3 py-2 bg-slate-50 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-800 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-extrabold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <span>
+                      {lang === 'bn'
+                        ? 'রেডি কাস্টম মেসেজ (ক্লিক করলে বক্সে বসবে, সেন্ড আইকনে ক্লিক করলে সরাসরি যাবে):'
+                        : 'Quick Custom Messages (Click to insert, or click Send icon):'}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingReplyId(null);
+                      setCustomReplyTitle('');
+                      setCustomReplyText('');
+                      setShowQuickRepliesModal(true);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-[11px] font-extrabold flex items-center gap-1 transition cursor-pointer shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>
+                      {lang === 'bn' ? '+ কাস্টম মেসেজ যোগ / এডিট' : '+ Add / Edit Custom'}
+                    </span>
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 max-h-24 overflow-y-auto custom-scrollbar pr-1">
+                  {quickReplies.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => handleInsertQuickReply(item)}
+                      title={formatReplyForUser(item.text)}
+                      className="group inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-xl bg-white dark:bg-slate-950 hover:bg-sky-500/10 border border-slate-200 dark:border-slate-800 hover:border-sky-500/40 text-xs font-bold text-slate-700 dark:text-slate-200 transition cursor-pointer shadow-2xs"
+                    >
+                      <span className="truncate max-w-[190px]">{item.title}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDirectSendQuickReply(item, e)}
+                        disabled={sending}
+                        title={
+                          lang === 'bn'
+                            ? 'সরাসরি এই মেসেজটি পাঠান'
+                            : 'Send this message immediately'
+                        }
+                        className="p-1 rounded-lg bg-sky-500/15 hover:bg-sky-600 text-sky-600 dark:text-sky-400 hover:text-white transition cursor-pointer"
+                      >
+                        <Send className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Message Input Box */}
               <form
                 onSubmit={handleSendMessage}
                 className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-end gap-2"
               >
                 <textarea
-                  rows={1}
+                  rows={2}
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -852,15 +1087,15 @@ export default function AdminSupportChatPage() {
                   }}
                   placeholder={
                     lang === 'bn'
-                      ? 'SafnexBD Admin হিসেবে মেসেজ লিখুন...'
-                      : 'Reply as SafnexBD Admin...'
+                      ? 'SafnexBD Admin হিসেবে মেসেজ লিখুন অথবা উপরের কাস্টম মেসেজে ক্লিক করুন...'
+                      : 'Reply as SafnexBD Admin or click a custom message above...'
                   }
-                  className="flex-1 max-h-32 min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-sky-500 resize-none"
+                  className="flex-1 max-h-36 min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-sky-500 resize-none"
                 />
                 <button
                   type="submit"
                   disabled={sending || !messageInput.trim()}
-                  className="px-5 h-[44px] rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer shrink-0"
+                  className="px-5 h-[48px] rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer shrink-0"
                 >
                   <Send className="w-4 h-4" />
                   <span>{lang === 'bn' ? 'পাঠান' : 'Send'}</span>
@@ -1052,6 +1287,204 @@ export default function AdminSupportChatPage() {
           </div>
         </div>
       )}
+
+      {/* Modal 3: Custom Quick Replies Manager (Add / Edit / Delete Customizable Messages) */}
+      {showQuickRepliesModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-3xl w-full p-6 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-amber-500" />
+                  <span>
+                    {lang === 'bn'
+                      ? 'কাস্টম কুইক রিপ্লাই মেসেজ ম্যানেজার'
+                      : 'Custom Quick Reply Messages Manager'}
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {lang === 'bn'
+                    ? 'নতুন কাস্টম মেসেজ তৈরি করুন বা আগের মেসেজ এডিট/ডিলিট করুন। মেসেজে {First Name} ও {Last Name} লিখলে ইউজারের নাম অটোমেটিক বসে যাবে।'
+                    : 'Create, edit, or delete custom quick replies. Use {First Name} and {Last Name} for dynamic user names.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowQuickRepliesModal(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Add / Edit Form */}
+            <form
+              onSubmit={handleAddOrUpdateQuickReply}
+              className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                  {editingReplyId
+                    ? lang === 'bn'
+                      ? '✏️ কাস্টম মেসেজ এডিট করুন'
+                      : '✏️ Edit Custom Message'
+                    : lang === 'bn'
+                      ? '➕ নতুন কাস্টম মেসেজ যোগ করুন'
+                      : '➕ Add New Custom Message'}
+                </h4>
+                {editingReplyId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingReplyId(null);
+                      setCustomReplyTitle('');
+                      setCustomReplyText('');
+                    }}
+                    className="text-xs font-bold text-rose-500 hover:underline cursor-pointer"
+                  >
+                    {lang === 'bn' ? 'এডিট বাতিল করুন' : 'Cancel Edit'}
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    {lang === 'bn'
+                      ? 'বাটনের সংক্ষিপ্ত নাম (যেমন: 💳 রিচার্জ গাইড / 📞 কল সাপোর্ট):'
+                      : 'Short Button Title (e.g. 💳 Recharge Guide):'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={customReplyTitle}
+                    onChange={(e) => setCustomReplyTitle(e.target.value)}
+                    placeholder={
+                      lang === 'bn'
+                        ? 'যেমন: 🎉 স্পেশাল অফার / 📌 কেওয়াইসি ভেরিফিকেশন'
+                        : 'e.g. 📌 Verification Help'
+                    }
+                    className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      {lang === 'bn'
+                        ? 'কাস্টম মেসেজ টেক্সট:'
+                        : 'Custom Message Text:'}
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCustomReplyText((prev) => `${prev} {First Name}`.trimStart())
+                        }
+                        className="px-2 py-0.5 rounded bg-sky-500/15 text-sky-600 dark:text-sky-400 text-[10px] font-mono font-bold hover:bg-sky-500/25 cursor-pointer"
+                      >
+                        + {'{First Name}'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCustomReplyText((prev) => `${prev} {Last Name}`.trimStart())
+                        }
+                        className="px-2 py-0.5 rounded bg-sky-500/15 text-sky-600 dark:text-sky-400 text-[10px] font-mono font-bold hover:bg-sky-500/25 cursor-pointer"
+                      >
+                        + {'{Last Name}'}
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    rows={3}
+                    required
+                    value={customReplyText}
+                    onChange={(e) => setCustomReplyText(e.target.value)}
+                    placeholder={
+                      lang === 'bn'
+                        ? 'প্রিয় {First Name}, আপনার মেসেজটি এখানে লিখুন...'
+                        : 'Dear {First Name}, write your custom reply template here...'
+                    }
+                    className="w-full p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 leading-relaxed"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={savingQuickReplies || !customReplyTitle.trim() || !customReplyText.trim()}
+                  className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>
+                    {savingQuickReplies
+                      ? lang === 'bn'
+                        ? 'সেভ হচ্ছে...'
+                        : 'Saving...'
+                      : editingReplyId
+                        ? lang === 'bn'
+                          ? 'আপডেট ও সেভ করুন'
+                          : 'Update Custom Message'
+                        : lang === 'bn'
+                          ? 'কাস্টম মেসেজ যুক্ত করুন'
+                          : 'Add Custom Message'}
+                  </span>
+                </button>
+              </div>
+            </form>
+
+            {/* Saved Custom Messages List */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black text-slate-700 dark:text-slate-300">
+                  {lang === 'bn'
+                    ? `সংরক্ষিত কাস্টম মেসেজ সমূহ (${quickReplies.length}টি)`
+                    : `Saved Custom Messages (${quickReplies.length})`}
+                </h4>
+              </div>
+
+              <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar pr-1">
+                {quickReplies.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-start justify-between gap-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-black text-slate-900 dark:text-white">
+                        {item.title}
+                      </p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 whitespace-pre-wrap break-words leading-relaxed">
+                        {item.text}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleStartEditQuickReply(item)}
+                        className="p-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-600 dark:text-sky-400 transition cursor-pointer"
+                        title={lang === 'bn' ? 'এডিট করুন' : 'Edit'}
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteQuickReply(item.id)}
+                        className="p-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 transition cursor-pointer"
+                        title={lang === 'bn' ? 'ডিলিট করুন' : 'Delete'}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
