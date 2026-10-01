@@ -155,12 +155,66 @@ export const DEFAULT_SETTINGS = {
   },
   microJob: {
     enabled: true,
+    autoApproveEnabled: true,
     autoApproveHours: 48,
     platformFeePercent: 5,
     minJobReward: 1,
     requireKycToPost: false,
     requireKycToWork: false,
     featuredJobFee: 20,
+  },
+  advancedFeatures: {
+    microJobAutoApproval: {
+      enabled: true,
+      autoApproveHours: 48,
+    },
+    sellerLevelBadges: {
+      enabled: true,
+      risingTalentMinDeals: 1,
+      level1MinDeals: 5,
+      level2MinDeals: 20,
+      topRatedMinDeals: 50,
+    },
+    chatMediaFeatures: {
+      voiceMessageEnabled: true,
+      maxVoiceSeconds: 60,
+      ctrlVPasteEnabled: true,
+    },
+    escrowCountdownTimer: {
+      enabled: true,
+      defaultDeliveryHours: 24,
+    },
+    antiFraudShield: {
+      enabled: true,
+      flagSameIpUsers: true,
+      maxAccountsPerIp: 2,
+    },
+    telegramAdminAlerts: {
+      enabled: false,
+      botToken: '',
+      chatId: '',
+      notifyRecharge: true,
+      notifyWithdraw: true,
+      notifyDispute: true,
+      notifyMicroJob: true,
+      notifyAdminChat: true,
+    },
+    quickRejectTemplates: {
+      enabled: true,
+      reasons: [
+        'স্ক্রিনশট বা কাজের প্রমাণ (Proof) সঠিক নয়',
+        'ভুল Transaction ID বা পেমেন্ট তথ্য দেওয়া হয়েছে',
+        'নির্দেশনা অনুযায়ী সম্পূর্ণ কাজ করা হয়নি',
+        'ডুপ্লিকেট বা ফেক সাবমিশন শনাক্ত হয়েছে',
+        'অ্যাকাউন্টের তথ্য বা নিয়মাবলী অনুসরণ করা হয়নি',
+      ],
+    },
+    user360Overview: {
+      enabled: true,
+    },
+    trafficTracking: {
+      enabled: true,
+    },
   },
 };
 
@@ -286,11 +340,58 @@ const CATEGORY_KEYS: Record<string, string> = {
   performance: 'WEBSITE_PERFORMANCE',
   ai: 'WEBSITE_AI',
   microJob: 'WEBSITE_MICRO_JOB',
+  advancedFeatures: 'WEBSITE_ADVANCED_FEATURES',
 };
 
 @Injectable()
 export class SettingsService {
   constructor(private prisma: PrismaService) {}
+
+  private mergeAdvancedFeatures(stored: any) {
+    const def = DEFAULT_SETTINGS.advancedFeatures;
+    const raw = stored && typeof stored === 'object' ? stored : {};
+    return {
+      microJobAutoApproval: {
+        ...def.microJobAutoApproval,
+        ...(raw.microJobAutoApproval || {}),
+      },
+      sellerLevelBadges: {
+        ...def.sellerLevelBadges,
+        ...(raw.sellerLevelBadges || {}),
+      },
+      chatMediaFeatures: {
+        ...def.chatMediaFeatures,
+        ...(raw.chatMediaFeatures || {}),
+      },
+      escrowCountdownTimer: {
+        ...def.escrowCountdownTimer,
+        ...(raw.escrowCountdownTimer || {}),
+      },
+      antiFraudShield: {
+        ...def.antiFraudShield,
+        ...(raw.antiFraudShield || {}),
+      },
+      telegramAdminAlerts: {
+        ...def.telegramAdminAlerts,
+        ...(raw.telegramAdminAlerts || {}),
+      },
+      quickRejectTemplates: {
+        ...def.quickRejectTemplates,
+        ...(raw.quickRejectTemplates || {}),
+        reasons: Array.isArray(raw.quickRejectTemplates?.reasons)
+          ? raw.quickRejectTemplates.reasons
+          : def.quickRejectTemplates.reasons,
+      },
+      user360Overview: {
+        ...def.user360Overview,
+        ...(raw.user360Overview || {}),
+      },
+      trafficTracking: {
+        ...def.trafficTracking,
+        ...(raw.trafficTracking || {}),
+      },
+    };
+  }
 
   /**
    * Get all settings (for Admin Panel)
@@ -304,6 +405,12 @@ export class SettingsService {
 
     const settingsMap = new Map<string, any>();
     records.forEach((r) => settingsMap.set(r.key, r.value));
+
+    const adv = this.mergeAdvancedFeatures(settingsMap.get(CATEGORY_KEYS.advancedFeatures));
+    const microJobMerged = {
+      ...DEFAULT_SETTINGS.microJob,
+      ...(settingsMap.get(CATEGORY_KEYS.microJob) || {}),
+    };
 
     return {
       general: { ...DEFAULT_SETTINGS.general, ...(settingsMap.get(CATEGORY_KEYS.general) || {}) },
@@ -331,10 +438,8 @@ export class SettingsService {
         ...DEFAULT_SETTINGS.ai,
         ...(settingsMap.get(CATEGORY_KEYS.ai) || {}),
       },
-      microJob: {
-        ...DEFAULT_SETTINGS.microJob,
-        ...(settingsMap.get(CATEGORY_KEYS.microJob) || {}),
-      },
+      microJob: microJobMerged,
+      advancedFeatures: adv,
     };
   }
 
@@ -346,7 +451,7 @@ export class SettingsService {
 
   /**
    * Get public settings (for frontend web visitors / public layout)
-   * Excludes sensitive tokens like Facebook CAPI token and AI API keys
+   * Excludes sensitive tokens like Facebook CAPI token, AI API keys, and disabled feature params
    */
   async getPublicSettings() {
     if (this.publicSettingsCache && Date.now() < this.publicSettingsCache.expiresAt) {
@@ -365,6 +470,61 @@ export class SettingsService {
       customHeadScripts: all.tracking.customHeadScripts || '',
       customBodyScripts: all.tracking.customBodyScripts || '',
       events: all.tracking.events || DEFAULT_SETTINGS.tracking.events,
+    };
+
+    const adv = all.advancedFeatures || DEFAULT_SETTINGS.advancedFeatures;
+    const microAutoApproveEnabled =
+      Boolean(all.microJob?.autoApproveEnabled !== false) &&
+      Boolean(adv.microJobAutoApproval?.enabled !== false);
+    const microAutoApproveHours = Number(
+      adv.microJobAutoApproval?.autoApproveHours || all.microJob?.autoApproveHours || 48,
+    );
+
+    const voiceEnabled = Boolean(adv.chatMediaFeatures?.voiceMessageEnabled !== false);
+    const pasteEnabled = Boolean(adv.chatMediaFeatures?.ctrlVPasteEnabled !== false);
+
+    // Strip internal parameters of any disabled feature so users receive zero info about disabled features
+    const publicAdvancedFeatures = {
+      microJobAutoApproval: microAutoApproveEnabled
+        ? {
+            enabled: true,
+            autoApproveHours: microAutoApproveHours,
+          }
+        : { enabled: false },
+      sellerLevelBadges:
+        adv.sellerLevelBadges?.enabled !== false
+          ? {
+              enabled: true,
+              risingTalentMinDeals: Number(adv.sellerLevelBadges?.risingTalentMinDeals ?? 1),
+              level1MinDeals: Number(adv.sellerLevelBadges?.level1MinDeals ?? 5),
+              level2MinDeals: Number(adv.sellerLevelBadges?.level2MinDeals ?? 20),
+              topRatedMinDeals: Number(adv.sellerLevelBadges?.topRatedMinDeals ?? 50),
+            }
+          : { enabled: false },
+      chatMediaFeatures:
+        !voiceEnabled && !pasteEnabled
+          ? { enabled: false, voiceMessageEnabled: false, ctrlVPasteEnabled: false }
+          : voiceEnabled
+            ? {
+                enabled: true,
+                voiceMessageEnabled: true,
+                maxVoiceSeconds: Number(adv.chatMediaFeatures?.maxVoiceSeconds || 60),
+                ctrlVPasteEnabled: pasteEnabled,
+              }
+            : {
+                enabled: true,
+                voiceMessageEnabled: false,
+                ctrlVPasteEnabled: pasteEnabled,
+              },
+      escrowCountdownTimer:
+        adv.escrowCountdownTimer?.enabled !== false
+          ? {
+              enabled: true,
+              defaultDeliveryHours: Number(adv.escrowCountdownTimer?.defaultDeliveryHours || 24),
+            }
+          : { enabled: false },
+      trafficTracking:
+        adv.trafficTracking?.enabled !== false ? { enabled: true } : { enabled: false },
     };
 
     const result = {
@@ -405,13 +565,15 @@ export class SettingsService {
       },
       microJob: {
         enabled: Boolean(all.microJob?.enabled !== false),
-        autoApproveHours: Number(all.microJob?.autoApproveHours || 48),
+        autoApproveEnabled: microAutoApproveEnabled,
+        ...(microAutoApproveEnabled ? { autoApproveHours: microAutoApproveHours } : {}),
         platformFeePercent: Number(all.microJob?.platformFeePercent || 5),
         minJobReward: Number(all.microJob?.minJobReward || 1),
         requireKycToPost: Boolean(all.microJob?.requireKycToPost),
         requireKycToWork: Boolean(all.microJob?.requireKycToWork),
         featuredJobFee: Number(all.microJob?.featuredJobFee ?? 20),
       },
+      advancedFeatures: publicAdvancedFeatures,
     };
 
     this.publicSettingsCache = {
@@ -664,6 +826,8 @@ export class SettingsService {
       operations?: any;
       performance?: any;
       ai?: any;
+      microJob?: any;
+      advancedFeatures?: any;
     },
     adminId?: string,
   ) {
@@ -671,12 +835,63 @@ export class SettingsService {
     const updates: Promise<any>[] = [];
     const auditChanges: Record<string, { before: any; after: any }> = {};
 
+    const resolveCategoryKey = (inputCat: string) => {
+      if (CATEGORY_KEYS[inputCat]) return { cat: inputCat, settingKey: CATEGORY_KEYS[inputCat] };
+      const lower = inputCat.toLowerCase();
+      for (const [k, v] of Object.entries(CATEGORY_KEYS)) {
+        if (k.toLowerCase() === lower) return { cat: k, settingKey: v };
+      }
+      return null;
+    };
+
     // 1. If category-based single update
     if (payload.category && payload.data) {
-      const cat = payload.category.toLowerCase();
-      const settingKey = CATEGORY_KEYS[cat];
-      if (settingKey) {
-        const merged = { ...((current as any)[cat] || {}), ...payload.data };
+      const resolved = resolveCategoryKey(payload.category);
+      if (resolved) {
+        const { cat, settingKey } = resolved;
+        const merged =
+          cat === 'advancedFeatures'
+            ? this.mergeAdvancedFeatures({
+                ...((current as any)[cat] || {}),
+                ...payload.data,
+                microJobAutoApproval: {
+                  ...((current as any)[cat]?.microJobAutoApproval || {}),
+                  ...(payload.data?.microJobAutoApproval || {}),
+                },
+                sellerLevelBadges: {
+                  ...((current as any)[cat]?.sellerLevelBadges || {}),
+                  ...(payload.data?.sellerLevelBadges || {}),
+                },
+                chatMediaFeatures: {
+                  ...((current as any)[cat]?.chatMediaFeatures || {}),
+                  ...(payload.data?.chatMediaFeatures || {}),
+                },
+                escrowCountdownTimer: {
+                  ...((current as any)[cat]?.escrowCountdownTimer || {}),
+                  ...(payload.data?.escrowCountdownTimer || {}),
+                },
+                antiFraudShield: {
+                  ...((current as any)[cat]?.antiFraudShield || {}),
+                  ...(payload.data?.antiFraudShield || {}),
+                },
+                telegramAdminAlerts: {
+                  ...((current as any)[cat]?.telegramAdminAlerts || {}),
+                  ...(payload.data?.telegramAdminAlerts || {}),
+                },
+                quickRejectTemplates: {
+                  ...((current as any)[cat]?.quickRejectTemplates || {}),
+                  ...(payload.data?.quickRejectTemplates || {}),
+                },
+                user360Overview: {
+                  ...((current as any)[cat]?.user360Overview || {}),
+                  ...(payload.data?.user360Overview || {}),
+                },
+                trafficTracking: {
+                  ...((current as any)[cat]?.trafficTracking || {}),
+                  ...(payload.data?.trafficTracking || {}),
+                },
+              })
+            : { ...((current as any)[cat] || {}), ...payload.data };
         auditChanges[cat] = { before: (current as any)[cat], after: merged };
 
         updates.push(
@@ -685,7 +900,11 @@ export class SettingsService {
             create: {
               key: settingKey,
               category: 'WEBSITE_SETTINGS',
-              isPublic: cat !== 'tracking' && cat !== 'system' && cat !== 'ai',
+              isPublic:
+                cat !== 'tracking' &&
+                cat !== 'system' &&
+                cat !== 'ai' &&
+                cat !== 'advancedFeatures',
               value: merged,
               description: `Website ${cat} configuration settings`,
             },
@@ -697,7 +916,50 @@ export class SettingsService {
       // 2. Multi-category or full payload update
       for (const [cat, settingKey] of Object.entries(CATEGORY_KEYS)) {
         if ((payload as any)[cat]) {
-          const merged = { ...((current as any)[cat] || {}), ...(payload as any)[cat] };
+          const catData = (payload as any)[cat];
+          const merged =
+            cat === 'advancedFeatures'
+              ? this.mergeAdvancedFeatures({
+                  ...((current as any)[cat] || {}),
+                  ...catData,
+                  microJobAutoApproval: {
+                    ...((current as any)[cat]?.microJobAutoApproval || {}),
+                    ...(catData?.microJobAutoApproval || {}),
+                  },
+                  sellerLevelBadges: {
+                    ...((current as any)[cat]?.sellerLevelBadges || {}),
+                    ...(catData?.sellerLevelBadges || {}),
+                  },
+                  chatMediaFeatures: {
+                    ...((current as any)[cat]?.chatMediaFeatures || {}),
+                    ...(catData?.chatMediaFeatures || {}),
+                  },
+                  escrowCountdownTimer: {
+                    ...((current as any)[cat]?.escrowCountdownTimer || {}),
+                    ...(catData?.escrowCountdownTimer || {}),
+                  },
+                  antiFraudShield: {
+                    ...((current as any)[cat]?.antiFraudShield || {}),
+                    ...(catData?.antiFraudShield || {}),
+                  },
+                  telegramAdminAlerts: {
+                    ...((current as any)[cat]?.telegramAdminAlerts || {}),
+                    ...(catData?.telegramAdminAlerts || {}),
+                  },
+                  quickRejectTemplates: {
+                    ...((current as any)[cat]?.quickRejectTemplates || {}),
+                    ...(catData?.quickRejectTemplates || {}),
+                  },
+                  user360Overview: {
+                    ...((current as any)[cat]?.user360Overview || {}),
+                    ...(catData?.user360Overview || {}),
+                  },
+                  trafficTracking: {
+                    ...((current as any)[cat]?.trafficTracking || {}),
+                    ...(catData?.trafficTracking || {}),
+                  },
+                })
+              : { ...((current as any)[cat] || {}), ...catData };
           auditChanges[cat] = { before: (current as any)[cat], after: merged };
 
           updates.push(
@@ -706,7 +968,11 @@ export class SettingsService {
               create: {
                 key: settingKey,
                 category: 'WEBSITE_SETTINGS',
-                isPublic: cat !== 'tracking' && cat !== 'system' && cat !== 'ai',
+                isPublic:
+                  cat !== 'tracking' &&
+                  cat !== 'system' &&
+                  cat !== 'ai' &&
+                  cat !== 'advancedFeatures',
                 value: merged,
                 description: `Website ${cat} configuration settings`,
               },
@@ -729,6 +995,7 @@ export class SettingsService {
         afterState[cat] = change.after;
       }
 
+      const resolvedTarget = payload.category ? resolveCategoryKey(payload.category) : null;
       await this.prisma.auditLog
         .create({
           data: {
@@ -736,7 +1003,7 @@ export class SettingsService {
             actorType: 'ADMIN',
             action: 'WEBSITE_SETTINGS_UPDATE',
             targetEntity: 'SystemSetting',
-            targetId: payload.category ? CATEGORY_KEYS[payload.category.toLowerCase()] || 'WEBSITE_ALL' : 'WEBSITE_ALL',
+            targetId: resolvedTarget?.settingKey || 'WEBSITE_ALL',
             beforeState,
             afterState,
             reason: `Updated website settings for: ${Object.keys(auditChanges).join(', ')}`,
@@ -746,6 +1013,104 @@ export class SettingsService {
     }
 
     return this.getAllSettings();
+  }
+
+  /**
+   * Send real-time Telegram Alert to Super Admin / Admin Group if enabled in advancedFeatures.telegramAdminAlerts
+   */
+  async sendAdminTelegramAlert(
+    title: string,
+    message: string,
+    eventKey?:
+      | 'notifyRecharge'
+      | 'notifyWithdraw'
+      | 'notifyDispute'
+      | 'notifyMicroJob'
+      | 'notifyAdminChat',
+  ): Promise<boolean> {
+    try {
+      const all = await this.getAllSettings();
+      const tg = all.advancedFeatures?.telegramAdminAlerts;
+      if (!tg || !tg.enabled) return false;
+
+      const botToken = (tg.botToken || '').trim();
+      const chatId = (tg.chatId || '').trim();
+      if (!botToken || !chatId) return false;
+
+      if (eventKey && tg[eventKey] === false) {
+        return false;
+      }
+
+      const timestamp = new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' });
+      const htmlText = `🚨 <b>[SafnexBD Admin Alert]</b>\n<b>${title}</b>\n\n${message}\n\n⏰ <i>${timestamp}</i>`;
+
+      const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: htmlText,
+          parse_mode: 'HTML',
+        }),
+        signal: AbortSignal.timeout(6000),
+      });
+
+      const data = await res.json().catch(() => null);
+      return Boolean(res.ok && data?.ok);
+    } catch (err) {
+      return false;
+    }
+  }
+
+  /**
+   * Test Admin Telegram Bot Alert connection from Settings Panel
+   */
+  async testTelegramAdminAlert(botToken?: string, chatId?: string) {
+    const all = await this.getAllSettings();
+    const tg = all.advancedFeatures?.telegramAdminAlerts;
+    const token = (botToken || tg?.botToken || '').trim();
+    const targetChatId = (chatId || tg?.chatId || '').trim();
+
+    if (!token || !targetChatId) {
+      return {
+        success: false,
+        message: 'Bot Token এবং Chat ID উভয়ই প্রদান করা আবশ্যক।',
+      };
+    }
+
+    try {
+      const timestamp = new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' });
+      const text = `✅ <b>[SafnexBD Admin Alert Test]</b>\n\nআপনার টেলিগ্রাম অ্যাডমিন নোটিফিকেশন বট সফলভাবে সংযুক্ত হয়েছে!\n\n⏰ <i>${timestamp}</i>`;
+
+      const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: targetChatId,
+          text,
+          parse_mode: 'HTML',
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        return {
+          success: false,
+          message: data?.description || `Telegram API Error (${res.status})`,
+        };
+      }
+
+      return {
+        success: true,
+        message: 'টেস্ট মেসেজ সফলভাবে আপনার টেলিগ্রামে পাঠানো হয়েছে!',
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err?.message || 'টেলিগ্রাম সার্ভারে সংযোগ করা যায়নি।',
+      };
+    }
   }
 
   /**

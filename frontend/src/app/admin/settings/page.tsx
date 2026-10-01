@@ -85,7 +85,7 @@ export default function AdminSettingsPage() {
   const { lang } = useLanguage();
   const { refreshSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<
-    'general' | 'seo' | 'tracking' | 'localization' | 'footer' | 'system' | 'withdrawal' | 'operations' | 'performance' | 'chat_rules' | 'telegram' | 'ai' | 'micro_job'
+    'general' | 'seo' | 'tracking' | 'localization' | 'footer' | 'system' | 'withdrawal' | 'operations' | 'performance' | 'chat_rules' | 'telegram' | 'ai' | 'micro_job' | 'advanced_features'
   >('general');
 
   const [loading, setLoading] = useState(true);
@@ -94,6 +94,9 @@ export default function AdminSettingsPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [showCapiToken, setShowCapiToken] = useState(false);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
+  const [newRejectReasonInput, setNewRejectReasonInput] = useState('');
+  const [testingAdvTelegram, setTestingAdvTelegram] = useState(false);
+  const [advTelegramTestMsg, setAdvTelegramTestMsg] = useState<{ success: boolean; message: string } | null>(null);
 
   // AI Settings & Testing State
   const [testingAi, setTestingAi] = useState(false);
@@ -419,6 +422,44 @@ export default function AdminSettingsPage() {
       requireKycToPost: false,
       requireKycToWork: false,
     },
+    advancedFeatures: {
+      microJobAutoApproval: { enabled: true, autoApproveHours: 48 },
+      sellerLevelBadges: {
+        enabled: true,
+        risingTalentMinDeals: 1,
+        level1MinDeals: 5,
+        level2MinDeals: 20,
+        topRatedMinDeals: 50,
+      },
+      chatMediaFeatures: {
+        voiceMessageEnabled: true,
+        maxVoiceSeconds: 60,
+        ctrlVPasteEnabled: true,
+      },
+      escrowCountdownTimer: { enabled: true, defaultDeliveryHours: 24 },
+      antiFraudShield: { enabled: true, flagSameIpUsers: true, maxAccountsPerIp: 2 },
+      telegramAdminAlerts: {
+        enabled: false,
+        botToken: '',
+        chatId: '',
+        notifyRecharge: true,
+        notifyWithdraw: true,
+        notifyDispute: true,
+        notifyMicroJob: true,
+        notifyAdminChat: true,
+      },
+      quickRejectTemplates: {
+        enabled: true,
+        reasons: [
+          'স্ক্রিনশট অস্পষ্ট বা ফেক (Invalid Screenshot)',
+          'কাজের নির্দেশনা সঠিকভাবে অনুসরণ করা হয়নি',
+          'সাবস্ক্রাইব / ফলো আনডু করা হয়েছে',
+          'ভুল ট্রানজেকশন আইডি (Invalid TrxID)',
+          'ডুপ্লিকেট বা পূর্বে ব্যবহৃত প্রুফ জমা দেওয়া হয়েছে',
+        ],
+      },
+      user360Overview: { enabled: true },
+    },
   });
 
   const fetchSettings = async () => {
@@ -428,6 +469,7 @@ export default function AdminSettingsPage() {
       const res: any = await api.get('/settings/admin');
       const data = res?.data !== undefined ? res.data : res;
       if (data && typeof data === 'object') {
+        const adv = data.advancedFeatures || {};
         setSettings((prev: any) => ({
           general: { ...prev.general, ...(data.general || {}) },
           seo: { ...prev.seo, ...(data.seo || {}) },
@@ -440,6 +482,24 @@ export default function AdminSettingsPage() {
           performance: { ...prev.performance, ...(data.performance || {}) },
           ai: { ...prev.ai, ...(data.ai || {}) },
           microJob: { ...prev.microJob, ...(data.microJob || {}) },
+          advancedFeatures: {
+            ...prev.advancedFeatures,
+            ...adv,
+            microJobAutoApproval: { ...prev.advancedFeatures.microJobAutoApproval, ...(adv.microJobAutoApproval || {}) },
+            sellerLevelBadges: { ...prev.advancedFeatures.sellerLevelBadges, ...(adv.sellerLevelBadges || {}) },
+            chatMediaFeatures: { ...prev.advancedFeatures.chatMediaFeatures, ...(adv.chatMediaFeatures || {}) },
+            escrowCountdownTimer: { ...prev.advancedFeatures.escrowCountdownTimer, ...(adv.escrowCountdownTimer || {}) },
+            antiFraudShield: { ...prev.advancedFeatures.antiFraudShield, ...(adv.antiFraudShield || {}) },
+            telegramAdminAlerts: { ...prev.advancedFeatures.telegramAdminAlerts, ...(adv.telegramAdminAlerts || {}) },
+            quickRejectTemplates: {
+              ...prev.advancedFeatures.quickRejectTemplates,
+              ...(adv.quickRejectTemplates || {}),
+              reasons: Array.isArray(adv.quickRejectTemplates?.reasons)
+                ? adv.quickRejectTemplates.reasons
+                : prev.advancedFeatures.quickRejectTemplates.reasons,
+            },
+            user360Overview: { ...prev.advancedFeatures.user360Overview, ...(adv.user360Overview || {}) },
+          },
         }));
       }
       try {
@@ -728,6 +788,7 @@ export default function AdminSettingsPage() {
       const res: any = await api.post('/settings/admin', payload);
       const data = res?.data !== undefined ? res.data : res;
       if (data && typeof data === 'object') {
+        const adv = data.advancedFeatures || {};
         setSettings((prev: any) => ({
           general: { ...prev.general, ...(data.general || {}) },
           seo: { ...prev.seo, ...(data.seo || {}) },
@@ -740,6 +801,24 @@ export default function AdminSettingsPage() {
           performance: { ...prev.performance, ...(data.performance || {}) },
           ai: { ...prev.ai, ...(data.ai || {}) },
           microJob: { ...prev.microJob, ...(data.microJob || {}) },
+          advancedFeatures: {
+            ...prev.advancedFeatures,
+            ...adv,
+            microJobAutoApproval: { ...prev.advancedFeatures.microJobAutoApproval, ...(adv.microJobAutoApproval || {}) },
+            sellerLevelBadges: { ...prev.advancedFeatures.sellerLevelBadges, ...(adv.sellerLevelBadges || {}) },
+            chatMediaFeatures: { ...prev.advancedFeatures.chatMediaFeatures, ...(adv.chatMediaFeatures || {}) },
+            escrowCountdownTimer: { ...prev.advancedFeatures.escrowCountdownTimer, ...(adv.escrowCountdownTimer || {}) },
+            antiFraudShield: { ...prev.advancedFeatures.antiFraudShield, ...(adv.antiFraudShield || {}) },
+            telegramAdminAlerts: { ...prev.advancedFeatures.telegramAdminAlerts, ...(adv.telegramAdminAlerts || {}) },
+            quickRejectTemplates: {
+              ...prev.advancedFeatures.quickRejectTemplates,
+              ...(adv.quickRejectTemplates || {}),
+              reasons: Array.isArray(adv.quickRejectTemplates?.reasons)
+                ? adv.quickRejectTemplates.reasons
+                : prev.advancedFeatures.quickRejectTemplates.reasons,
+            },
+            user360Overview: { ...prev.advancedFeatures.user360Overview, ...(adv.user360Overview || {}) },
+          },
         }));
       }
 
@@ -754,6 +833,38 @@ export default function AdminSettingsPage() {
       );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestAdvancedTelegram = async () => {
+    const botToken = settings.advancedFeatures?.telegramAdminAlerts?.botToken?.trim();
+    const chatId = settings.advancedFeatures?.telegramAdminAlerts?.chatId?.trim();
+    if (!botToken || !chatId) {
+      setAdvTelegramTestMsg({
+        success: false,
+        message: lang === 'bn' ? 'অনুগ্রহ করে প্রথমে Bot Token এবং Chat ID লিখুন!' : 'Please enter Bot Token and Chat ID first!',
+      });
+      return;
+    }
+    setTestingAdvTelegram(true);
+    setAdvTelegramTestMsg(null);
+    try {
+      const res: any = await api.post('/settings/telegram/test', {
+        botToken,
+        chatId,
+      });
+      const data = res?.data !== undefined ? res.data : res;
+      setAdvTelegramTestMsg({
+        success: data?.success !== false,
+        message: data?.message || 'Test alert sent successfully!',
+      });
+    } catch (err: any) {
+      setAdvTelegramTestMsg({
+        success: false,
+        message: err?.response?.data?.message || err?.message || 'Failed to send test alert',
+      });
+    } finally {
+      setTestingAdvTelegram(false);
     }
   };
 
@@ -911,6 +1022,12 @@ export default function AdminSettingsPage() {
       label: lang === 'bn' ? '💼 মাইক্রো জব কন্ট্রোল' : '💼 Micro Job Control',
       icon: Briefcase,
       desc: lang === 'bn' ? 'মাস্টার সুইচ, অটো-অ্যাপ্রুভ ও প্ল্যাটফর্ম ফি' : 'Master toggle, auto-approval & platform fee',
+    },
+    {
+      id: 'advanced_features' as const,
+      label: lang === 'bn' ? '⚡ অটোমেশন ও ফিচার কন্ট্রোল (Features & ON/OFF)' : '⚡ Features & ON/OFF',
+      icon: Sliders,
+      desc: lang === 'bn' ? 'লেভেল ব্যাজ, ভয়েস মেসেজ, আইপি শিল্ড ও ৩৬০° কন্ট্রোল' : 'Level badges, voice notes, IP shield & 360° controls',
     },
   ];
 
@@ -6571,6 +6688,797 @@ export default function AdminSettingsPage() {
                   ? 'মাইক্রো জব সেটিংস সংরক্ষণ করুন'
                   : 'Save Micro Job Settings'}
               </span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 14. ADVANCED AUTOMATION & FEATURE ON/OFF CONTROL HUB                      */}
+      {/* ========================================================================= */}
+      {activeTab === 'advanced_features' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Header Banner */}
+          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-3xl p-6 border border-slate-700/80 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="p-3.5 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                <Sliders className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                  <span>⚡ অটোমেশন ও ফিচার কন্ট্রোল (Features & ON/OFF)</span>
+                </h2>
+                <p className="text-xs text-slate-300 mt-1">
+                  যেকোনো ফিচার ON করলে ইউজার প্যানেলে তাৎক্ষণিকভাবে চালু হবে এবং OFF করলে ইউজার ইন্টারফেস থেকে সম্পূর্ণ হাইড হয়ে যাবে।
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => handleSave('advancedFeatures')}
+              disabled={saving}
+              className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black shadow-md transition disabled:opacity-50 shrink-0"
+            >
+              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              <span>ফিচার কনফিগ সেভ করুন</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 1. Micro-Jobs Auto-Approval ON/OFF & Hours (Item 2) */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
+              <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">⏱️</span>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                      ১. মাইক্রো-জব অটো-অ্যাপ্রুভাল (Micro-Jobs Auto-Approval)
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    নির্দিষ্ট সময়ের মধ্যে এম্প্লয়ার রিভিউ না করলে স্বয়ংক্রিয়ভাবে প্রুফ অ্যাপ্রুভ ও পেমেন্ট রিলিজ।
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettings((prev: any) => ({
+                      ...prev,
+                      advancedFeatures: {
+                        ...prev.advancedFeatures,
+                        microJobAutoApproval: {
+                          ...prev.advancedFeatures?.microJobAutoApproval,
+                          enabled: !prev.advancedFeatures?.microJobAutoApproval?.enabled,
+                        },
+                      },
+                    }))
+                  }
+                  className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors shrink-0 ${
+                    settings.advancedFeatures?.microJobAutoApproval?.enabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings.advancedFeatures?.microJobAutoApproval?.enabled ? 'translate-x-7' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                  অটো-অ্যাপ্রুভাল সময়সীমা (Auto-Approve Hours)
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    min="1"
+                    max="720"
+                    value={settings.advancedFeatures?.microJobAutoApproval?.autoApproveHours ?? 48}
+                    onChange={(e) => {
+                      const val = Math.max(1, Number(e.target.value) || 48);
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        microJob: { ...prev.microJob, autoApproveHours: val },
+                        advancedFeatures: {
+                          ...prev.advancedFeatures,
+                          microJobAutoApproval: {
+                            ...prev.advancedFeatures?.microJobAutoApproval,
+                            autoApproveHours: val,
+                          },
+                        },
+                      }));
+                    }}
+                    className="w-36 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white"
+                  />
+                  <span className="text-xs font-semibold text-slate-500">ঘণ্টা (Hours)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Seller & Worker Level Badges ON/OFF & Thresholds (Item 4) */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
+              <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">👑</span>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                      ২. সেলার ও ওয়ার্কার লেভেল ব্যাজ (Seller & Worker Level Badges)
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    চ্যাট হেডার ও প্রোফাইলে সম্পন্ন ডিল/কাজের সংখ্যার ভিত্তিতে লেভেল ব্যাজ প্রদর্শন।
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettings((prev: any) => ({
+                      ...prev,
+                      advancedFeatures: {
+                        ...prev.advancedFeatures,
+                        sellerLevelBadges: {
+                          ...prev.advancedFeatures?.sellerLevelBadges,
+                          enabled: !prev.advancedFeatures?.sellerLevelBadges?.enabled,
+                        },
+                      },
+                    }))
+                  }
+                  className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors shrink-0 ${
+                    settings.advancedFeatures?.sellerLevelBadges?.enabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings.advancedFeatures?.sellerLevelBadges?.enabled ? 'translate-x-7' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">
+                    🌟 Rising Talent
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={settings.advancedFeatures?.sellerLevelBadges?.risingTalentMinDeals ?? 1}
+                    onChange={(e) =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        advancedFeatures: {
+                          ...prev.advancedFeatures,
+                          sellerLevelBadges: {
+                            ...prev.advancedFeatures?.sellerLevelBadges,
+                            risingTalentMinDeals: Number(e.target.value) || 1,
+                          },
+                        },
+                      }))
+                    }
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold"
+                  />
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">
+                    🥉 Level 1 Min
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={settings.advancedFeatures?.sellerLevelBadges?.level1MinDeals ?? 5}
+                    onChange={(e) =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        advancedFeatures: {
+                          ...prev.advancedFeatures,
+                          sellerLevelBadges: {
+                            ...prev.advancedFeatures?.sellerLevelBadges,
+                            level1MinDeals: Number(e.target.value) || 5,
+                          },
+                        },
+                      }))
+                    }
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold"
+                  />
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">
+                    🥈 Level 2 Min
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={settings.advancedFeatures?.sellerLevelBadges?.level2MinDeals ?? 20}
+                    onChange={(e) =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        advancedFeatures: {
+                          ...prev.advancedFeatures,
+                          sellerLevelBadges: {
+                            ...prev.advancedFeatures?.sellerLevelBadges,
+                            level2MinDeals: Number(e.target.value) || 20,
+                          },
+                        },
+                      }))
+                    }
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold"
+                  />
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <label className="text-[11px] font-bold text-amber-600 dark:text-amber-400 block mb-1">
+                    👑 Top Rated
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={settings.advancedFeatures?.sellerLevelBadges?.topRatedMinDeals ?? 50}
+                    onChange={(e) =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        advancedFeatures: {
+                          ...prev.advancedFeatures,
+                          sellerLevelBadges: {
+                            ...prev.advancedFeatures?.sellerLevelBadges,
+                            topRatedMinDeals: Number(e.target.value) || 50,
+                          },
+                        },
+                      }))
+                    }
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Chat Voice Message & Ctrl+V Screenshot Paste (Item 5) */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
+              <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🎙️</span>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                      ৩. চ্যাট ভয়েস মেসেজ ও Ctrl+V স্ক্রিনশট পেস্ট (Chat Media Features)
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    চ্যাটবক্সে সরাসরি ভয়েস নোট রেকর্ড এবং ক্লিপবোর্ড থেকে স্ক্রিনশট পেস্ট করার সুবিধা।
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <div>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      🎙️ ভয়েস মেসেজ রেকর্ডার (Voice Note Recording)
+                    </p>
+                    <p className="text-[11px] text-slate-500">অফ করলে চ্যাটবক্স থেকে মাইক্রোফোন বাটন সম্পূর্ণ হাইড থাকবে</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        advancedFeatures: {
+                          ...prev.advancedFeatures,
+                          chatMediaFeatures: {
+                            ...prev.advancedFeatures?.chatMediaFeatures,
+                            voiceMessageEnabled: !prev.advancedFeatures?.chatMediaFeatures?.voiceMessageEnabled,
+                          },
+                        },
+                      }))
+                    }
+                    className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors shrink-0 ${
+                      settings.advancedFeatures?.chatMediaFeatures?.voiceMessageEnabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        settings.advancedFeatures?.chatMediaFeatures?.voiceMessageEnabled ? 'translate-x-7' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    সর্বোচ্চ ভয়েস নোট ডিউরেশন (Max Voice Seconds)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="10"
+                      max="300"
+                      value={settings.advancedFeatures?.chatMediaFeatures?.maxVoiceSeconds ?? 60}
+                      onChange={(e) =>
+                        setSettings((prev: any) => ({
+                          ...prev,
+                          advancedFeatures: {
+                            ...prev.advancedFeatures,
+                            chatMediaFeatures: {
+                              ...prev.advancedFeatures?.chatMediaFeatures,
+                              maxVoiceSeconds: Number(e.target.value) || 60,
+                            },
+                          },
+                        }))
+                      }
+                      className="w-24 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-center"
+                    />
+                    <span className="text-xs text-slate-400 font-semibold">সেকেন্ড</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <div>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      📋 Ctrl+V ডিরেক্ট স্ক্রিনশট পেস্ট (Clipboard Image Paste)
+                    </p>
+                    <p className="text-[11px] text-slate-500">স্ক্রিনশট কপি করে চ্যাট ইনপুটে Ctrl+V চাপলেই অটো-অ্যাটাচ হবে</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        advancedFeatures: {
+                          ...prev.advancedFeatures,
+                          chatMediaFeatures: {
+                            ...prev.advancedFeatures?.chatMediaFeatures,
+                            ctrlVPasteEnabled: !prev.advancedFeatures?.chatMediaFeatures?.ctrlVPasteEnabled,
+                          },
+                        },
+                      }))
+                    }
+                    className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors shrink-0 ${
+                      settings.advancedFeatures?.chatMediaFeatures?.ctrlVPasteEnabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        settings.advancedFeatures?.chatMediaFeatures?.ctrlVPasteEnabled ? 'translate-x-7' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. Escrow Delivery Countdown Timer ON/OFF (Item 6) */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
+              <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">⏳</span>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                      ৪. এসক্রো ডেলিভারি কাউন্টডাউন টাইমার (Escrow Delivery Timer)
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    চ্যাটে টাকা হোল্ড (HOLD) থাকা অবস্থায় লাইভ ডেলিভারি কাউন্টডাউন টাইমার প্রদর্শন।
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettings((prev: any) => ({
+                      ...prev,
+                      advancedFeatures: {
+                        ...prev.advancedFeatures,
+                        escrowCountdownTimer: {
+                          ...prev.advancedFeatures?.escrowCountdownTimer,
+                          enabled: !prev.advancedFeatures?.escrowCountdownTimer?.enabled,
+                        },
+                      },
+                    }))
+                  }
+                  className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors shrink-0 ${
+                    settings.advancedFeatures?.escrowCountdownTimer?.enabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings.advancedFeatures?.escrowCountdownTimer?.enabled ? 'translate-x-7' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                  ডিফল্ট ডেলিভারি সময়সীমা (Default Delivery Hours)
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    min="1"
+                    max="720"
+                    value={settings.advancedFeatures?.escrowCountdownTimer?.defaultDeliveryHours ?? 24}
+                    onChange={(e) =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        advancedFeatures: {
+                          ...prev.advancedFeatures,
+                          escrowCountdownTimer: {
+                            ...prev.advancedFeatures?.escrowCountdownTimer,
+                            defaultDeliveryHours: Math.max(1, Number(e.target.value) || 24),
+                          },
+                        },
+                      }))
+                    }
+                    className="w-36 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold"
+                  />
+                  <span className="text-xs font-semibold text-slate-500">ঘণ্টা (Hours)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 5. Anti-Fraud Duplicate IP / Multi-Account Detector (Item 7) & 8. User 360 Overview (Item 10) */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
+              <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🛡️</span>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                      ৫. অ্যান্টি-ফ্রড ডুপ্লিকেট আইপি শিল্ড ও ৩৬০° ওভারভিউ (Anti-Fraud & User 360°)
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    একই আইপি দিয়ে একাধিক অ্যাকাউন্ট খোলা বা ফেক রেফারেল ও মাল্টি-অ্যাকাউন্ট শনাক্তকরণ।
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettings((prev: any) => ({
+                      ...prev,
+                      advancedFeatures: {
+                        ...prev.advancedFeatures,
+                        antiFraudShield: {
+                          ...prev.advancedFeatures?.antiFraudShield,
+                          enabled: !prev.advancedFeatures?.antiFraudShield?.enabled,
+                        },
+                      },
+                    }))
+                  }
+                  className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors shrink-0 ${
+                    settings.advancedFeatures?.antiFraudShield?.enabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings.advancedFeatures?.antiFraudShield?.enabled ? 'translate-x-7' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    প্রতি আইপিতে সর্বোচ্চ অনুমোদিত অ্যাকাউন্ট (Max Accounts Per IP)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={settings.advancedFeatures?.antiFraudShield?.maxAccountsPerIp ?? 2}
+                    onChange={(e) =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        advancedFeatures: {
+                          ...prev.advancedFeatures,
+                          antiFraudShield: {
+                            ...prev.advancedFeatures?.antiFraudShield,
+                            maxAccountsPerIp: Math.max(1, Number(e.target.value) || 2),
+                          },
+                        },
+                      }))
+                    }
+                    className="w-24 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-center"
+                  />
+                </div>
+
+                {/* 8. User 360 Financial Overview Toggle */}
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <div>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      📊 ইউজার ৩৬০° ফিন্যান্সিয়াল ওভারভিউ (User 360° Financial Overview)
+                    </p>
+                    <p className="text-[11px] text-slate-500">অ্যাডমিন ইউজার লিস্টে এক ক্লিকে সম্পূর্ণ লেনদেন ও আইপি হিস্ট্রি ভিউ</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        advancedFeatures: {
+                          ...prev.advancedFeatures,
+                          user360Overview: {
+                            ...prev.advancedFeatures?.user360Overview,
+                            enabled: !prev.advancedFeatures?.user360Overview?.enabled,
+                          },
+                        },
+                      }))
+                    }
+                    className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors shrink-0 ${
+                      settings.advancedFeatures?.user360Overview?.enabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        settings.advancedFeatures?.user360Overview?.enabled ? 'translate-x-7' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 6. Telegram Instant Admin Notification (Item 8) */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
+              <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🚀</span>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                      ৬. টেলিগ্রাম ইনস্ট্যান্ট অ্যাডমিন নোটিফিকেশন (Telegram Admin Alerts)
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    নতুন রিচার্জ, উইথড্র, ডিসপ্যুট বা মাইক্রো-জব পোস্ট হলে সাথে সাথে টেলিগ্রামে পুশ অ্যালার্ট।
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettings((prev: any) => ({
+                      ...prev,
+                      advancedFeatures: {
+                        ...prev.advancedFeatures,
+                        telegramAdminAlerts: {
+                          ...prev.advancedFeatures?.telegramAdminAlerts,
+                          enabled: !prev.advancedFeatures?.telegramAdminAlerts?.enabled,
+                        },
+                      },
+                    }))
+                  }
+                  className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors shrink-0 ${
+                    settings.advancedFeatures?.telegramAdminAlerts?.enabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings.advancedFeatures?.telegramAdminAlerts?.enabled ? 'translate-x-7' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">
+                    Telegram Bot Token
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="123456:ABC-DEF..."
+                    value={settings.advancedFeatures?.telegramAdminAlerts?.botToken || ''}
+                    onChange={(e) =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        advancedFeatures: {
+                          ...prev.advancedFeatures,
+                          telegramAdminAlerts: {
+                            ...prev.advancedFeatures?.telegramAdminAlerts,
+                            botToken: e.target.value,
+                          },
+                        },
+                      }))
+                    }
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">
+                    Admin Chat ID / Group ID
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="-100123456789"
+                    value={settings.advancedFeatures?.telegramAdminAlerts?.chatId || ''}
+                    onChange={(e) =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        advancedFeatures: {
+                          ...prev.advancedFeatures,
+                          telegramAdminAlerts: {
+                            ...prev.advancedFeatures?.telegramAdminAlerts,
+                            chatId: e.target.value,
+                          },
+                        },
+                      }))
+                    }
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+                {[
+                  { key: 'notifyRecharge', label: '📥 রিচার্জ রিকোয়েস্ট' },
+                  { key: 'notifyWithdraw', label: '💸 উইথড্র রিকোয়েস্ট' },
+                  { key: 'notifyDispute', label: '⚠️ নতুন ডিসপ্যুট' },
+                  { key: 'notifyMicroJob', label: '💼 মাইক্রো-জব পোস্ট' },
+                  { key: 'notifyAdminChat', label: '💬 অ্যাডমিন কলিং' },
+                ].map((ev) => (
+                  <label
+                    key={ev.key}
+                    className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs font-semibold cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={Boolean(settings.advancedFeatures?.telegramAdminAlerts?.[ev.key])}
+                      onChange={(e) =>
+                        setSettings((prev: any) => ({
+                          ...prev,
+                          advancedFeatures: {
+                            ...prev.advancedFeatures,
+                            telegramAdminAlerts: {
+                              ...prev.advancedFeatures?.telegramAdminAlerts,
+                              [ev.key]: e.target.checked,
+                            },
+                          },
+                        }))
+                      }
+                      className="rounded text-amber-500 focus:ring-amber-500"
+                    />
+                    <span>{ev.label}</span>
+                  </label>
+                ))}
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={handleTestAdvancedTelegram}
+                  disabled={testingAdvTelegram}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition shadow-xs disabled:opacity-50"
+                >
+                  {testingAdvTelegram ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  <span>🚀 টেস্ট টেলিগ্রাম অ্যালার্ট পাঠান (Send Test Alert)</span>
+                </button>
+                {advTelegramTestMsg && (
+                  <span
+                    className={`text-xs font-bold ${
+                      advTelegramTestMsg.success ? 'text-emerald-500' : 'text-rose-500'
+                    }`}
+                  >
+                    {advTelegramTestMsg.message}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 7. Quick Rejection Templates ON/OFF & Custom Reasons (Item 9) */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">⚡</span>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                    ৭. ১-ক্লিক কুইক রিজেকশন টেমপ্লেট (Quick Rejection Reason Templates)
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  মাইক্রো-জব, রিচার্জ বা উইথড্র বাতিলের সময় বারবার না লিখে ১-ক্লিকে কারণ সিলেক্ট করার রেডিমেড টেমপ্লেট।
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setSettings((prev: any) => ({
+                    ...prev,
+                    advancedFeatures: {
+                      ...prev.advancedFeatures,
+                      quickRejectTemplates: {
+                        ...prev.advancedFeatures?.quickRejectTemplates,
+                        enabled: !prev.advancedFeatures?.quickRejectTemplates?.enabled,
+                      },
+                    },
+                  }))
+                }
+                className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors shrink-0 ${
+                  settings.advancedFeatures?.quickRejectTemplates?.enabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    settings.advancedFeatures?.quickRejectTemplates?.enabled ? 'translate-x-7' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={newRejectReasonInput}
+                onChange={(e) => setNewRejectReasonInput(e.target.value)}
+                placeholder="নতুন রিজেকশন কারণ লিখুন (যেমন: স্ক্রিনশট অস্পষ্ট বা ফেক)..."
+                className="flex-1 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const trimmed = newRejectReasonInput.trim();
+                  if (!trimmed) return;
+                  setSettings((prev: any) => ({
+                    ...prev,
+                    advancedFeatures: {
+                      ...prev.advancedFeatures,
+                      quickRejectTemplates: {
+                        ...prev.advancedFeatures?.quickRejectTemplates,
+                        reasons: [...(prev.advancedFeatures?.quickRejectTemplates?.reasons || []), trimmed],
+                      },
+                    },
+                  }));
+                  setNewRejectReasonInput('');
+                }}
+                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center gap-1.5 shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>কারণ যোগ করুন</span>
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-2 pt-1">
+              {(settings.advancedFeatures?.quickRejectTemplates?.reasons || []).map((r: string, idx: number) => (
+                <div
+                  key={idx}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200"
+                >
+                  <span>{r}</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        advancedFeatures: {
+                          ...prev.advancedFeatures,
+                          quickRejectTemplates: {
+                            ...prev.advancedFeatures?.quickRejectTemplates,
+                            reasons: (prev.advancedFeatures?.quickRejectTemplates?.reasons || []).filter(
+                              (_: string, i: number) => i !== idx,
+                            ),
+                          },
+                        },
+                      }))
+                    }
+                    className="text-slate-400 hover:text-rose-500 transition"
+                    title="মুছে ফেলুন"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Save Button */}
+          <div className="flex justify-end">
+            <button
+              onClick={() => handleSave('advancedFeatures')}
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-black shadow-lg shadow-amber-500/20 transition disabled:opacity-50"
+            >
+              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              <span>সকল অটোমেশন ও ফিচার সেটিংস সংরক্ষণ করুন</span>
             </button>
           </div>
         </div>

@@ -18,9 +18,9 @@ async function bootstrap() {
     bodyParser: false,
   });
 
-  // Global body parsers with 10mb limit to handle Base64 avatars and documents while preventing RAM exhaustion / DoS
-  app.use(json({ limit: '10mb' }));
-  app.use(urlencoded({ extended: true, limit: '10mb' }));
+  // Global body parsers with 15mb limit to handle Base64 avatars, voice notes, and documents while preventing RAM exhaustion / DoS
+  app.use(json({ limit: '15mb' }));
+  app.use(urlencoded({ extended: true, limit: '15mb' }));
 
   // Global Prefix
   app.setGlobalPrefix('api/v1');

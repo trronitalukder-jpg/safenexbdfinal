@@ -34,8 +34,23 @@ export default function MicroJobsPublicPage() {
   const [selectedCat, setSelectedCat] = useState<string>('');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'reward_high' | 'reward_low'>('newest');
+  const [publicAdvFeatures, setPublicAdvFeatures] = useState<any>(
+    (settings as any)?.advancedFeatures || null,
+  );
 
   const isEnabled = settings.microJob?.enabled !== false;
+
+  useEffect(() => {
+    api
+      .get('/settings/public')
+      .then((res: any) => {
+        const data = res?.data || res;
+        if (data?.advancedFeatures) {
+          setPublicAdvFeatures(data.advancedFeatures);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!isEnabled) {
@@ -391,6 +406,16 @@ export default function MicroJobsPublicPage() {
                           {job.isPinned && (
                             <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-xs">
                               🔥 FEATURED
+                            </span>
+                          )}
+                          {(publicAdvFeatures?.microJobAutoApproval?.enabled ??
+                            (settings as any)?.advancedFeatures?.microJobAutoApproval?.enabled) === true && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shrink-0">
+                              ⏱️{' '}
+                              {publicAdvFeatures?.microJobAutoApproval?.autoApproveHours ||
+                                (settings as any)?.advancedFeatures?.microJobAutoApproval?.autoApproveHours ||
+                                48}
+                              h Auto-Approve
                             </span>
                           )}
                         </div>

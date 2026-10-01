@@ -371,6 +371,7 @@ model WalletLedger {
   @@index([walletId])
   @@index([userId])
   @@index([userId, createdAt])
+  @@index([userId, type, createdAt])
   @@index([walletId, createdAt])
   @@index([type])
   @@index([createdAt])
@@ -1480,8 +1481,11 @@ model MicroJobSubmission {
 
   @@unique([jobId, workerId])
   @@index([jobId])
+  @@index([jobId, status, createdAt])
   @@index([workerId])
+  @@index([workerId, status, createdAt])
   @@index([status])
+  @@index([status, createdAt])
   @@index([autoApproveAt])
   @@map("micro_job_submissions")
 }
@@ -1527,6 +1531,7 @@ model TrafficSession {
 
   @@index([visitorId])
   @@index([ipAddress])
+  @@index([userId, ipAddress])
   @@index([trafficSource])
   @@index([isRepeat])
   @@index([createdAt])

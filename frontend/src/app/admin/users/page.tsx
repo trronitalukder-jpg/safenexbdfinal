@@ -64,6 +64,9 @@ export default function AdminUsersPage() {
   // Modals state
   const [viewUser, setViewUser] = useState<any | null>(null);
   const [viewUserLoading, setViewUserLoading] = useState(false);
+  const [overview360User, setOverview360User] = useState<any | null>(null);
+  const [overview360Data, setOverview360Data] = useState<any | null>(null);
+  const [overview360Loading, setOverview360Loading] = useState(false);
   const [previewNidImage, setPreviewNidImage] = useState<string | null>(null);
   const [adjustingUser, setAdjustingUser] = useState<any | null>(null);
   const [deletingUser, setDeletingUser] = useState<any | null>(null);
@@ -150,6 +153,22 @@ export default function AdminUsersPage() {
       // Keep basic data if detailed fetch fails
     } finally {
       setViewUserLoading(false);
+    }
+  };
+
+  // Open User 360° Financial & Anti-Fraud Overview
+  const handleOpen360Overview = async (user: any) => {
+    setOverview360User(user);
+    setOverview360Data(null);
+    setOverview360Loading(true);
+    try {
+      const res = await api.get(`/admin/users/${user.id}/360-overview`);
+      const data = unwrap(res);
+      setOverview360Data(data);
+    } catch (err: any) {
+      showNotice(err?.response?.data?.message || err?.message || 'Failed to load 360° Overview', 'error');
+    } finally {
+      setOverview360Loading(false);
     }
   };
 
@@ -629,6 +648,15 @@ export default function AdminUsersPage() {
                       {/* Actions Column */}
                       <td className="p-3.5 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* 360° Financial & Anti-Fraud Overview Button */}
+                          <button
+                            onClick={() => handleOpen360Overview(u)}
+                            className="px-2 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500 hover:text-slate-950 text-amber-400 border border-amber-500/30 font-bold text-[10px] flex items-center gap-1 transition"
+                            title="User 360° Financial Timeline & Anti-Fraud IP Shield"
+                          >
+                            <span>📊 360° ওভারভিউ</span>
+                          </button>
+
                           {/* Profile View Option */}
                           <button
                             onClick={() => handleOpenProfile(u)}
@@ -1553,6 +1581,365 @@ export default function AdminUsersPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 5. USER 360° FINANCIAL TIMELINE & ANTI-FRAUD IP SHIELD MODAL              */}
+      {/* ========================================================================= */}
+      {overview360User && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
+          <div className="bg-slate-900 rounded-3xl max-w-4xl w-full border border-slate-800 shadow-2xl overflow-hidden my-6 text-xs animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col">
+            {/* Header */}
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800 flex items-center justify-between gap-4 shrink-0">
+              <div className="flex items-center gap-3.5">
+                {overview360User.avatarUrl ? (
+                  <img
+                    src={getImageUrl(overview360User.avatarUrl)}
+                    alt=""
+                    className="w-12 h-12 rounded-2xl object-cover border border-amber-500/40"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 font-black text-lg flex items-center justify-center">
+                    {overview360User.fullName?.charAt(0) || overview360User.firstName?.charAt(0) || 'U'}
+                  </div>
+                )}
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-black">
+                      📊 360° ফিন্যান্সিয়াল ও আইপি শিল্ড
+                    </span>
+                    <h3 className="text-base font-black text-white">
+                      {overview360User.fullName || `${overview360User.firstName || ''} ${overview360User.lastName || ''}`.trim()}
+                    </h3>
+                    <span className="font-mono text-sky-400 font-bold">@{overview360User.uniqueUserId}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {overview360User.email} • {overview360User.phone || 'No Phone'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setOverview360User(null);
+                  setOverview360Data(null);
+                }}
+                className="p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-6">
+              {overview360Loading ? (
+                <div className="py-16 text-center space-y-3">
+                  <RefreshCw className="w-7 h-7 text-amber-400 animate-spin mx-auto" />
+                  <p className="text-xs text-slate-400">ইউজার ৩৬০° ফিন্যান্সিয়াল টাইমলাইন ও আইপি ডাটা বিশ্লেষণ করা হচ্ছে...</p>
+                </div>
+              ) : (
+                (() => {
+                  const d = overview360Data || {};
+                  const fin = d.financialSummary || d.summary || d.financials || d;
+                  const walletBal = Number(
+                    fin.walletBalance ??
+                      fin.availableBalance ??
+                      d.wallet?.availableBalance ??
+                      overview360User.wallet?.availableBalance ??
+                      0,
+                  );
+                  const holdBal = Number(
+                    fin.holdBalance ??
+                      d.wallet?.holdBalance ??
+                      overview360User.wallet?.holdBalance ??
+                      0,
+                  );
+                  const rechargeSum = Number(
+                    fin.totalRechargeAmount ??
+                      fin.totalRecharges?.amount ??
+                      fin.totalRecharges?.sum ??
+                      (typeof fin.totalRecharges === 'number' ? fin.totalRecharges : 0) ??
+                      0,
+                  );
+                  const rechargeCount = Number(
+                    fin.totalRechargeCount ??
+                      fin.totalRecharges?.count ??
+                      (Array.isArray(d.recentRecharges) ? d.recentRecharges.length : 0),
+                  );
+                  const withdrawSum = Number(
+                    fin.totalWithdrawAmount ??
+                      fin.totalWithdrawals?.amount ??
+                      fin.totalWithdrawals?.sum ??
+                      (typeof fin.totalWithdrawals === 'number' ? fin.totalWithdrawals : 0) ??
+                      0,
+                  );
+                  const withdrawCount = Number(
+                    fin.totalWithdrawCount ??
+                      fin.totalWithdrawals?.count ??
+                      (Array.isArray(d.recentWithdrawals) ? d.recentWithdrawals.length : 0),
+                  );
+                  const referralSum = Number(
+                    fin.referralEarnings?.amount ??
+                      fin.referralEarnings?.sum ??
+                      fin.totalReferralEarnings ??
+                      (typeof fin.referralEarnings === 'number' ? fin.referralEarnings : 0) ??
+                      0,
+                  );
+                  const microJobSum = Number(
+                    fin.microJobEarnings?.amount ??
+                      fin.microJobEarnings?.sum ??
+                      fin.totalMicroJobEarnings ??
+                      (typeof fin.microJobEarnings === 'number' ? fin.microJobEarnings : 0) ??
+                      0,
+                  );
+
+                  const af = d.antiFraud || d.ipShield || d;
+                  const knownIps: string[] = Array.isArray(af.knownIps)
+                    ? af.knownIps
+                    : Array.isArray(af.ipAddresses)
+                    ? af.ipAddresses
+                    : Array.isArray(d.knownIps)
+                    ? d.knownIps
+                    : Array.isArray(d.ipAddresses)
+                    ? d.ipAddresses
+                    : [];
+
+                  const sharedIpUsers: any[] = Array.isArray(af.sharedIpUsers)
+                    ? af.sharedIpUsers
+                    : Array.isArray(af.duplicateAccounts)
+                    ? af.duplicateAccounts
+                    : Array.isArray(af.sameIpUsers)
+                    ? af.sameIpUsers
+                    : Array.isArray(d.sharedIpUsers)
+                    ? d.sharedIpUsers
+                    : Array.isArray(d.duplicateAccounts)
+                    ? d.duplicateAccounts
+                    : [];
+
+                  const recentTxns: any[] = Array.isArray(d.recentTransactions)
+                    ? d.recentTransactions
+                    : Array.isArray(d.transactions)
+                    ? d.transactions
+                    : [];
+                  const recentRecharges: any[] = Array.isArray(d.recentRecharges)
+                    ? d.recentRecharges
+                    : Array.isArray(d.recharges)
+                    ? d.recharges
+                    : [];
+                  const recentWithdrawals: any[] = Array.isArray(d.recentWithdrawals)
+                    ? d.recentWithdrawals
+                    : Array.isArray(d.withdrawals)
+                    ? d.withdrawals
+                    : [];
+
+                  return (
+                    <>
+                      {/* 1. Financial Summary Grid (6 Cards) */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                        <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800">
+                          <span className="text-[10px] text-slate-400 font-semibold block">মূল ব্যালেন্স (Wallet)</span>
+                          <div className="text-base font-black text-emerald-400 mt-1">৳{walletBal.toLocaleString()}</div>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800">
+                          <span className="text-[10px] text-slate-400 font-semibold block">হোল্ড ব্যালেন্স (Hold)</span>
+                          <div className="text-base font-black text-amber-400 mt-1">৳{holdBal.toLocaleString()}</div>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800">
+                          <span className="text-[10px] text-slate-400 font-semibold block">মোট ডিপোজিট ({rechargeCount} বার)</span>
+                          <div className="text-base font-black text-sky-400 mt-1">৳{rechargeSum.toLocaleString()}</div>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800">
+                          <span className="text-[10px] text-slate-400 font-semibold block">মোট উইথড্র ({withdrawCount} বার)</span>
+                          <div className="text-base font-black text-rose-400 mt-1">৳{withdrawSum.toLocaleString()}</div>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800">
+                          <span className="text-[10px] text-slate-400 font-semibold block">রেফারেল আয় (Referral)</span>
+                          <div className="text-base font-black text-purple-400 mt-1">৳{referralSum.toLocaleString()}</div>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800">
+                          <span className="text-[10px] text-slate-400 font-semibold block">মাইক্রো-জব আয়</span>
+                          <div className="text-base font-black text-teal-400 mt-1">৳{microJobSum.toLocaleString()}</div>
+                        </div>
+                      </div>
+
+                      {/* 2. Anti-Fraud Duplicate IP / Multi-Account Shield */}
+                      <div
+                        className={`p-4 rounded-2xl border space-y-3 ${
+                          sharedIpUsers.length > 0
+                            ? 'bg-rose-950/30 border-rose-500/50'
+                            : 'bg-slate-950/80 border-slate-800'
+                        }`}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Shield className={`w-4 h-4 ${sharedIpUsers.length > 0 ? 'text-rose-400' : 'text-emerald-400'}`} />
+                            <h4 className="text-xs font-black text-white">
+                              অ্যান্টি-ফ্রড ডুপ্লিকেট আইপি ও মাল্টি-অ্যাকাউন্ট চেক (Anti-Fraud IP Shield)
+                            </h4>
+                          </div>
+                          {sharedIpUsers.length > 0 ? (
+                            <span className="px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-black">
+                              🚨 সতর্কতা: একই আইপিতে {sharedIpUsers.length} টি অন্য অ্যাকাউন্ট পাওয়া গেছে!
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                              ✅ নিরাপদ: কোনো ডুপ্লিকেট আইপি অ্যাকাউন্ট পাওয়া যায়নি
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Known IPs */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[11px] text-slate-400 font-semibold">ব্যবহৃত IP সমূহ:</span>
+                          {knownIps.length === 0 ? (
+                            <span className="text-[11px] text-slate-500 italic">কোনো IP লগ পাওয়া যায়নি</span>
+                          ) : (
+                            knownIps.map((ip, idx) => (
+                              <span
+                                key={idx}
+                                className="px-2.5 py-0.5 rounded-lg bg-slate-900 border border-slate-700 font-mono text-[11px] text-sky-300"
+                              >
+                                🌐 {ip}
+                              </span>
+                            ))
+                          )}
+                        </div>
+
+                        {/* Duplicate Accounts Sharing IP */}
+                        {sharedIpUsers.length > 0 && (
+                          <div className="space-y-2 pt-1">
+                            <p className="text-[11px] font-bold text-rose-300">
+                              এই ইউজারের সাথে একই IP শেয়ার করা সন্দেহভাজন অ্যাকাউন্টসমূহ:
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {sharedIpUsers.map((dup: any, idx: number) => (
+                                <div
+                                  key={dup.id || idx}
+                                  className="p-2.5 rounded-xl bg-rose-950/50 border border-rose-800/70 flex items-center justify-between gap-2"
+                                >
+                                  <div>
+                                    <div className="font-bold text-white flex items-center gap-1.5">
+                                      <span>
+                                        {dup.fullName || `${dup.firstName || ''} ${dup.lastName || ''}`.trim() || 'User'}
+                                      </span>
+                                      <span className="font-mono text-rose-300 text-[10px]">@{dup.uniqueUserId}</span>
+                                    </div>
+                                    <div className="text-[10px] text-slate-300 mt-0.5">
+                                      📱 {dup.phone || dup.email || 'N/A'}
+                                      {dup.sharedIp || dup.ip ? ` • IP: ${dup.sharedIp || dup.ip}` : ''}
+                                    </div>
+                                  </div>
+                                  <span
+                                    className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                                      dup.isActive !== false
+                                        ? 'bg-emerald-500/20 text-emerald-300'
+                                        : 'bg-rose-500/20 text-rose-300'
+                                    }`}
+                                  >
+                                    {dup.isActive !== false ? 'Active' : 'Banned'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 3. Recent Transactions, Recharges & Withdrawals */}
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        {/* Recent Transactions */}
+                        <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2.5">
+                          <h5 className="text-xs font-bold text-white flex items-center justify-between">
+                            <span>🔄 সাম্প্রতিক এসক্রো লেনদেন</span>
+                            <span className="text-[10px] text-slate-400">{recentTxns.length} টি</span>
+                          </h5>
+                          {recentTxns.length === 0 ? (
+                            <p className="text-[11px] text-slate-500 py-4 text-center">কোনো লেনদেন নেই</p>
+                          ) : (
+                            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                              {recentTxns.slice(0, 8).map((tx: any, i: number) => (
+                                <div key={tx.id || i} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800/80 flex items-center justify-between gap-2">
+                                  <div>
+                                    <div className="font-mono font-bold text-slate-200 text-[11px]">
+                                      {tx.trackingNumber || tx.type || 'TXN'}
+                                    </div>
+                                    <div className="text-[10px] text-slate-400">
+                                      {tx.status} • {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : ''}
+                                    </div>
+                                  </div>
+                                  <span className="font-bold text-emerald-400">৳{Number(tx.amount || 0).toLocaleString()}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Recent Recharges */}
+                        <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2.5">
+                          <h5 className="text-xs font-bold text-white flex items-center justify-between">
+                            <span>📥 সাম্প্রতিক রিচার্জ</span>
+                            <span className="text-[10px] text-slate-400">{recentRecharges.length} টি</span>
+                          </h5>
+                          {recentRecharges.length === 0 ? (
+                            <p className="text-[11px] text-slate-500 py-4 text-center">কোনো রিচার্জ নেই</p>
+                          ) : (
+                            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                              {recentRecharges.slice(0, 8).map((rc: any, i: number) => (
+                                <div key={rc.id || i} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800/80 flex items-center justify-between gap-2">
+                                  <div>
+                                    <div className="font-bold text-slate-200 text-[11px]">
+                                      {rc.paymentMethod || rc.method || 'Deposit'} ({rc.transactionId || rc.trxId || 'N/A'})
+                                    </div>
+                                    <div className="text-[10px] text-slate-400">
+                                      {rc.status} • {rc.createdAt ? new Date(rc.createdAt).toLocaleDateString() : ''}
+                                    </div>
+                                  </div>
+                                  <span className="font-bold text-sky-400">৳{Number(rc.amount || 0).toLocaleString()}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Recent Withdrawals */}
+                        <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2.5">
+                          <h5 className="text-xs font-bold text-white flex items-center justify-between">
+                            <span>💸 সাম্প্রতিক উইথড্র</span>
+                            <span className="text-[10px] text-slate-400">{recentWithdrawals.length} টি</span>
+                          </h5>
+                          {recentWithdrawals.length === 0 ? (
+                            <p className="text-[11px] text-slate-500 py-4 text-center">কোনো উইথড্র নেই</p>
+                          ) : (
+                            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                              {recentWithdrawals.slice(0, 8).map((wd: any, i: number) => (
+                                <div key={wd.id || i} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800/80 flex items-center justify-between gap-2">
+                                  <div>
+                                    <div className="font-bold text-slate-200 text-[11px]">
+                                      {wd.method || wd.paymentMethod || 'Withdraw'} ({wd.accountNumber || wd.WalletNumber || ''})
+                                    </div>
+                                    <div className="text-[10px] text-slate-400">
+                                      {wd.status} • {wd.createdAt ? new Date(wd.createdAt).toLocaleDateString() : ''}
+                                    </div>
+                                  </div>
+                                  <span className="font-bold text-rose-400">৳{Number(wd.amount || 0).toLocaleString()}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()
+              )}
+            </div>
           </div>
         </div>
       )}

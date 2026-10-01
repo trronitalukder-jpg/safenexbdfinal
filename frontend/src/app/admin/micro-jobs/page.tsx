@@ -98,9 +98,83 @@ export default function AdminMicroJobsPage() {
   // Zoom Lightbox
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
-  // Auto approve action
+  // Auto approve action & Advanced Features state
   const [triggeringCron, setTriggeringCron] = useState(false);
   const [togglingMaster, setTogglingMaster] = useState(false);
+  const [savingAutoApprove, setSavingAutoApprove] = useState(false);
+  const [adminAdvFeatures, setAdminAdvFeatures] = useState<any>({
+    microJobAutoApproval: { enabled: true, autoApproveHours: 48 },
+    quickRejectTemplates: {
+      enabled: true,
+      reasons: [
+        'স্ক্রিনশট অস্পষ্ট বা ফেক (Invalid Screenshot)',
+        'কাজের নির্দেশনা সঠিকভাবে অনুসরণ করা হয়নি',
+        'সাবস্ক্রাইব / ফলো আনডু করা হয়েছে',
+        'ভুল ট্রানজেকশন আইডি (Invalid TrxID)',
+        'ডুপ্লিকেট বা পূর্বে ব্যবহৃত প্রুফ জমা দেওয়া হয়েছে',
+      ],
+    },
+  });
+
+  const fetchAdminAdvSettings = async () => {
+    try {
+      const res = await api.get('/settings/admin');
+      const data = unwrap(res);
+      if (data?.advancedFeatures) {
+        setAdminAdvFeatures((prev: any) => ({
+          ...prev,
+          ...data.advancedFeatures,
+          microJobAutoApproval: {
+            ...prev.microJobAutoApproval,
+            ...(data.advancedFeatures.microJobAutoApproval || {}),
+          },
+          quickRejectTemplates: {
+            ...prev.quickRejectTemplates,
+            ...(data.advancedFeatures.quickRejectTemplates || {}),
+            reasons: Array.isArray(data.advancedFeatures.quickRejectTemplates?.reasons)
+              ? data.advancedFeatures.quickRejectTemplates.reasons
+              : prev.quickRejectTemplates.reasons,
+          },
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch admin settings:', err);
+    }
+  };
+
+  const handleSaveAutoApproveConfig = async (nextEnabled: boolean, nextHours: number) => {
+    const validHours = Math.max(1, Number(nextHours) || 48);
+    setSavingAutoApprove(true);
+    try {
+      const fullRes = await api.get('/settings/admin');
+      const fullSettings = unwrap(fullRes) || {};
+      const updatedAdv = {
+        ...(fullSettings.advancedFeatures || {}),
+        microJobAutoApproval: {
+          enabled: nextEnabled,
+          autoApproveHours: validHours,
+        },
+      };
+      const updatedMicroJob = {
+        ...(fullSettings.microJob || {}),
+        autoApproveHours: validHours,
+      };
+      await api.post('/settings/admin', {
+        ...fullSettings,
+        microJob: updatedMicroJob,
+        advancedFeatures: updatedAdv,
+      });
+      setAdminAdvFeatures((prev: any) => ({
+        ...prev,
+        microJobAutoApproval: { enabled: nextEnabled, autoApproveHours: validHours },
+      }));
+      if (refreshSettings) await refreshSettings();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'অটো-অ্যাপ্রুভাল সেটিংস সেভ করা যায়নি');
+    } finally {
+      setSavingAutoApprove(false);
+    }
+  };
 
   const notifySidebarRefresh = () => {
     if (typeof window !== 'undefined') {
@@ -184,6 +258,7 @@ export default function AdminMicroJobsPage() {
   // Initial load
   useEffect(() => {
     fetchStats();
+    fetchAdminAdvSettings();
   }, []);
 
   useEffect(() => {
@@ -535,6 +610,108 @@ export default function AdminMicroJobsPage() {
                 ? 'সার্ভিস বন্ধ করুন (Turn OFF)'
                 : 'সার্ভিস চালু করুন (Turn ON)'}
             </span>
+          </button>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 2B. AUTO-APPROVAL CONTROL BAR                                             */}
+      {/* ========================================================================= */}
+      <div className="p-4 sm:p-5 rounded-3xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-2xs">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div
+            className={`p-3 rounded-2xl shrink-0 ${
+              adminAdvFeatures.microJobAutoApproval?.enabled
+                ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400'
+                : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+            }`}
+          >
+            <Clock className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
+                ⏱️ অটো-অ্যাপ্রুভাল টাইমার কন্ট্রোল (Micro-Job Auto-Approval)
+              </h2>
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider ${
+                  adminAdvFeatures.microJobAutoApproval?.enabled
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                {adminAdvFeatures.microJobAutoApproval?.enabled
+                  ? `ON (${adminAdvFeatures.microJobAutoApproval?.autoApproveHours || 48}h)`
+                  : 'OFF'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              নির্দিষ্ট ঘণ্টার মধ্যে বায়ার বা অ্যাডমিন প্রুফ রিভিউ না করলে সিস্টেম স্বয়ংক্রিয়ভাবে প্রুফ অ্যাপ্রুভ করে ওয়ার্কারকে পেমেন্ট রিলিজ করবে।
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5">
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">অটো-অ্যাপ্রুভ সময় (ঘণ্টা):</span>
+            <input
+              type="number"
+              min={1}
+              max={720}
+              value={adminAdvFeatures.microJobAutoApproval?.autoApproveHours ?? 48}
+              onChange={(e) => {
+                const val = Math.max(1, Number(e.target.value) || 48);
+                setAdminAdvFeatures((prev) => ({
+                  ...prev,
+                  microJobAutoApproval: {
+                    ...prev.microJobAutoApproval,
+                    autoApproveHours: val,
+                  },
+                }));
+              }}
+              className="w-16 px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-extrabold text-center text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <button
+              type="button"
+              disabled={savingAutoApprove}
+              onClick={() =>
+                handleSaveAutoApproveConfig(
+                  !!adminAdvFeatures.microJobAutoApproval?.enabled,
+                  Number(adminAdvFeatures.microJobAutoApproval?.autoApproveHours) || 48,
+                )
+              }
+              className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold transition disabled:opacity-50"
+            >
+              সেভ
+            </button>
+          </div>
+
+          <button
+            type="button"
+            disabled={savingAutoApprove}
+            onClick={() =>
+              handleSaveAutoApproveConfig(
+                !adminAdvFeatures.microJobAutoApproval?.enabled,
+                Number(adminAdvFeatures.microJobAutoApproval?.autoApproveHours) || 48,
+              )
+            }
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-1.5 shadow-xs ${
+              adminAdvFeatures.microJobAutoApproval?.enabled
+                ? 'bg-rose-600 hover:bg-rose-500 text-white'
+                : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+            } disabled:opacity-50`}
+          >
+            {adminAdvFeatures.microJobAutoApproval?.enabled ? (
+              <>
+                <ToggleRight className="w-4 h-4" />
+                <span>অটো-অ্যাপ্রুভ বন্ধ করুন (OFF)</span>
+              </>
+            ) : (
+              <>
+                <ToggleLeft className="w-4 h-4" />
+                <span>অটো-অ্যাপ্রুভ চালু করুন (ON)</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -1492,6 +1669,31 @@ export default function AdminMicroJobsPage() {
             <p className="text-xs text-slate-500">
               কেন এই প্রুফটি বাতিল করা হলো তা লিখুন। ইউজার তার প্যানেল থেকে কারণটি দেখতে পারবে এবং সংশোধন করে পুনরায় সাবমিট করতে পারবে।
             </p>
+            {adminAdvFeatures.quickRejectTemplates?.enabled !== false &&
+              Array.isArray(adminAdvFeatures.quickRejectTemplates?.reasons) &&
+              adminAdvFeatures.quickRejectTemplates.reasons.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                    ⚡ কুইক রিজেক্ট টেমপ্লেট (ক্লিক করে সিলেক্ট করুন):
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
+                    {adminAdvFeatures.quickRejectTemplates.reasons.map((r, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setRejectReason(r)}
+                        className={`text-left px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${
+                          rejectReason === r
+                            ? 'bg-rose-600 text-white border-rose-600'
+                            : 'bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/60 hover:bg-rose-100 dark:hover:bg-rose-900/40'
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             <textarea
               rows={3}
               value={rejectReason}
@@ -1537,6 +1739,31 @@ export default function AdminMicroJobsPage() {
             <p className="text-xs text-slate-500">
               জব: <span className="font-bold text-slate-800 dark:text-slate-200">{rejectModalJob.title}</span>। কেন রিজেক্ট করা হলো তা লিখে দিন, যাতে ইউজার এডিট করে পুনরায় সাবমিট করতে পারে।
             </p>
+            {adminAdvFeatures.quickRejectTemplates?.enabled !== false &&
+              Array.isArray(adminAdvFeatures.quickRejectTemplates?.reasons) &&
+              adminAdvFeatures.quickRejectTemplates.reasons.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                    ⚡ কুইক রিজেক্ট টেমপ্লেট (ক্লিক করে সিলেক্ট করুন):
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
+                    {adminAdvFeatures.quickRejectTemplates.reasons.map((r, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setJobRejectReason(r)}
+                        className={`text-left px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${
+                          jobRejectReason === r
+                            ? 'bg-rose-600 text-white border-rose-600'
+                            : 'bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/60 hover:bg-rose-100 dark:hover:bg-rose-900/40'
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             <textarea
               rows={3}
               value={jobRejectReason}

@@ -1,13 +1,17 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 import { invalidateUserCache } from '../auth/jwt.strategy';
 import { purgeOrScrubUser } from '../common/utils/user-cleanup.util';
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Optional() private settingsService?: SettingsService,
+  ) {}
 
   /**
    * Complete Analytics Dashboard Summary (Spec #47, #98)
@@ -184,7 +188,7 @@ export class AdminService {
       where.isActive = isActive === 'true';
     }
 
-    const [items, total] = await Promise.all([
+    const [items, total, allSettings] = await Promise.all([
       this.prisma.user.findMany({
         where,
         include: {
@@ -206,40 +210,402 @@ export class AdminService {
         take: limit,
       }),
       this.prisma.user.count({ where }),
+      this.settingsService ? this.settingsService.getAllSettings().catch(() => null) : Promise.resolve(null),
     ]);
 
+    const antiFraudEnabled =
+      allSettings?.advancedFeatures?.antiFraudShield?.enabled !== false &&
+      allSettings?.advancedFeatures?.antiFraudShield?.flagSameIpUsers !== false;
+    const maxAccountsPerIp = Number(
+      allSettings?.advancedFeatures?.antiFraudShield?.maxAccountsPerIp || 2,
+    );
+
+    const userLastIpMap = new Map<string, string>();
+    const userSharedAccountsMap = new Map<
+      string,
+      Array<{ id: string; uniqueUserId: string; firstName: string; lastName: string }>
+    >();
+
+    if (antiFraudEnabled && items.length > 0) {
+      const userIds = items.map((u) => u.id);
+      const userSessions = await this.prisma.trafficSession.findMany({
+        where: {
+          userId: { in: userIds },
+          ipAddress: { notIn: ['', '127.0.0.1', '::1', 'unknown'] },
+        },
+        select: {
+          userId: true,
+          ipAddress: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 500,
+      });
+
+      const userIpSetMap = new Map<string, Set<string>>();
+      const allTargetIps = new Set<string>();
+
+      for (const s of userSessions) {
+        if (!s.userId || !s.ipAddress) continue;
+        if (!userLastIpMap.has(s.userId)) {
+          userLastIpMap.set(s.userId, s.ipAddress);
+        }
+        if (!userIpSetMap.has(s.userId)) {
+          userIpSetMap.set(s.userId, new Set());
+        }
+        userIpSetMap.get(s.userId)!.add(s.ipAddress);
+        allTargetIps.add(s.ipAddress);
+      }
+
+      if (allTargetIps.size > 0) {
+        const matchingSessions = await this.prisma.trafficSession.findMany({
+          where: {
+            ipAddress: { in: Array.from(allTargetIps) },
+            userId: { not: null },
+          },
+          select: {
+            ipAddress: true,
+            userId: true,
+            user: {
+              select: {
+                id: true,
+                uniqueUserId: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+          distinct: ['ipAddress', 'userId'],
+        });
+
+        const ipToUsersMap = new Map<
+          string,
+          Array<{ id: string; uniqueUserId: string; firstName: string; lastName: string }>
+        >();
+        for (const ms of matchingSessions) {
+          if (!ms.ipAddress || !ms.user) continue;
+          if (!ipToUsersMap.has(ms.ipAddress)) {
+            ipToUsersMap.set(ms.ipAddress, []);
+          }
+          ipToUsersMap.get(ms.ipAddress)!.push(ms.user);
+        }
+
+        for (const [uid, ips] of userIpSetMap.entries()) {
+          const otherUsersMap = new Map<
+            string,
+            { id: string; uniqueUserId: string; firstName: string; lastName: string }
+          >();
+          for (const ip of ips) {
+            const usersOnIp = ipToUsersMap.get(ip) || [];
+            for (const other of usersOnIp) {
+              if (other.id !== uid) {
+                otherUsersMap.set(other.id, other);
+              }
+            }
+          }
+          userSharedAccountsMap.set(uid, Array.from(otherUsersMap.values()));
+        }
+      }
+    }
+
     return {
-      items: items.map((u) => ({
-        id: u.id,
-        uniqueUserId: u.uniqueUserId,
-        fullName: `${u.firstName} ${u.lastName}`.trim(),
-        firstName: u.firstName,
-        lastName: u.lastName,
-        email: u.email,
-        phone: u.phone,
-        avatarUrl: u.avatarUrl,
-        address: u.address,
-        city: u.city,
-        country: u.country,
-        postalCode: u.postalCode,
-        businessName: u.businessName,
-        businessType: u.businessType,
-        isVerified: u.isVerified,
-        isActive: u.isActive,
-        wallet: u.wallet,
-        productsCount: u._count.products,
-        transactionsCount: u._count.sentTransactions + u._count.receivedTransactions,
-        sentTransactionsCount: u._count.sentTransactions,
-        receivedTransactionsCount: u._count.receivedTransactions,
-        rechargesCount: u._count.rechargeRequests,
-        withdrawalsCount: u._count.withdrawalRequests,
-        disputesCount: u._count.initiatedDisputes,
-        roles: u.userRoles.map((ur) => ur.role.name),
-        createdAt: u.createdAt,
-        updatedAt: u.updatedAt,
-        deletedAt: u.deletedAt,
-      })),
+      items: items.map((u) => {
+        const sharedUsers = userSharedAccountsMap.get(u.id) || [];
+        const totalAccountsOnIp = sharedUsers.length + 1;
+        return {
+          id: u.id,
+          uniqueUserId: u.uniqueUserId,
+          fullName: `${u.firstName} ${u.lastName}`.trim(),
+          firstName: u.firstName,
+          lastName: u.lastName,
+          email: u.email,
+          phone: u.phone,
+          avatarUrl: u.avatarUrl,
+          address: u.address,
+          city: u.city,
+          country: u.country,
+          postalCode: u.postalCode,
+          businessName: u.businessName,
+          businessType: u.businessType,
+          isVerified: u.isVerified,
+          isActive: u.isActive,
+          wallet: u.wallet,
+          productsCount: u._count.products,
+          transactionsCount: u._count.sentTransactions + u._count.receivedTransactions,
+          sentTransactionsCount: u._count.sentTransactions,
+          receivedTransactionsCount: u._count.receivedTransactions,
+          rechargesCount: u._count.rechargeRequests,
+          withdrawalsCount: u._count.withdrawalRequests,
+          disputesCount: u._count.initiatedDisputes,
+          roles: u.userRoles.map((ur) => ur.role.name),
+          lastIp: userLastIpMap.get(u.id) || null,
+          sharedIpUsersCount: sharedUsers.length,
+          sharedIpUsers: sharedUsers,
+          isDuplicateIpFlagged: antiFraudEnabled && sharedUsers.length > 0 && totalAccountsOnIp >= maxAccountsPerIp,
+          createdAt: u.createdAt,
+          updatedAt: u.updatedAt,
+          deletedAt: u.deletedAt,
+        };
+      }),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  /**
+   * User 360° Complete Financial & Security Overview (Item 7 & Item 10)
+   */
+  async getUser360Overview(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        wallet: true,
+        paymentAccounts: true,
+        referredBy: {
+          select: {
+            id: true,
+            uniqueUserId: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        _count: {
+          select: {
+            products: true,
+            sentTransactions: true,
+            receivedTransactions: true,
+            rechargeRequests: true,
+            withdrawalRequests: true,
+            initiatedDisputes: true,
+            referrals: true,
+            postedMicroJobs: true,
+            workerSubmissions: true,
+          },
+        },
+      },
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    const [
+      rechargeApprovedAgg,
+      withdrawalApprovedAgg,
+      referralRewardAgg,
+      workerApprovedSubs,
+      recentTransactions,
+      recentRecharges,
+      recentWithdrawals,
+      recentLedgerEntries,
+      userSessions,
+      allSettings,
+    ] = await Promise.all([
+      this.prisma.rechargeRequest.aggregate({
+        where: { userId, status: 'APPROVED' },
+        _sum: { amount: true },
+        _count: { id: true },
+      }),
+      this.prisma.withdrawalRequest.aggregate({
+        where: { userId, status: 'APPROVED' },
+        _sum: { amount: true, netAmount: true, fee: true },
+        _count: { id: true },
+      }),
+      this.prisma.referralReward.aggregate({
+        where: { referrerId: userId },
+        _sum: { amount: true },
+        _count: { id: true },
+      }),
+      this.prisma.microJobSubmission.findMany({
+        where: { workerId: userId, status: 'APPROVED' },
+        select: {
+          id: true,
+          job: { select: { rewardPerWorker: true } },
+        },
+      }),
+      this.prisma.transaction.findMany({
+        where: {
+          OR: [{ senderId: userId }, { receiverId: userId }],
+        },
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          sender: { select: { id: true, uniqueUserId: true, firstName: true, lastName: true } },
+          receiver: { select: { id: true, uniqueUserId: true, firstName: true, lastName: true } },
+        },
+      }),
+      this.prisma.rechargeRequest.findMany({
+        where: { userId },
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          method: { select: { name: true, code: true } },
+        },
+      }),
+      this.prisma.withdrawalRequest.findMany({
+        where: { userId },
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          method: { select: { name: true, code: true } },
+        },
+      }),
+      this.prisma.walletLedger.findMany({
+        where: { userId },
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.trafficSession.findMany({
+        where: {
+          userId,
+          ipAddress: { notIn: ['', '127.0.0.1', '::1', 'unknown'] },
+        },
+        select: {
+          ipAddress: true,
+          city: true,
+          isp: true,
+          deviceType: true,
+          browser: true,
+          os: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 30,
+      }),
+      this.settingsService ? this.settingsService.getAllSettings().catch(() => null) : Promise.resolve(null),
+    ]);
+
+    const microJobEarnedTotal = workerApprovedSubs.reduce(
+      (acc, s) => acc + Number(s.job?.rewardPerWorker || 0),
+      0,
+    );
+
+    const distinctIps = Array.from(
+      new Set(userSessions.map((s) => s.ipAddress).filter(Boolean)),
+    );
+
+    const antiFraudEnabled =
+      allSettings?.advancedFeatures?.antiFraudShield?.enabled !== false;
+
+    let sharedIpAccounts: Array<{
+      id: string;
+      uniqueUserId: string;
+      firstName: string;
+      lastName: string;
+      phone: string;
+      email: string;
+      isActive: boolean;
+      isVerified: boolean;
+      sharedIps: string[];
+    }> = [];
+
+    if (antiFraudEnabled && distinctIps.length > 0) {
+      const otherSessions = await this.prisma.trafficSession.findMany({
+        where: {
+          ipAddress: { in: distinctIps },
+          userId: { not: null, notIn: [userId] },
+        },
+        select: {
+          ipAddress: true,
+          user: {
+            select: {
+              id: true,
+              uniqueUserId: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              email: true,
+              isActive: true,
+              isVerified: true,
+            },
+          },
+        },
+        distinct: ['ipAddress', 'userId'],
+      });
+
+      const otherUserMap = new Map<
+        string,
+        {
+          id: string;
+          uniqueUserId: string;
+          firstName: string;
+          lastName: string;
+          phone: string;
+          email: string;
+          isActive: boolean;
+          isVerified: boolean;
+          sharedIps: Set<string>;
+        }
+      >();
+
+      for (const os of otherSessions) {
+        if (!os.user) continue;
+        if (!otherUserMap.has(os.user.id)) {
+          otherUserMap.set(os.user.id, {
+            ...os.user,
+            sharedIps: new Set<string>(),
+          });
+        }
+        otherUserMap.get(os.user.id)!.sharedIps.add(os.ipAddress);
+      }
+
+      sharedIpAccounts = Array.from(otherUserMap.values()).map((item) => ({
+        ...item,
+        sharedIps: Array.from(item.sharedIps),
+      }));
+    }
+
+    return {
+      user: {
+        id: user.id,
+        uniqueUserId: user.uniqueUserId,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        fullName: `${user.firstName} ${user.lastName}`.trim(),
+        email: user.email,
+        phone: user.phone,
+        avatarUrl: user.avatarUrl,
+        isActive: user.isActive,
+        isVerified: user.isVerified,
+        verificationStatus: user.verificationStatus,
+        nidNumber: user.nidNumber,
+        nidName: user.nidName,
+        city: user.city,
+        division: user.division,
+        district: user.district,
+        referredBy: user.referredBy,
+        createdAt: user.createdAt,
+      },
+      wallet: {
+        availableBalance: Number(user.wallet?.availableBalance || 0),
+        holdBalance: Number(user.wallet?.holdBalance || 0),
+        currency: user.wallet?.currency || 'BDT',
+      },
+      financialSummary: {
+        totalRechargeApproved: Number(rechargeApprovedAgg._sum.amount || 0),
+        totalRechargeCount: rechargeApprovedAgg._count.id || 0,
+        totalWithdrawalApproved: Number(withdrawalApprovedAgg._sum.amount || 0),
+        totalWithdrawalNet: Number(withdrawalApprovedAgg._sum.netAmount || 0),
+        totalWithdrawalCount: withdrawalApprovedAgg._count.id || 0,
+        totalReferralEarnings: Number(referralRewardAgg._sum.amount || 0),
+        totalReferralRewardsCount: referralRewardAgg._count.id || 0,
+        totalReferralsCount: user._count.referrals || 0,
+        microJobsPostedCount: user._count.postedMicroJobs || 0,
+        microJobApprovedTasksCount: workerApprovedSubs.length,
+        microJobTotalEarned: microJobEarnedTotal,
+        totalTransactionsCount:
+          (user._count.sentTransactions || 0) + (user._count.receivedTransactions || 0),
+        disputesCount: user._count.initiatedDisputes || 0,
+      },
+      paymentAccounts: user.paymentAccounts,
+      recentTransactions,
+      recentRecharges,
+      recentWithdrawals,
+      recentLedgerEntries,
+      antiFraud: {
+        enabled: antiFraudEnabled,
+        distinctIps,
+        recentDevices: userSessions.slice(0, 8),
+        sharedIpAccountsCount: sharedIpAccounts.length,
+        sharedIpAccounts,
+      },
     };
   }
 

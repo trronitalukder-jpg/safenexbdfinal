@@ -203,6 +203,15 @@ export class MicroJobsService {
         .catch((err) => this.logger.error('Failed to process micro job employer referral reward:', err));
     }
 
+    // Send Admin Telegram Alert if enabled
+    this.settingsService
+      .sendAdminTelegramAlert(
+        'নতুন মাইক্রো জব পোস্ট (Pending Review)',
+        `📋 <b>জব:</b> ${createdJob.title}\n👥 <b>কর্মী সংখ্যা:</b> ${createdJob.totalWorkersNeeded} জন\n💰 <b>মোট বাজেট:</b> ৳${totalCost.toFixed(2)}`,
+        'notifyMicroJob',
+      )
+      .catch(() => {});
+
     return createdJob;
   }
 
@@ -216,6 +225,8 @@ export class MicroJobsService {
     limit?: number;
     sort?: 'newest' | 'reward_high' | 'reward_low';
   }) {
+    this.processAutoApprovalsIfEnabled().catch(() => {});
+
     const page = Math.max(1, Number(query.page || 1));
     const limit = Math.min(50, Math.max(1, Number(query.limit || 20)));
     const skip = (page - 1) * limit;
@@ -429,6 +440,7 @@ export class MicroJobsService {
    * Get all jobs posted by the employer
    */
   async getEmployerJobs(employerId: string) {
+    this.processAutoApprovalsIfEnabled().catch(() => {});
     return this.prisma.microJob.findMany({
       where: { employerId },
       orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
@@ -449,6 +461,7 @@ export class MicroJobsService {
    * Get all submissions for a specific job (employer only)
    */
   async getJobSubmissions(jobId: string, employerId: string) {
+    this.processAutoApprovalsIfEnabled().catch(() => {});
     const job = await this.prisma.microJob.findUnique({
       where: { id: jobId },
     });
@@ -1095,6 +1108,7 @@ export class MicroJobsService {
    * Worker's task history and earnings
    */
   async getWorkerTasks(workerId: string) {
+    this.processAutoApprovalsIfEnabled().catch(() => {});
     const submissions = await this.prisma.microJobSubmission.findMany({
       where: { workerId },
       orderBy: { createdAt: 'desc' },
@@ -1194,6 +1208,7 @@ export class MicroJobsService {
     page?: number;
     limit?: number;
   }) {
+    this.processAutoApprovalsIfEnabled().catch(() => {});
     const page = Math.max(1, Number(query.page || 1));
     const limit = Math.min(100, Math.max(1, Number(query.limit || 20)));
     const skip = (page - 1) * limit;
@@ -1467,20 +1482,66 @@ export class MicroJobsService {
     });
   }
 
+  private lastAutoApproveCheckAt = 0;
+
   /**
-   * Auto-approve pending submissions that have passed the autoApproveAt threshold
+   * Check settings and automatically approve expired submissions if enabled by Super Admin
    */
-  async autoApproveExpiredSubmissions() {
+  async processAutoApprovalsIfEnabled() {
+    const nowMs = Date.now();
+    if (nowMs - this.lastAutoApproveCheckAt < 30000) {
+      return { processedCount: 0, skipped: true };
+    }
+    this.lastAutoApproveCheckAt = nowMs;
+
+    try {
+      const all = await this.settingsService.getAllSettings();
+      const microJobEnabled = all.microJob?.enabled !== false;
+      const autoApproveEnabled =
+        all.microJob?.autoApproveEnabled !== false &&
+        all.advancedFeatures?.microJobAutoApproval?.enabled !== false;
+
+      if (!microJobEnabled || !autoApproveEnabled) {
+        return { processedCount: 0, disabled: true };
+      }
+
+      const autoApproveHours = Number(
+        all.advancedFeatures?.microJobAutoApproval?.autoApproveHours ||
+          all.microJob?.autoApproveHours ||
+          48,
+      );
+      if (autoApproveHours <= 0) {
+        return { processedCount: 0 };
+      }
+
+      return this.autoApproveExpiredSubmissions(autoApproveHours);
+    } catch {
+      return { processedCount: 0 };
+    }
+  }
+
+  /**
+   * Auto-approve pending submissions that have passed the autoApproveAt or configured hours threshold
+   */
+  async autoApproveExpiredSubmissions(overrideHours?: number) {
     const now = new Date();
+    const cutoffByHours =
+      overrideHours && overrideHours > 0
+        ? new Date(now.getTime() - overrideHours * 60 * 60 * 1000)
+        : now;
+
     const expired = await this.prisma.microJobSubmission.findMany({
       where: {
         status: 'SUBMITTED',
-        autoApproveAt: { lte: now },
+        OR: [
+          { autoApproveAt: { lte: now } },
+          { createdAt: { lte: cutoffByHours } },
+        ],
       },
       include: {
         job: true,
       },
-      take: 50,
+      take: 20,
     });
 
     let processedCount = 0;

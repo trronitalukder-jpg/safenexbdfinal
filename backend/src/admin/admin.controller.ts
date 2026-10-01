@@ -70,6 +70,12 @@ export class AdminController {
     return this.adminService.getUserById(userId);
   }
 
+  @Permissions('USER_VIEW')
+  @Get('users/:id/360-overview')
+  async getUser360Overview(@Param('id') userId: string) {
+    return this.adminService.getUser360Overview(userId);
+  }
+
   @Permissions('USER_EDIT')
   @Patch('users/:id/status')
   async updateUserStatus(

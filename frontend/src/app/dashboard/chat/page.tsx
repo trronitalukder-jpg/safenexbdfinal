@@ -53,6 +53,8 @@ import {
   Sparkles,
   ShieldCheck,
   Trash2,
+  Mic,
+  Square,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguage } from '@/context/LanguageContext';
@@ -323,6 +325,17 @@ function MessengerChatContent() {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
 
+  // Advanced Features (Controlled by Admin ON/OFF switches)
+  const [publicAdvancedFeatures, setPublicAdvancedFeatures] = useState<any>(null);
+  const [activeOtherUserProfile, setActiveOtherUserProfile] = useState<any>(null);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [voiceRecordingSeconds, setVoiceRecordingSeconds] = useState(0);
+  const [nowTick, setNowTick] = useState<number>(Date.now());
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const voiceChunksRef = useRef<Blob[]>([]);
+  const voiceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const voiceStreamRef = useRef<MediaStream | null>(null);
+
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -331,7 +344,7 @@ function MessengerChatContent() {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // ---------------------------------------------------------------------------
-  // Load Wallet & Commission Settings
+  // Load Wallet, Commission & Public Advanced Feature Settings
   // ---------------------------------------------------------------------------
   const fetchWallet = async () => {
     try {
@@ -364,7 +377,42 @@ function MessengerChatContent() {
   useEffect(() => {
     fetchWallet();
     fetchCommissionSettings();
+    api
+      .get('/settings/public')
+      .then((res: any) => {
+        const data = unwrap(res);
+        if (data?.advancedFeatures) {
+          setPublicAdvancedFeatures(data.advancedFeatures);
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  // Tick every 1s only when escrowCountdownTimer is enabled
+  useEffect(() => {
+    if (publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== true) return;
+    const interval = setInterval(() => {
+      setNowTick(Date.now());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [publicAdvancedFeatures?.escrowCountdownTimer?.enabled]);
+
+  // Fetch counterpart public profile stats when sellerLevelBadges is enabled
+  useEffect(() => {
+    if (publicAdvancedFeatures?.sellerLevelBadges?.enabled !== true) {
+      setActiveOtherUserProfile(null);
+      return;
+    }
+    const identifier = activeConversation?.otherUser?.uniqueUserId || activeConversation?.otherUser?.id;
+    if (!identifier) {
+      setActiveOtherUserProfile(null);
+      return;
+    }
+    api
+      .get(`/users/profile/${identifier}`)
+      .then((res: any) => setActiveOtherUserProfile(unwrap(res)))
+      .catch(() => setActiveOtherUserProfile(null));
+  }, [activeConversation?.otherUser?.id, activeConversation?.otherUser?.uniqueUserId, publicAdvancedFeatures?.sellerLevelBadges?.enabled]);
 
   const txRateType = txCommissionSetting?.rateType || 'PERCENTAGE';
   const txRateVal = txCommissionSetting?.value !== undefined ? Number(txCommissionSetting.value) : 5;
@@ -1059,6 +1107,229 @@ function MessengerChatContent() {
       setFilePreview(null);
     }
     setShowPlusMenu(false);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Ctrl+V Screenshot Paste Handler (when enabled by Admin)
+  // ---------------------------------------------------------------------------
+  const handlePasteImage = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    if (publicAdvancedFeatures?.chatMediaFeatures?.ctrlVPasteEnabled !== true) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type && item.type.startsWith('image/')) {
+        const pastedFile = item.getAsFile();
+        if (pastedFile) {
+          e.preventDefault();
+          const namedFile = new File(
+            [pastedFile],
+            `screenshot-${Date.now()}.${pastedFile.type.split('/')[1] || 'png'}`,
+            { type: pastedFile.type },
+          );
+          setSelectedFile(namedFile);
+          const reader = new FileReader();
+          reader.onload = () => setFilePreview(reader.result as string);
+          reader.readAsDataURL(namedFile);
+          break;
+        }
+      }
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Voice Note Recording (when enabled by Admin)
+  // ---------------------------------------------------------------------------
+  const cleanupVoiceRecording = () => {
+    if (voiceTimerRef.current) {
+      clearInterval(voiceTimerRef.current);
+      voiceTimerRef.current = null;
+    }
+    if (voiceStreamRef.current) {
+      voiceStreamRef.current.getTracks().forEach((track) => track.stop());
+      voiceStreamRef.current = null;
+    }
+    mediaRecorderRef.current = null;
+    setIsRecordingVoice(false);
+    setVoiceRecordingSeconds(0);
+  };
+
+  const startVoiceRecording = async () => {
+    if (publicAdvancedFeatures?.chatMediaFeatures?.voiceMessageEnabled !== true) return;
+    if (!activeConversation?.conversationId) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      voiceStreamRef.current = stream;
+      voiceChunksRef.current = [];
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (ev) => {
+        if (ev.data && ev.data.size > 0) {
+          voiceChunksRef.current.push(ev.data);
+        }
+      };
+
+      recorder.start();
+      setIsRecordingVoice(true);
+      setVoiceRecordingSeconds(0);
+
+      const maxSeconds = Number(publicAdvancedFeatures?.chatMediaFeatures?.maxVoiceSeconds || 60);
+      voiceTimerRef.current = setInterval(() => {
+        setVoiceRecordingSeconds((prev) => {
+          if (prev + 1 >= maxSeconds) {
+            stopAndSendVoiceRecording();
+            return maxSeconds;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    } catch (err) {
+      console.error('Microphone access denied or unavailable:', err);
+      alert(
+        lang === 'bn'
+          ? 'মাইক্রোফোন অ্যাক্সেস পাওয়া যায়নি। ব্রাউজার পারমিশন চেক করুন।'
+          : 'Microphone access denied or unavailable.',
+      );
+    }
+  };
+
+  const cancelVoiceRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.onstop = null;
+      mediaRecorderRef.current.stop();
+    }
+    voiceChunksRef.current = [];
+    cleanupVoiceRecording();
+  };
+
+  const stopAndSendVoiceRecording = () => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || !activeConversation?.conversationId) {
+      cleanupVoiceRecording();
+      return;
+    }
+    const convId = activeConversation.conversationId;
+
+    recorder.onstop = async () => {
+      const chunks = [...voiceChunksRef.current];
+      voiceChunksRef.current = [];
+      cleanupVoiceRecording();
+      if (chunks.length === 0) return;
+
+      const mimeType = recorder.mimeType || 'audio/webm';
+      const audioBlob = new Blob(chunks, { type: mimeType });
+      const audioFile = new File([audioBlob], `voice-note-${Date.now()}.webm`, { type: mimeType });
+
+      try {
+        setUploadingAttachment(true);
+        const base64Data = await fileToBase64(audioFile);
+        const uploadRes: any = await api.post('/uploads', {
+          base64Data,
+          fileName: audioFile.name,
+          folder: 'chat',
+        });
+        const uploadData = unwrap(uploadRes);
+        const fileUrl = uploadData?.fileUrl || uploadData?.url;
+        if (!fileUrl) throw new Error('Voice upload failed');
+
+        const payload = {
+          content: lang === 'bn' ? '🎙️ ভয়েস মেসেজ (Voice Note)' : '🎙️ Voice Note',
+          messageType: 'FILE',
+          attachments: [
+            {
+              fileUrl,
+              fileType: 'AUDIO',
+              fileSize: audioBlob.size,
+            },
+          ],
+        };
+
+        const res: any = await api.post(`/chat/conversations/${convId}/messages`, payload);
+        const savedMsg = unwrap(res);
+        if (savedMsg) {
+          setMessages((prev) => (prev.some((m) => m.id === savedMsg.id) ? prev : [...prev, savedMsg]));
+          setConversations((prev) => {
+            const updated = prev.map((c) =>
+              c.conversationId === convId
+                ? {
+                    ...c,
+                    lastMessage: savedMsg,
+                    lastMessageAt: savedMsg.createdAt || new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    unreadCount: 0,
+                  }
+                : c,
+            );
+            const target = updated.find((c) => c.conversationId === convId);
+            const others = updated.filter((c) => c.conversationId !== convId);
+            return target ? [target, ...others] : updated;
+          });
+        }
+      } catch (err: any) {
+        console.error('Failed to send voice note:', err);
+        alert(err?.message || 'Failed to send voice note.');
+      } finally {
+        setUploadingAttachment(false);
+      }
+    };
+
+    if (recorder.state !== 'inactive') {
+      recorder.stop();
+    } else {
+      cleanupVoiceRecording();
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Seller / Worker Level Badge Helper (when enabled by Admin)
+  // ---------------------------------------------------------------------------
+  const getSellerLevelBadge = (targetUser: any) => {
+    if (publicAdvancedFeatures?.sellerLevelBadges?.enabled !== true || !targetUser) return null;
+    const completedInChat = messages.filter(
+      (m: any) =>
+        m.transaction &&
+        (m.transaction.status === 'COMPLETED' || m.transaction.status === 'RELEASED'),
+    ).length;
+    const profileCount = Number(
+      activeOtherUserProfile?.completedDeals ||
+        activeOtherUserProfile?.completedJobsCount ||
+        activeOtherUserProfile?.reviewsCount ||
+        targetUser?.completedDeals ||
+        targetUser?.reviewsCount ||
+        0,
+    );
+    const totalDone = Math.max(completedInChat, profileCount);
+    const topMin = Number(publicAdvancedFeatures.sellerLevelBadges.topRatedMinJobs || 50);
+    const lvl2Min = Number(publicAdvancedFeatures.sellerLevelBadges.level2MinJobs || 20);
+    const lvl1Min = Number(publicAdvancedFeatures.sellerLevelBadges.level1MinJobs || 5);
+
+    if (totalDone >= topMin) {
+      return {
+        label: '👑 Top Rated',
+        className:
+          'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+      };
+    }
+    if (totalDone >= lvl2Min) {
+      return {
+        label: '🥈 Level 2',
+        className:
+          'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30',
+      };
+    }
+    if (totalDone >= lvl1Min) {
+      return {
+        label: '🥉 Level 1',
+        className:
+          'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30',
+      };
+    }
+    return {
+      label: '🌟 Rising Talent',
+      className:
+        'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+    };
   };
 
   // ---------------------------------------------------------------------------
@@ -2152,13 +2423,24 @@ function MessengerChatContent() {
                   </div>
 
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <h2 className="font-bold text-sm text-slate-900 dark:text-white leading-tight group-hover:text-emerald-600 transition-colors truncate">
                         {getUserDisplayName(activeConversation.otherUser)}
                       </h2>
                       {activeConversation.otherUser?.isVerified && (
                         <Shield className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                       )}
+                      {(() => {
+                        const badge = getSellerLevelBadge(activeConversation.otherUser);
+                        if (!badge) return null;
+                        return (
+                          <span
+                            className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-extrabold border shrink-0 ${badge.className}`}
+                          >
+                            {badge.label}
+                          </span>
+                        );
+                      })()}
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate flex items-center gap-1.5">
                       <span>
@@ -2578,6 +2860,55 @@ function MessengerChatContent() {
                     </div>
                   </div>
                 )}
+
+                {/* Escrow Delivery Countdown Timer Banner (Only when enabled in Admin Settings & HOLD deal exists) */}
+                {publicAdvancedFeatures?.escrowCountdownTimer?.enabled === true &&
+                  (() => {
+                    const activeHoldTx = conversationTransactions.find(
+                      (t: any) => t.status === 'HOLD',
+                    );
+                    if (!activeHoldTx) return null;
+                    const deliveryHours = Number(
+                      publicAdvancedFeatures.escrowCountdownTimer.defaultDeliveryHours || 24,
+                    );
+                    const startMs = new Date(
+                      activeHoldTx.updatedAt || activeHoldTx.createdAt || Date.now(),
+                    ).getTime();
+                    const endMs = startMs + deliveryHours * 3600 * 1000;
+                    const remainingSec = Math.max(0, Math.floor((endMs - nowTick) / 1000));
+                    const hrs = String(Math.floor(remainingSec / 3600)).padStart(2, '0');
+                    const mins = String(Math.floor((remainingSec % 3600) / 60)).padStart(2, '0');
+                    const secs = String(remainingSec % 60).padStart(2, '0');
+
+                    return (
+                      <div className="mx-3 sm:mx-4 mt-2 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-sky-500/10 border border-amber-500/30 dark:border-amber-500/20 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="p-1.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 shrink-0">
+                            <Clock className="w-4 h-4 animate-pulse" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-extrabold text-slate-900 dark:text-white truncate">
+                              ⏳ এসক্রো ডেলিভারি কাউন্টডাউন: ৳{Number(activeHoldTx.amount || 0).toLocaleString()}{' '}
+                              <span className="font-normal text-slate-500 dark:text-slate-400">
+                                ({activeHoldTx.reason || 'Escrow Hold'})
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {remainingSec > 0 ? (
+                            <span className="px-2.5 py-1 rounded-xl bg-slate-900 dark:bg-slate-800 text-amber-400 font-mono text-xs font-black tracking-wider shadow-xs">
+                              {hrs}h : {mins}m : {secs}s
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 text-[11px] font-extrabold border border-rose-500/30">
+                              নির্ধারিত সময় সমাপ্ত (Ready for Review)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                 {/* Chat Feed */}
                 <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 sm:py-4 space-y-3 sm:space-y-4 min-h-0">
@@ -3335,6 +3666,11 @@ function MessengerChatContent() {
                                   att.fileType?.toLowerCase() === 'image' ||
                                   /\.(jpg|jpeg|png|webp|gif)$/i.test(att.fileUrl || '');
 
+                                const isAudio =
+                                  att.fileType === 'AUDIO' ||
+                                  att.fileType?.toLowerCase()?.startsWith('audio') ||
+                                  /\.(webm|mp3|ogg|wav|m4a)$/i.test(att.fileUrl || '');
+
                                 if (isImage) {
                                   return (
                                     <div key={idx} className="mt-2 rounded-xl overflow-hidden cursor-pointer">
@@ -3350,6 +3686,23 @@ function MessengerChatContent() {
                                     </div>
                                   );
                                 }
+
+                                if (isAudio) {
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className="mt-2"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <audio
+                                        controls
+                                        src={getImageUrl(att.fileUrl)}
+                                        className="max-w-[230px] sm:max-w-[260px] h-9 rounded-lg"
+                                      />
+                                    </div>
+                                  );
+                                }
+
                                 return (
                                   <a
                                     key={idx}
@@ -3628,6 +3981,36 @@ function MessengerChatContent() {
                     </p>
                   </div>
                 </div>
+              ) : isRecordingVoice ? (
+                <div className="flex items-center justify-between gap-3 px-4 py-2 rounded-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
+                    <span className="text-xs font-extrabold text-rose-700 dark:text-rose-300">
+                      🎙️ {lang === 'bn' ? 'ভয়েস রেকর্ড হচ্ছে...' : 'Recording Voice...'} (
+                      {Math.floor(voiceRecordingSeconds / 60)}:
+                      {String(voiceRecordingSeconds % 60).padStart(2, '0')} /{' '}
+                      {Number(publicAdvancedFeatures?.chatMediaFeatures?.maxVoiceSeconds || 60)}s)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={cancelVoiceRecording}
+                      className="px-3 py-1.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 transition flex items-center gap-1"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'বাতিল' : 'Cancel'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={stopAndSendVoiceRecording}
+                      className="px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'পাঠান' : 'Send Voice'}</span>
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <div className="flex items-center gap-2">
                   {/* ＋ Button */}
@@ -3652,6 +4035,19 @@ function MessengerChatContent() {
                     <Smile className="w-5 h-5" />
                   </button>
 
+                  {/* Voice Note Button (Only shown when enabled in Admin Settings) */}
+                  {publicAdvancedFeatures?.chatMediaFeatures?.voiceMessageEnabled === true && (
+                    <button
+                      type="button"
+                      onClick={startVoiceRecording}
+                      disabled={uploadingAttachment}
+                      title={lang === 'bn' ? 'ভয়েস মেসেজ রেকর্ড করুন' : 'Record Voice Note'}
+                      className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-full transition-colors disabled:opacity-40"
+                    >
+                      <Mic className="w-5 h-5" />
+                    </button>
+                  )}
+
                   {/* Hidden File Inputs */}
                   <input
                     type="file"
@@ -3673,13 +4069,20 @@ function MessengerChatContent() {
                     type="text"
                     value={messageInput}
                     onChange={handleInputChange}
+                    onPaste={handlePasteImage}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         sendMessage();
                       }
                     }}
-                    placeholder="Type a message..."
+                    placeholder={
+                      publicAdvancedFeatures?.chatMediaFeatures?.ctrlVPasteEnabled === true
+                        ? lang === 'bn'
+                          ? 'মেসেজ লিখুন বা Ctrl+V চাপে স্ক্রিনশট পেস্ট করুন...'
+                          : 'Type a message or press Ctrl+V to paste screenshot...'
+                        : 'Type a message...'
+                    }
                     className="flex-1 py-2.5 px-4 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm rounded-full placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white dark:focus:bg-slate-800/90 border border-transparent focus:border-emerald-500/30 transition-all"
                   />
 
@@ -4476,13 +4879,25 @@ function MessengerChatContent() {
                   ID: {u.uniqueUserId || 'TBD' + u.id?.slice(0, 5).toUpperCase()}
                 </p>
 
-                {/* Rating & Location */}
+                {/* Rating, Seller Level & Location */}
                 <div className="flex flex-wrap items-center justify-center gap-2.5 mt-2">
                   <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-500 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-lg border border-amber-200/50 dark:border-amber-900/40">
                     <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                     <span>{u.averageRating ? Number(u.averageRating).toFixed(1) : '5.0'}</span>
                     <span className="text-[10px] text-slate-400 font-normal">({u.reviewsCount || 0} reviews)</span>
                   </span>
+
+                  {(() => {
+                    const badge = getSellerLevelBadge(u);
+                    if (!badge) return null;
+                    return (
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-extrabold border ${badge.className}`}
+                      >
+                        {badge.label}
+                      </span>
+                    );
+                  })()}
 
                   {locationText && (
                     <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">

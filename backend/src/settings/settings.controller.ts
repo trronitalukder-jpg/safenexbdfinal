@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards, Req } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Put, UseGuards, Req } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -41,6 +41,26 @@ export class SettingsController {
     return this.settingsService.saveSettings(payload, adminId);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  @Put('admin')
+  async putAdminSettings(
+    @Body() payload: any,
+    @CurrentUser('id') adminId: string,
+  ) {
+    return this.settingsService.saveSettings(payload, adminId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  @Patch('admin')
+  async patchAdminSettings(
+    @Body() payload: any,
+    @CurrentUser('id') adminId: string,
+  ) {
+    return this.settingsService.saveSettings(payload, adminId);
+  }
+
   /**
    * Admin endpoint to test AI provider API key and connection
    */
@@ -56,6 +76,18 @@ export class SettingsController {
       body.modelName,
       body.baseUrl,
     );
+  }
+
+  /**
+   * Admin endpoint to test Telegram Admin Bot Alerts
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  @Post('telegram/test')
+  async testTelegramAdminAlert(
+    @Body() body: { botToken?: string; chatId?: string },
+  ) {
+    return this.settingsService.testTelegramAdminAlert(body?.botToken, body?.chatId);
   }
 
   /**
