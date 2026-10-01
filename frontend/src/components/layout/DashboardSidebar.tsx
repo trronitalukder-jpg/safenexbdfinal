@@ -82,7 +82,7 @@ export const DashboardSidebar = () => {
   return (
     <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full overflow-hidden">
       {/* Scrollable Navigation Body */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4">
         {/* Brand Logo */}
         <div className="flex items-center justify-between pb-4 mb-3 border-b border-slate-100 dark:border-slate-800">
           <Link href="/dashboard" className="flex items-center gap-2">

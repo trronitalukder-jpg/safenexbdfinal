@@ -148,7 +148,7 @@ export default function DashboardLayout({
       {/* 2. Mobile & Tablet Drawer Navigation Overlay (Opens from Right on < 1280px) */}
       {mobileDrawerOpen && (
         <div
-          className="fixed inset-0 z-50 xl:hidden bg-slate-950/70 backdrop-blur-xs flex justify-end"
+          className="fixed inset-0 z-[60] xl:hidden bg-slate-950/70 backdrop-blur-xs flex justify-end"
           onClick={() => setMobileDrawerOpen(false)}
         >
           {/* Backdrop Tap Area on Left */}
@@ -185,32 +185,49 @@ export default function DashboardLayout({
             </div>
 
             {/* Scrollable Navigation Body */}
-            <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3 custom-scrollbar">
-              {/* Home Page link on mobile */}
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-3 custom-scrollbar">
+              {/* Mobile Quick Wallet Card inside Drawer */}
               <Link
-                href="/"
+                href="/dashboard/wallet"
                 onClick={() => setMobileDrawerOpen(false)}
-                className="px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition group"
+                className="p-3 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-sky-500/10 to-indigo-500/15 border border-emerald-500/25 flex items-center justify-between transition"
               >
                 <div className="flex items-center gap-2.5">
-                  <Home className="w-4 h-4 text-sky-500 group-hover:scale-110 transition shrink-0" />
-                  <span>{lang === 'bn' ? 'হোম পেজে যান' : 'Home Page'}</span>
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                    <Wallet className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      {lang === 'bn' ? 'ব্যবহারযোগ্য ব্যালেন্স' : 'Available Balance'}
+                    </div>
+                    <div className="text-sm font-black font-mono text-emerald-600 dark:text-emerald-400">
+                      ৳{available.toLocaleString()}
+                    </div>
+                  </div>
                 </div>
-                <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+                <ChevronRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               </Link>
 
-              {/* Browse Marketplace link on mobile */}
-              <Link
-                href="/products"
-                onClick={() => setMobileDrawerOpen(false)}
-                className="px-3.5 py-2.5 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex items-center justify-between text-sm font-semibold hover:bg-sky-500/15 transition group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <ShoppingBag className="w-4 h-4 text-sky-500 group-hover:scale-110 transition shrink-0" />
-                  <span>{lang === 'bn' ? 'মার্কেটপ্লেস ব্রাউজ' : 'Marketplace'}</span>
-                </div>
-                <ExternalLink className="w-3.5 h-3.5 opacity-60" />
-              </Link>
+              {/* Home Page link on mobile */}
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  href="/"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 flex items-center justify-center gap-1.5 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                >
+                  <Home className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                  <span>{lang === 'bn' ? 'হোম পেজ' : 'Home'}</span>
+                </Link>
+
+                <Link
+                  href="/shop"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  className="px-3 py-2 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex items-center justify-center gap-1.5 text-xs font-bold hover:bg-sky-500/15 transition"
+                >
+                  <ShoppingBag className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                  <span>{lang === 'bn' ? 'শপ (Shop)' : 'Shop'}</span>
+                </Link>
+              </div>
 
               {/* Navigation Links */}
               <nav className="space-y-1">
@@ -224,14 +241,14 @@ export default function DashboardLayout({
                       key={l.href}
                       href={l.href}
                       onClick={() => setMobileDrawerOpen(false)}
-                      className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[15px] font-semibold transition ${
+                      className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
                         isActive
                           ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 font-bold border border-sky-200 dark:border-sky-800'
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900'
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <Icon className="w-5 h-5 shrink-0" />
+                        <Icon className="w-4 h-4 shrink-0" />
                         <span>{l.label}</span>
                       </div>
                       {l.href === '/dashboard/notifications' && unreadCount > 0 ? (
@@ -309,7 +326,7 @@ export default function DashboardLayout({
             </div>
 
             {/* Bottom Fixed Footer Controls: Language, Theme & Logout */}
-            <div className="flex-shrink-0 p-3.5 border-t border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur space-y-2">
+            <div className="flex-shrink-0 p-3.5 border-t border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur space-y-2 safe-area-bottom">
               <div className="flex items-center justify-between">
                 <button
                   type="button"
@@ -344,7 +361,7 @@ export default function DashboardLayout({
       {/* 3. Main Body Column */}
       <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
         {/* Dedicated Clean Dashboard Header Bar */}
-        <header className="h-16 flex-shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-3 sm:px-6 lg:px-8 flex items-center justify-between z-10 gap-2 overflow-hidden">
+        <header className="h-14 sm:h-16 flex-shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-2.5 sm:px-6 lg:px-8 flex items-center justify-between z-10 gap-1.5 sm:gap-2 overflow-hidden">
           {/* Left: Profile Settings, Real-time Notification Bell & Home Link */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
             {/* Quick Profile Link (Avatar + Name & User ID) */}
@@ -364,7 +381,7 @@ export default function DashboardLayout({
                   {user.firstName?.charAt(0) || 'U'}
                 </div>
               )}
-              <div className="flex flex-col min-w-0 max-w-[85px] xs:max-w-[110px] sm:max-w-[150px] md:max-w-[200px]">
+              <div className="flex flex-col min-w-0 max-w-[80px] xs:max-w-[110px] sm:max-w-[150px] md:max-w-[200px]">
                 <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white truncate leading-tight">
                   {user.firstName} {user.lastName}
                 </span>
@@ -374,6 +391,16 @@ export default function DashboardLayout({
                   </span>
                 )}
               </div>
+            </Link>
+
+            {/* Quick Wallet Balance Pill (Visible on Phone, Tablet, Desktop) */}
+            <Link
+              href="/dashboard/wallet"
+              title={lang === 'bn' ? 'ওয়ালেট ও ব্যালেন্স' : 'Wallet & Balance'}
+              className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 font-mono text-[11px] sm:text-xs font-extrabold transition shrink-0"
+            >
+              <Wallet className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              <span>৳{available.toLocaleString()}</span>
             </Link>
 
             {/* Real-time Notification Bell */}
@@ -398,7 +425,7 @@ export default function DashboardLayout({
             <Link
               href="/"
               title={lang === 'bn' ? 'হোম পেজে যান' : 'Go to Home Page'}
-              className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 transition shrink-0"
+              className="hidden xs:flex items-center gap-1.5 p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 transition shrink-0"
             >
               <Home className="w-4 h-4 text-sky-500 shrink-0" />
               <span className="hidden sm:inline">{lang === 'bn' ? 'হোম' : 'Home'}</span>
@@ -407,13 +434,25 @@ export default function DashboardLayout({
 
           {/* Right: Actions, Theme & 3-Line Menu Toggle */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Quick Live Chat Button (Visible when not on chat page) */}
+            {pathname !== '/dashboard/chat' && (
+              <Link
+                href="/dashboard/chat"
+                title={lang === 'bn' ? 'লাইভ চ্যাট ও ডিল' : 'Live Chat & Deals'}
+                className="flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/25 text-sky-600 dark:text-sky-400 text-xs font-bold transition shrink-0"
+              >
+                <MessageSquare className="w-4 h-4 shrink-0" />
+                <span className="hidden md:inline">{lang === 'bn' ? 'চ্যাট' : 'Chat'}</span>
+              </Link>
+            )}
+
             {/* Direct Marketplace Link */}
             <Link
-              href="/products"
+              href="/shop"
               className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition whitespace-nowrap"
             >
               <ShoppingBag className="w-3.5 h-3.5 text-sky-500" />
-              <span>{lang === 'bn' ? 'মার্কেটপ্লেস' : 'Marketplace'}</span>
+              <span>{lang === 'bn' ? 'শপ' : 'Shop'}</span>
             </Link>
 
             {/* Guides Link Button (visible on md+) */}
@@ -481,7 +520,7 @@ export default function DashboardLayout({
             {children}
           </main>
         ) : (
-          <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 pb-6 md:pb-8 bg-slate-50/70 dark:bg-slate-950/70">
+          <main className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 lg:p-8 pb-24 md:pb-8 bg-slate-50/70 dark:bg-slate-950/70">
             <div className="w-full max-w-[1680px] mx-auto space-y-6">
               {children}
 

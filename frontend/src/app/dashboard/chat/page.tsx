@@ -338,6 +338,8 @@ function MessengerChatContent() {
     },
   });
   const [selectedDeliveryHours, setSelectedDeliveryHours] = useState<number>(24);
+  const [deliveryTimeValue, setDeliveryTimeValue] = useState<string>('24');
+  const [deliveryTimeUnit, setDeliveryTimeUnit] = useState<'m' | 'h' | 'd'>('h');
   const [showTimerModal, setShowTimerModal] = useState<boolean>(false);
   const [activeOtherUserProfile, setActiveOtherUserProfile] = useState<any>(null);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
@@ -354,6 +356,33 @@ function MessengerChatContent() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Delivery duration helpers (Minute / Hour / Day)
+  const updateDeliveryDuration = (val: string | number, unit: 'm' | 'h' | 'd') => {
+    const cleanStr = String(val).replace(/[^0-9]/g, '');
+    setDeliveryTimeValue(cleanStr);
+    setDeliveryTimeUnit(unit);
+    const num = Math.max(1, Number(cleanStr) || 1);
+    const eqHours = unit === 'm' ? Math.max(1, Math.round(num / 60)) : unit === 'd' ? num * 24 : num;
+    setSelectedDeliveryHours(eqHours);
+  };
+
+  const getSelectedDeliveryTag = () => {
+    const num = Math.max(1, Number(deliveryTimeValue) || 1);
+    return `[⏱️ Delivery: ${num}${deliveryTimeUnit}]`;
+  };
+
+  const getSelectedDeliveryLabel = (short = false) => {
+    const num = Math.max(1, Number(deliveryTimeValue) || 1);
+    if (short) return `${num}${deliveryTimeUnit}`;
+    if (deliveryTimeUnit === 'm') {
+      return lang === 'bn' ? `${num} মিনিট` : `${num} Min`;
+    }
+    if (deliveryTimeUnit === 'd') {
+      return lang === 'bn' ? `${num} দিন` : `${num} Day${num > 1 ? 's' : ''}`;
+    }
+    return lang === 'bn' ? `${num} ঘণ্টা` : `${num} Hour${num > 1 ? 's' : ''}`;
+  };
 
   // ---------------------------------------------------------------------------
   // Load Wallet, Commission & Public Advanced Feature Settings
@@ -389,6 +418,9 @@ function MessengerChatContent() {
   useEffect(() => {
     fetchWallet();
     fetchCommissionSettings();
+    if (typeof window !== 'undefined' && window.innerWidth < 640) {
+      setShowTemplatesBar(false);
+    }
     api
       .get('/settings/public')
       .then((res: any) => {
@@ -396,9 +428,10 @@ function MessengerChatContent() {
         if (data?.advancedFeatures) {
           setPublicAdvancedFeatures(data.advancedFeatures);
           if (data.advancedFeatures?.escrowCountdownTimer?.defaultDeliveryHours) {
-            setSelectedDeliveryHours(
-              Number(data.advancedFeatures.escrowCountdownTimer.defaultDeliveryHours) || 24,
-            );
+            const defHrs = Number(data.advancedFeatures.escrowCountdownTimer.defaultDeliveryHours) || 24;
+            setSelectedDeliveryHours(defHrs);
+            setDeliveryTimeValue(String(defHrs));
+            setDeliveryTimeUnit('h');
           }
         }
       })
@@ -414,31 +447,173 @@ function MessengerChatContent() {
     return () => clearInterval(interval);
   }, [publicAdvancedFeatures?.escrowCountdownTimer?.enabled]);
 
-  // Helper to compute live countdown timer for any deal/transaction
+  // Helper to compute live countdown timer for any deal/transaction (supports m = minutes, h = hours, d = days)
   const getDealTimerInfo = (txnOrMeta: any) => {
     if (publicAdvancedFeatures?.escrowCountdownTimer?.enabled === false) return null;
     const defaultHrs = Number(
       publicAdvancedFeatures?.escrowCountdownTimer?.defaultDeliveryHours || 24,
     );
     const noteStr = String(txnOrMeta?.notes || txnOrMeta?.reason || '');
-    const matchHrs = noteStr.match(/\[⏱️\s*Delivery:\s*(\d+)h\]/i) || noteStr.match(/(\d+)\s*hours?/i);
-    const deliveryHours = matchHrs ? Math.max(1, Number(matchHrs[1])) : defaultHrs;
+    const matchTag =
+      noteStr.match(/\[⏱️\s*Delivery:\s*(\d+(?:\.\d+)?)\s*([mhd])\]/i) ||
+      noteStr.match(/(\d+(?:\.\d+)?)\s*(minutes?|mins?|hours?|hrs?|days?)/i);
+
+    let durationVal = defaultHrs;
+    let durationUnit: 'm' | 'h' | 'd' = 'h';
+
+    if (matchTag) {
+      durationVal = Math.max(1, Number(matchTag[1]) || 1);
+      const u = String(matchTag[2] || 'h').toLowerCase().charAt(0);
+      if (u === 'm' || u === 'd' || u === 'h') {
+        durationUnit = u;
+      }
+    }
+
+    const durationMs =
+      durationUnit === 'm'
+        ? durationVal * 60 * 1000
+        : durationUnit === 'd'
+        ? durationVal * 86400 * 1000
+        : durationVal * 3600 * 1000;
+
+    const deliveryHours =
+      durationUnit === 'm'
+        ? Number((durationVal / 60).toFixed(2))
+        : durationUnit === 'd'
+        ? durationVal * 24
+        : durationVal;
+
+    const shortLabel = `${durationVal}${durationUnit}`;
+    const labelBn =
+      durationUnit === 'm'
+        ? `${durationVal} মিনিট`
+        : durationUnit === 'd'
+        ? `${durationVal} দিন`
+        : `${durationVal} ঘণ্টা`;
+    const labelEn =
+      durationUnit === 'm'
+        ? `${durationVal} Min`
+        : durationUnit === 'd'
+        ? `${durationVal} Day${durationVal > 1 ? 's' : ''}`
+        : `${durationVal} Hour${durationVal > 1 ? 's' : ''}`;
+
     const startMs = new Date(
       txnOrMeta?.updatedAt || txnOrMeta?.createdAt || Date.now(),
     ).getTime();
-    const endMs = startMs + deliveryHours * 3600 * 1000;
+    const endMs = startMs + durationMs;
     const remainingSec = Math.max(0, Math.floor((endMs - nowTick) / 1000));
+    const days = Math.floor(remainingSec / 86400);
     const hrs = String(Math.floor(remainingSec / 3600)).padStart(2, '0');
+    const remHrs = String(Math.floor((remainingSec % 86400) / 3600)).padStart(2, '0');
     const mins = String(Math.floor((remainingSec % 3600) / 60)).padStart(2, '0');
     const secs = String(remainingSec % 60).padStart(2, '0');
+    const formatted =
+      days > 0
+        ? `${days}d : ${remHrs}h : ${mins}m : ${secs}s`
+        : `${hrs}h : ${mins}m : ${secs}s`;
+
     return {
       deliveryHours,
+      durationVal,
+      durationUnit,
+      shortLabel,
+      labelBn,
+      labelEn,
       remainingSec,
+      days,
+      remHrs,
       hrs,
       mins,
       secs,
-      formatted: `${hrs}h : ${mins}m : ${secs}s`,
+      formatted,
     };
+  };
+
+  // Reusable Delivery Time Selector (Minutes, Hours, Days + Quick Presets)
+  const renderDeliveryTimeSelector = () => {
+    const presets: Array<{ val: number; unit: 'm' | 'h' | 'd'; labelBn: string; labelEn: string }> = [
+      { val: 15, unit: 'm', labelBn: '১৫ মি.', labelEn: '15m' },
+      { val: 30, unit: 'm', labelBn: '৩০ মি.', labelEn: '30m' },
+      { val: 1, unit: 'h', labelBn: '১ ঘণ্টা', labelEn: '1h' },
+      { val: 6, unit: 'h', labelBn: '৬ ঘণ্টা', labelEn: '6h' },
+      { val: 12, unit: 'h', labelBn: '১২ ঘণ্টা', labelEn: '12h' },
+      { val: 24, unit: 'h', labelBn: '২৪ ঘণ্টা', labelEn: '24h' },
+      { val: 3, unit: 'd', labelBn: '৩ দিন', labelEn: '3d' },
+      { val: 7, unit: 'd', labelBn: '৭ দিন', labelEn: '7d' },
+    ];
+
+    const currentNum = Math.max(1, Number(deliveryTimeValue) || 1);
+
+    return (
+      <div className="p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/70 dark:border-indigo-800/60 space-y-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <label className="text-xs font-extrabold text-indigo-800 dark:text-indigo-300 flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <span>{lang === 'bn' ? '⏱️ ডেলিভারি সময়সীমা:' : '⏱️ Delivery Time:'}</span>
+          </label>
+          <span className="text-[11px] font-mono font-extrabold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-800 px-2.5 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800 shadow-2xs">
+            {getSelectedDeliveryLabel(false)}
+          </span>
+        </div>
+
+        {/* Custom Number Input + Unit Selector (Minute / Hour / Day) */}
+        <div className="flex items-center gap-1.5">
+          <div className="relative w-24 sm:w-28 shrink-0">
+            <input
+              type="number"
+              min={1}
+              max={999}
+              value={deliveryTimeValue}
+              onChange={(e) => updateDeliveryDuration(e.target.value, deliveryTimeUnit)}
+              placeholder="24"
+              className="w-full px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-700/80 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-black text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 text-center"
+            />
+          </div>
+
+          <div className="flex-1 grid grid-cols-3 gap-1 bg-white/80 dark:bg-slate-900/80 p-1 rounded-xl border border-indigo-200/60 dark:border-indigo-800/60">
+            {[
+              { u: 'm' as const, bn: 'মিনিট', en: 'Min' },
+              { u: 'h' as const, bn: 'ঘণ্টা', en: 'Hour' },
+              { u: 'd' as const, bn: 'দিন', en: 'Day' },
+            ].map((item) => (
+              <button
+                key={item.u}
+                type="button"
+                onClick={() => updateDeliveryDuration(deliveryTimeValue || '1', item.u)}
+                className={`py-1 px-1.5 rounded-lg text-[11px] font-extrabold transition cursor-pointer ${
+                  deliveryTimeUnit === item.u
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                {lang === 'bn' ? item.bn : item.en}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Quick Preset Chips */}
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-1">
+          {presets.map((p) => {
+            const isActive = currentNum === p.val && deliveryTimeUnit === p.unit;
+            return (
+              <button
+                key={`${p.val}${p.unit}`}
+                type="button"
+                onClick={() => updateDeliveryDuration(p.val, p.unit)}
+                className={`py-1.5 px-1 rounded-lg text-[10px] sm:text-[11px] font-extrabold transition cursor-pointer ${
+                  isActive
+                    ? 'bg-indigo-600 text-white shadow-xs ring-1 ring-indigo-400'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-400'
+                }`}
+              >
+                {lang === 'bn' ? p.labelBn : p.labelEn}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   // Fetch counterpart public profile stats when sellerLevelBadges is enabled
@@ -1400,7 +1575,7 @@ function MessengerChatContent() {
       const finalPayNote =
         publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false &&
         !/\[⏱️\s*Delivery:/i.test(basePayNote)
-          ? `${basePayNote} [⏱️ Delivery: ${selectedDeliveryHours}h]`
+          ? `${basePayNote} ${getSelectedDeliveryTag()}`
           : basePayNote;
 
       const res: any = await api.post('/transactions/pay-request', {
@@ -1476,7 +1651,7 @@ function MessengerChatContent() {
       const finalReqNote =
         publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false &&
         !/\[⏱️\s*Delivery:/i.test(baseReqNote)
-          ? `${baseReqNote} [⏱️ Delivery: ${selectedDeliveryHours}h]`
+          ? `${baseReqNote} ${getSelectedDeliveryTag()}`
           : baseReqNote;
 
       const res: any = await api.post('/transactions/request-money', {
@@ -2566,13 +2741,15 @@ function MessengerChatContent() {
                         />
                         {activeHoldTx && timerInfo ? (
                           <span className="font-mono text-[11px] sm:text-xs tracking-tight">
-                            {timerInfo.hrs}:{timerInfo.mins}:{timerInfo.secs}
+                            {timerInfo.days > 0
+                              ? `${timerInfo.days}d ${timerInfo.remHrs}:${timerInfo.mins}:${timerInfo.secs}`
+                              : `${timerInfo.hrs}:${timerInfo.mins}:${timerInfo.secs}`}
                           </span>
                         ) : (
                           <span>
                             {lang === 'bn'
-                              ? `⏱️ টাইমার (${timerInfo?.deliveryHours || selectedDeliveryHours}h)`
-                              : `⏱️ Timer (${timerInfo?.deliveryHours || selectedDeliveryHours}h)`}
+                              ? `⏱️ টাইমার (${timerInfo?.shortLabel || getSelectedDeliveryLabel(true)})`
+                              : `⏱️ Timer (${timerInfo?.shortLabel || getSelectedDeliveryLabel(true)})`}
                           </span>
                         )}
                       </button>
@@ -2818,6 +2995,91 @@ function MessengerChatContent() {
               </div>
             </div>
 
+            {/* Mobile Quick Tab & Deal Action Bar (1-Tap Comfort on Phones) */}
+            <div className="md:hidden flex items-center justify-between gap-1.5 px-2.5 py-1.5 bg-slate-50/90 dark:bg-slate-900/90 border-b border-slate-200/70 dark:border-slate-800 overflow-x-auto no-scrollbar shrink-0">
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveHeaderTab('chat')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition whitespace-nowrap ${
+                    activeHeaderTab === 'chat'
+                      ? 'bg-emerald-600 text-white shadow-2xs'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700'
+                  }`}
+                >
+                  <MessageSquare className="w-3 h-3" />
+                  <span>{lang === 'bn' ? 'চ্যাট' : 'Chat'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveHeaderTab('transaction')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition whitespace-nowrap ${
+                    activeHeaderTab === 'transaction'
+                      ? 'bg-emerald-600 text-white shadow-2xs'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700'
+                  }`}
+                >
+                  <Wallet className="w-3 h-3" />
+                  <span>{lang === 'bn' ? 'ডিল' : 'Deals'}</span>
+                  {conversationTransactions.length > 0 && (
+                    <span
+                      className={`px-1 rounded-full text-[10px] font-extrabold ${
+                        activeHeaderTab === 'transaction'
+                          ? 'bg-white/20 text-white'
+                          : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400'
+                      }`}
+                    >
+                      {conversationTransactions.length}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveHeaderTab('rules')}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition whitespace-nowrap ${
+                    activeHeaderTab === 'rules'
+                      ? 'bg-emerald-600 text-white shadow-2xs'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700'
+                  }`}
+                >
+                  <FileText className="w-3 h-3" />
+                  <span>{lang === 'bn' ? 'নিয়ম' : 'Rules'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveHeaderTab('admin_calling')}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition whitespace-nowrap relative ${
+                    activeHeaderTab === 'admin_calling'
+                      ? 'bg-amber-600 text-white shadow-2xs'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700'
+                  }`}
+                >
+                  <ShieldAlert className="w-3 h-3 text-amber-500" />
+                  <span>{lang === 'bn' ? 'অ্যাডমিন' : 'Admin'}</span>
+                  {hasDispute && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping absolute -top-0.5 -right-0.5" />
+                  )}
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0 pl-1 border-l border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowPayModal(true)}
+                  className="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 whitespace-nowrap"
+                >
+                  💸 Pay
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowRequestModal(true)}
+                  className="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 whitespace-nowrap"
+                >
+                  💰 Req
+                </button>
+              </div>
+            </div>
+
             {/* =========================================================================
                 TAB 1: CHAT FEED & COMPOSER
             ========================================================================= */}
@@ -3019,8 +3281,8 @@ function MessengerChatContent() {
                                   ? `⏳ এসক্রো ডেলিভারি কাউন্টডাউন: ৳${Number(targetTx.amount || 0).toLocaleString()}`
                                   : `⏳ Escrow Delivery Countdown: ৳${Number(targetTx.amount || 0).toLocaleString()}`
                                 : lang === 'bn'
-                                ? `⏱️ প্রস্তাবিত ডিল টাইমার (${timerInfo.deliveryHours} ঘণ্টা): ৳${Number(targetTx.amount || 0).toLocaleString()}`
-                                : `⏱️ Proposed Deal Timer (${timerInfo.deliveryHours}h): ৳${Number(targetTx.amount || 0).toLocaleString()}`}{' '}
+                                ? `⏱️ প্রস্তাবিত ডিল টাইমার (${timerInfo.labelBn}): ৳${Number(targetTx.amount || 0).toLocaleString()}`
+                                : `⏱️ Proposed Deal Timer (${timerInfo.shortLabel}): ৳${Number(targetTx.amount || 0).toLocaleString()}`}{' '}
                               <span className="font-normal text-slate-500 dark:text-slate-400">
                                 ({targetTx.notes || targetTx.reason || 'Escrow Deal'})
                               </span>
@@ -3031,7 +3293,7 @@ function MessengerChatContent() {
                           {activeHoldTx ? (
                             timerInfo.remainingSec > 0 ? (
                               <span className="px-2.5 py-1 rounded-xl bg-slate-900 dark:bg-slate-800 text-amber-400 font-mono text-xs font-black tracking-wider shadow-xs">
-                                {timerInfo.hrs}h : {timerInfo.mins}m : {timerInfo.secs}s
+                                {timerInfo.formatted}
                               </span>
                             ) : (
                               <span className="px-2.5 py-1 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 text-[11px] font-extrabold border border-rose-500/30">
@@ -3041,8 +3303,8 @@ function MessengerChatContent() {
                           ) : (
                             <span className="px-2.5 py-1 rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[11px] font-extrabold border border-amber-500/30">
                               {lang === 'bn'
-                                ? `Approve করলে ${timerInfo.deliveryHours}h কাউন্টডাউন শুরু হবে`
-                                : `Starts ${timerInfo.deliveryHours}h countdown on Approve`}
+                                ? `Approve করলে ${timerInfo.labelBn} কাউন্টডাউন শুরু হবে`
+                                : `Starts ${timerInfo.shortLabel} countdown on Approve`}
                             </span>
                           )}
                         </div>
@@ -3189,7 +3451,7 @@ function MessengerChatContent() {
                                     )
                                   ) : (
                                     <span className="px-2.5 py-0.5 rounded-lg bg-amber-500/20 text-amber-800 dark:text-amber-300 font-mono text-xs font-extrabold">
-                                      {timerInfo.deliveryHours} {lang === 'bn' ? 'ঘণ্টা' : 'Hours'}
+                                      {lang === 'bn' ? timerInfo.labelBn : timerInfo.labelEn}
                                     </span>
                                   )}
                                 </div>
@@ -3474,7 +3736,7 @@ function MessengerChatContent() {
                                     )
                                   ) : (
                                     <span className="px-2.5 py-0.5 rounded-lg bg-amber-500/20 text-amber-800 dark:text-amber-300 font-mono text-xs font-extrabold">
-                                      {timerInfo.deliveryHours} {lang === 'bn' ? 'ঘণ্টা' : 'Hours'}
+                                      {lang === 'bn' ? timerInfo.labelBn : timerInfo.labelEn}
                                     </span>
                                   )}
                                 </div>
@@ -4589,8 +4851,8 @@ function MessengerChatContent() {
                                   <span>
                                     {status === 'HOLD'
                                       ? lang === 'bn'
-                                        ? `ডেলিভারি কাউন্টডাউন (${tInfo.deliveryHours}h):`
-                                        : `Delivery Countdown (${tInfo.deliveryHours}h):`
+                                        ? `ডেলিভারি কাউন্টডাউন (${tInfo.labelBn}):`
+                                        : `Delivery Countdown (${tInfo.shortLabel}):`
                                       : lang === 'bn'
                                       ? 'নির্ধারিত ডেলিভারি সময়সীমা:'
                                       : 'Scheduled Delivery Time:'}
@@ -4602,8 +4864,8 @@ function MessengerChatContent() {
                                       ? lang === 'bn'
                                         ? '⚠️ সময় শেষ (Overdue)'
                                         : '⚠️ Time Expired'
-                                      : `⏳ ${tInfo.hrs}h : ${tInfo.mins}m : ${tInfo.secs}s`
-                                    : `⏱️ ${tInfo.deliveryHours} ${lang === 'bn' ? 'ঘণ্টা (অ্যাপ্রুভ করলে চালু হবে)' : 'Hours (Starts on Approve)'}`}
+                                      : `⏳ ${tInfo.formatted}`
+                                    : `⏱️ ${lang === 'bn' ? `${tInfo.labelBn} (অ্যাপ্রুভ করলে চালু হবে)` : `${tInfo.labelEn} (Starts on Approve)`}`}
                                 </span>
                               </div>
                             );
@@ -5285,8 +5547,8 @@ function MessengerChatContent() {
           MODAL 2: Send Money / Pay Request Modal
       ========================================================================= */}
       {showPayModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl relative">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md max-h-[90dvh] overflow-y-auto custom-scrollbar p-4 sm:p-6 shadow-2xl relative">
             <button
               onClick={() => setShowPayModal(false)}
               className="absolute right-4 top-4 p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -5394,36 +5656,8 @@ function MessengerChatContent() {
                 />
               </div>
 
-              {/* Delivery Countdown Timer Duration Selector */}
-              {publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false && (
-                <div className="p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/70 dark:border-indigo-800/60 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-extrabold text-indigo-800 dark:text-indigo-300 flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                      <span>{lang === 'bn' ? '⏱️ ডেলিভারি কাউন্টডাউন টাইমার:' : '⏱️ Delivery Time Limit:'}</span>
-                    </label>
-                    <span className="text-[11px] font-mono font-bold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800">
-                      {selectedDeliveryHours} {lang === 'bn' ? 'ঘণ্টা' : 'Hours'}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-6 gap-1.5">
-                    {[6, 12, 24, 48, 72, 168].map((hrs) => (
-                      <button
-                        key={hrs}
-                        type="button"
-                        onClick={() => setSelectedDeliveryHours(hrs)}
-                        className={`py-1.5 rounded-lg text-[11px] font-extrabold font-mono transition ${
-                          selectedDeliveryHours === hrs
-                            ? 'bg-indigo-600 text-white shadow-xs'
-                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-400'
-                        }`}
-                      >
-                        {hrs === 168 ? '7d' : `${hrs}h`}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Delivery Countdown Timer Duration Selector (Minutes / Hours / Days) */}
+              {publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false && renderDeliveryTimeSelector()}
 
               {/* Insufficient Balance warning */}
               {parseFloat(payAmount) > 0 &&
@@ -5463,8 +5697,8 @@ function MessengerChatContent() {
           MODAL 3: Request Money Modal
       ========================================================================= */}
       {showRequestModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl relative">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md max-h-[90dvh] overflow-y-auto custom-scrollbar p-4 sm:p-6 shadow-2xl relative">
             <button
               onClick={() => setShowRequestModal(false)}
               className="absolute right-4 top-4 p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -5540,36 +5774,8 @@ function MessengerChatContent() {
                 />
               </div>
 
-              {/* Delivery Countdown Timer Duration Selector */}
-              {publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false && (
-                <div className="p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/70 dark:border-indigo-800/60 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-extrabold text-indigo-800 dark:text-indigo-300 flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                      <span>{lang === 'bn' ? '⏱️ ডেলিভারি কাউন্টডাউন টাইমার:' : '⏱️ Delivery Time Limit:'}</span>
-                    </label>
-                    <span className="text-[11px] font-mono font-bold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800">
-                      {selectedDeliveryHours} {lang === 'bn' ? 'ঘণ্টা' : 'Hours'}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-6 gap-1.5">
-                    {[6, 12, 24, 48, 72, 168].map((hrs) => (
-                      <button
-                        key={hrs}
-                        type="button"
-                        onClick={() => setSelectedDeliveryHours(hrs)}
-                        className={`py-1.5 rounded-lg text-[11px] font-extrabold font-mono transition ${
-                          selectedDeliveryHours === hrs
-                            ? 'bg-indigo-600 text-white shadow-xs'
-                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-400'
-                        }`}
-                      >
-                        {hrs === 168 ? '7d' : `${hrs}h`}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Delivery Countdown Timer Duration Selector (Minutes / Hours / Days) */}
+              {publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false && renderDeliveryTimeSelector()}
             </div>
 
             <div className="mt-4 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed bg-blue-50/50 dark:bg-blue-950/30 p-3 rounded-xl border border-blue-100 dark:border-blue-900/40">
@@ -5594,8 +5800,8 @@ function MessengerChatContent() {
           MODAL 4: Dispute Modal (Routes directly to Admin Calling Queue)
       ========================================================================= */}
       {showDisputeModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl relative">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md max-h-[90dvh] overflow-y-auto custom-scrollbar p-4 sm:p-6 shadow-2xl relative">
             <button
               onClick={() => setShowDisputeModal(null)}
               className="absolute right-4 top-4 p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -5693,8 +5899,8 @@ function MessengerChatContent() {
           MODAL 5: Escrow Delivery Countdown Timer Modal
       ========================================================================= */}
       {showTimerModal && publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl relative space-y-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md max-h-[90dvh] overflow-y-auto custom-scrollbar p-4 sm:p-6 shadow-2xl relative space-y-4">
             <button
               onClick={() => setShowTimerModal(false)}
               className="absolute right-4 top-4 p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -5712,8 +5918,8 @@ function MessengerChatContent() {
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {lang === 'bn'
-                    ? 'লেনদেন বা কাজের ডেলিভারি সময়সীমা নির্ধারণ ও লাইভ কাউন্টডাউন ট্র্যাকার'
-                    : 'Set delivery time limits & monitor live escrow deal countdowns'}
+                    ? 'মিনিট, ঘণ্টা বা দিন সিলেক্ট করে ডেলিভারি সময়সীমা নির্ধারণ করুন'
+                    : 'Set delivery time limits in Minutes, Hours, or Days'}
                 </p>
               </div>
             </div>
@@ -5733,7 +5939,7 @@ function MessengerChatContent() {
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
                       {lang === 'bn'
-                        ? 'নিচ থেকে ডেলিভারি সময় সিলেক্ট করে Pay বা Request পাঠালে এবং অপর পক্ষ Approve করার সাথে সাথে লাইভ কাউন্টডাউন শুরু হবে।'
+                        ? 'নিচ থেকে মিনিট, ঘণ্টা বা দিন সিলেক্ট করে Pay বা Request পাঠালে এবং অপর পক্ষ Approve করার সাথে সাথে লাইভ কাউন্টডাউন শুরু হবে।'
                         : 'Select a delivery duration below and send a Pay or Request deal. Live countdown starts immediately upon approval.'}
                     </p>
                   </div>
@@ -5779,7 +5985,7 @@ function MessengerChatContent() {
                             ? isExpired
                               ? '⚠️ Overdue'
                               : `⏳ ${tInfo.formatted}`
-                            : `⏱️ ${tInfo.deliveryHours}h`}
+                            : `⏱️ ${lang === 'bn' ? tInfo.labelBn : tInfo.shortLabel}`}
                         </div>
                       </div>
                     );
@@ -5788,40 +5994,8 @@ function MessengerChatContent() {
               );
             })()}
 
-            {/* Default Timer Selector for New Deals */}
-            <div className="p-3.5 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/70 dark:border-indigo-800/60 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-indigo-900 dark:text-indigo-200">
-                  {lang === 'bn' ? 'নতুন লেনদেনের ডেলিভারি সময়সীমা:' : 'Delivery Time for New Deal:'}
-                </span>
-                <span className="text-xs font-mono font-black text-indigo-600 dark:text-indigo-400">
-                  {selectedDeliveryHours} {lang === 'bn' ? 'ঘণ্টা' : 'Hours'}
-                </span>
-              </div>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                {[
-                  { h: 6, label: '6h' },
-                  { h: 12, label: '12h' },
-                  { h: 24, label: '24h (1d)' },
-                  { h: 48, label: '48h (2d)' },
-                  { h: 72, label: '72h (3d)' },
-                  { h: 168, label: '7 Days' },
-                ].map((item) => (
-                  <button
-                    key={item.h}
-                    type="button"
-                    onClick={() => setSelectedDeliveryHours(item.h)}
-                    className={`py-2 px-1.5 rounded-xl text-[11px] font-extrabold font-mono transition ${
-                      selectedDeliveryHours === item.h
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-400'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* Default Timer Selector for New Deals (Minutes / Hours / Days) */}
+            {renderDeliveryTimeSelector()}
 
             {/* Quick Launch Deal Buttons */}
             <div className="grid grid-cols-2 gap-2.5 pt-1">
@@ -5834,7 +6008,7 @@ function MessengerChatContent() {
                 className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
               >
                 <ArrowUpRight className="w-4 h-4" />
-                <span>💸 Pay ({selectedDeliveryHours}h)</span>
+                <span>💸 Pay ({getSelectedDeliveryLabel(true)})</span>
               </button>
               <button
                 type="button"
@@ -5845,7 +6019,7 @@ function MessengerChatContent() {
                 className="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
               >
                 <ArrowDownLeft className="w-4 h-4" />
-                <span>💰 Request ({selectedDeliveryHours}h)</span>
+                <span>💰 Request ({getSelectedDeliveryLabel(true)})</span>
               </button>
             </div>
           </div>

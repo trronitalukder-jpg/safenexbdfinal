@@ -25,8 +25,12 @@ export default function MobileBottomNav() {
     return null;
   }
 
-  // Do not show inside admin area to avoid blocking admin controls
-  if (pathname.startsWith('/admin')) {
+  // Do not show inside admin area or full-screen chat rooms to avoid blocking message input controls
+  if (
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/dashboard/chat') ||
+    pathname.startsWith('/dashboard/admin-chat')
+  ) {
     return null;
   }
 
