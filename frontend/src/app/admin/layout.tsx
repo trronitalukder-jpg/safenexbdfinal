@@ -246,42 +246,48 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased font-sans">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased font-sans max-w-[100vw] overflow-x-hidden">
       {/* Mobile & Tablet Drawer Navigation */}
       {mobileDrawerOpen && (
-        <div className="fixed inset-0 z-50 xl:hidden flex">
+        <div
+          className="fixed inset-0 z-50 xl:hidden bg-black/65 backdrop-blur-xs flex justify-start"
+          onClick={() => setMobileDrawerOpen(false)}
+        >
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
-            onClick={() => setMobileDrawerOpen(false)}
-          />
-          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-slate-900 shadow-2xl z-10 animate-in slide-in-from-left duration-200 h-full overflow-hidden">
+            className="w-72 sm:w-80 max-w-[86vw] bg-slate-900 h-[100dvh] max-h-[100dvh] shadow-2xl flex flex-col overflow-hidden z-10 animate-in slide-in-from-left duration-200 shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
             <AdminSidebar onClose={() => setMobileDrawerOpen(false)} isMobile={true} />
           </div>
+          <div
+            className="flex-1 h-full cursor-pointer"
+            onClick={() => setMobileDrawerOpen(false)}
+          />
         </div>
       )}
 
       {/* Top Header Bar */}
-      <header className="h-16 flex-shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-3 sm:px-6 lg:px-8 flex items-center justify-between z-20 sticky top-0 gap-2 overflow-x-clip">
+      <header className="h-14 sm:h-16 flex-shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-2.5 sm:px-6 lg:px-8 flex items-center justify-between z-30 sticky top-0 gap-1.5 sm:gap-3 w-full max-w-full">
         {/* Left: Mobile & Tablet Menu Toggle & Admin Title */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <button
             type="button"
             onClick={() => setMobileDrawerOpen(true)}
-            className="xl:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-amber-500 transition shrink-0"
+            className="xl:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-amber-500 border border-slate-200/70 dark:border-slate-700/70 transition shrink-0"
             title="Open Admin Navigation"
           >
             <Menu className="w-5 h-5" />
           </button>
 
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-500">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="hidden sm:flex p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-500 shrink-0">
               <ShieldCheck className="w-5 h-5" />
             </div>
-            <div>
-              <div className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white leading-tight">
+            <div className="min-w-0">
+              <div className="font-extrabold text-xs sm:text-base text-slate-900 dark:text-white leading-tight truncate">
                 {lang === 'bn' ? 'অ্যাডমিন কন্ট্রোল সেন্টার' : 'Admin Control Center'}
               </div>
-              <div className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold tracking-wide">
+              <div className="text-[9px] sm:text-[10px] text-amber-600 dark:text-amber-400 font-semibold tracking-wide truncate">
                 {user.roles?.includes('SUPER_ADMIN') ? 'SUPER ADMIN' : user.roles?.[0] || 'ADMIN'}
               </div>
             </div>
@@ -289,13 +295,13 @@ export default function AdminLayout({
         </div>
 
         {/* Right: Duty Selector, User Dashboard link, Language Switch, Theme Toggle, and Admin Avatar */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
           {/* Staff Duty & Workload Status Dropdown */}
           <div className="relative">
             <button
               type="button"
               onClick={() => setShowDutyMenu(!showDutyMenu)}
-              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold transition shadow-xs cursor-pointer ${
+              className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-xl border text-xs font-bold transition shadow-xs cursor-pointer ${
                 dutyStatus === 'ON_DUTY'
                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
                   : dutyStatus === 'ON_BREAK'
@@ -305,7 +311,7 @@ export default function AdminLayout({
               title={lang === 'bn' ? 'স্টাফ ডিউটি স্ট্যাটাস পরিবর্তন' : 'Change Duty Status'}
             >
               <span
-                className={`w-2 h-2 rounded-full ${
+                className={`w-2 h-2 rounded-full shrink-0 ${
                   dutyStatus === 'ON_DUTY'
                     ? 'bg-emerald-500 animate-pulse'
                     : dutyStatus === 'ON_BREAK'
@@ -313,7 +319,7 @@ export default function AdminLayout({
                     : 'bg-slate-400'
                 }`}
               />
-              <span className="hidden sm:inline">
+              <span className="hidden md:inline">
                 {dutyStatus === 'ON_DUTY'
                   ? (lang === 'bn' ? 'ডিউটিতে আছি' : 'On Duty')
                   : dutyStatus === 'ON_BREAK'
@@ -325,7 +331,7 @@ export default function AdminLayout({
                   {activeTasksCount}
                 </span>
               )}
-              <ChevronDown className="w-3 h-3 opacity-60" />
+              <ChevronDown className="w-3 h-3 opacity-60 shrink-0" />
             </button>
 
             {showDutyMenu && (
@@ -334,92 +340,92 @@ export default function AdminLayout({
                   className="fixed inset-0 z-40 bg-transparent"
                   onClick={() => setShowDutyMenu(false)}
                 />
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl z-50 p-2 space-y-1 animate-in fade-in">
+                <div className="fixed right-2.5 top-14 sm:absolute sm:right-0 sm:top-auto sm:mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl z-50 p-2 space-y-1 animate-in fade-in">
                   <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800 mb-1">
                     {lang === 'bn' ? 'স্টাফ ডিউটি স্ট্যাটাস' : 'Staff Duty Status'}
                   </div>
-                <button
-                  type="button"
-                  disabled={updatingDuty}
-                  onClick={() => handleDutyChange('ON_DUTY')}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
-                    dutyStatus === 'ON_DUTY'
-                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold'
-                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-emerald-500" />
-                    <span>{lang === 'bn' ? '🟢 অন ডিউটি' : '🟢 On Duty'}</span>
-                  </div>
-                  {dutyStatus === 'ON_DUTY' && <Check className="w-3.5 h-3.5" />}
-                </button>
+                  <button
+                    type="button"
+                    disabled={updatingDuty}
+                    onClick={() => handleDutyChange('ON_DUTY')}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                      dutyStatus === 'ON_DUTY'
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-emerald-500" />
+                      <span>{lang === 'bn' ? '🟢 অন ডিউটি' : '🟢 On Duty'}</span>
+                    </div>
+                    {dutyStatus === 'ON_DUTY' && <Check className="w-3.5 h-3.5" />}
+                  </button>
 
-                <button
-                  type="button"
-                  disabled={updatingDuty}
-                  onClick={() => handleDutyChange('ON_BREAK')}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
-                    dutyStatus === 'ON_BREAK'
-                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold'
-                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Coffee className="w-4 h-4 text-amber-500" />
-                    <span>{lang === 'bn' ? '🟡 বিরতি (পজ)' : '🟡 On Break'}</span>
-                  </div>
-                  {dutyStatus === 'ON_BREAK' && <Check className="w-3.5 h-3.5" />}
-                </button>
+                  <button
+                    type="button"
+                    disabled={updatingDuty}
+                    onClick={() => handleDutyChange('ON_BREAK')}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                      dutyStatus === 'ON_BREAK'
+                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Coffee className="w-4 h-4 text-amber-500" />
+                      <span>{lang === 'bn' ? '🟡 বিরতি (পজ)' : '🟡 On Break'}</span>
+                    </div>
+                    {dutyStatus === 'ON_BREAK' && <Check className="w-3.5 h-3.5" />}
+                  </button>
 
-                <button
-                  type="button"
-                  disabled={updatingDuty}
-                  onClick={() => handleDutyChange('OFF_DUTY')}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
-                    dutyStatus === 'OFF_DUTY'
-                      ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold'
-                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Power className="w-4 h-4 text-rose-500" />
-                    <span>{lang === 'bn' ? '🔴 অফ ডিউটি' : '🔴 Off Duty'}</span>
-                  </div>
-                  {dutyStatus === 'OFF_DUTY' && <Check className="w-3.5 h-3.5" />}
-                </button>
+                  <button
+                    type="button"
+                    disabled={updatingDuty}
+                    onClick={() => handleDutyChange('OFF_DUTY')}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                      dutyStatus === 'OFF_DUTY'
+                        ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Power className="w-4 h-4 text-rose-500" />
+                      <span>{lang === 'bn' ? '🔴 অফ ডিউটি' : '🔴 Off Duty'}</span>
+                    </div>
+                    {dutyStatus === 'OFF_DUTY' && <Check className="w-3.5 h-3.5" />}
+                  </button>
 
-                {isSuperAdmin() && (
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 mt-1">
-                    <Link
-                      href="/admin/operations"
-                      onClick={() => setShowDutyMenu(false)}
-                      className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[11px] font-bold transition"
-                    >
-                      <span>{lang === 'bn' ? 'লাইভ অপারেশন কন্ট্রোল' : 'Live Operations'}</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
+                  {isSuperAdmin() && (
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 mt-1">
+                      <Link
+                        href="/admin/operations"
+                        onClick={() => setShowDutyMenu(false)}
+                        className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[11px] font-bold transition"
+                      >
+                        <span>{lang === 'bn' ? 'লাইভ অপারেশন কন্ট্রোল' : 'Live Operations'}</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
 
-          {/* Quick Home Page Link */}
+          {/* Quick Home Page Link (Hidden on phone since it's in Side Menu) */}
           <Link
             href="/"
-            className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 transition shrink-0"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 transition shrink-0"
             title={lang === 'bn' ? 'হোম পেজে যান' : 'Go to Home Page'}
           >
-            <Home className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-amber-500" />
-            <span className="hidden sm:inline">{lang === 'bn' ? 'হোম পেজ' : 'Home'}</span>
+            <Home className="w-3.5 h-3.5 text-amber-500" />
+            <span>{lang === 'bn' ? 'হোম পেজ' : 'Home'}</span>
           </Link>
 
           {/* Complaints (অভিযোগ) Button with Live Unread Badge */}
           <Link
             href="/admin/complaints"
-            className={`relative flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold border transition shadow-xs shrink-0 ${
+            className={`relative flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs font-bold border transition shadow-xs shrink-0 ${
               unreadComplaintCount > 0
                 ? 'bg-rose-500/15 hover:bg-rose-500 text-rose-700 dark:text-rose-300 hover:text-white dark:hover:text-white border-rose-500/40 ring-1 ring-rose-500/30'
                 : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 border-rose-500/25'
@@ -432,12 +438,12 @@ export default function AdminLayout({
                 : 'User Complaints & Disputes'
             }
           >
-            <ShieldAlert className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-            <span className="text-xs font-bold">
+            <ShieldAlert className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-rose-500 shrink-0" />
+            <span className="hidden sm:inline text-xs font-bold">
               {lang === 'bn' ? 'অভিযোগ' : 'Complaints'}
             </span>
             {unreadComplaintCount > 0 && (
-              <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center animate-pulse shadow-xs shrink-0">
+              <span className="min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-1 rounded-full bg-rose-600 text-white text-[9px] sm:text-[10px] font-black flex items-center justify-center animate-pulse shadow-xs shrink-0">
                 {unreadComplaintCount > 99 ? '99+' : unreadComplaintCount}
               </span>
             )}
@@ -448,9 +454,9 @@ export default function AdminLayout({
             type="button"
             onClick={toggleLang}
             title={lang === 'bn' ? 'Switch to English' : 'বাংলায় পরিবর্তন করুন'}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 transition"
+            className="flex items-center gap-1 px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 transition shrink-0"
           >
-            <Globe className="w-3.5 h-3.5 text-amber-500" />
+            <Globe className="hidden sm:inline w-3.5 h-3.5 text-amber-500" />
             <span>{lang === 'bn' ? 'বাংলা' : 'EN'}</span>
           </button>
 
@@ -459,7 +465,7 @@ export default function AdminLayout({
             type="button"
             onClick={toggleTheme}
             title={theme === 'dark' ? (lang === 'bn' ? 'লাইট মোড' : 'Light Mode') : (lang === 'bn' ? 'ডার্ক মোড' : 'Dark Mode')}
-            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 transition"
+            className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 transition shrink-0"
           >
             {theme === 'dark' ? (
               <Sun className="w-4 h-4 text-amber-400" />
@@ -477,7 +483,7 @@ export default function AdminLayout({
                 setUnreadCount(0);
               }}
               title={lang === 'bn' ? 'অ্যাডমিন নোটিফিকেশন' : 'Admin Alerts'}
-              className="relative p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 transition cursor-pointer"
+              className="relative p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 transition cursor-pointer shrink-0"
             >
               <Bell className="w-4 h-4 text-amber-500" />
               {unreadCount > 0 && (
@@ -489,70 +495,76 @@ export default function AdminLayout({
 
             {/* Notification Dropdown Menu */}
             {showNotifMenu && (
-              <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl z-50 overflow-hidden animate-in fade-in">
-                <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 font-bold text-xs text-slate-900 dark:text-white">
-                    <Bell className="w-3.5 h-3.5 text-amber-500" />
-                    <span>{lang === 'bn' ? 'অ্যাডমিন নোটিফিকেশন' : 'Recent Admin Alerts'}</span>
-                  </div>
-                  <Link
-                    href="/admin/notifications"
-                    onClick={() => setShowNotifMenu(false)}
-                    className="text-[11px] font-bold text-amber-500 hover:text-amber-400"
-                  >
-                    {lang === 'bn' ? 'কনফিগ সেটিংস' : 'Configure'}
-                  </Link>
-                </div>
-
-                <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 custom-scrollbar">
-                  {adminNotifications.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-slate-400">
-                      {lang === 'bn' ? 'কোনো নতুন নোটিফিকেশন নেই' : 'No new notifications yet.'}
+              <>
+                <div
+                  className="fixed inset-0 z-40 bg-transparent"
+                  onClick={() => setShowNotifMenu(false)}
+                />
+                <div className="fixed left-2.5 right-2.5 top-14 sm:left-auto sm:absolute sm:right-0 sm:top-auto sm:mt-2 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl z-50 overflow-hidden animate-in fade-in">
+                  <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 font-bold text-xs text-slate-900 dark:text-white">
+                      <Bell className="w-3.5 h-3.5 text-amber-500" />
+                      <span>{lang === 'bn' ? 'অ্যাডমিন নোটিফিকেশন' : 'Recent Admin Alerts'}</span>
                     </div>
-                  ) : (
-                    adminNotifications.map((notif, i) => (
-                      <Link
-                        key={notif.id || i}
-                        href={notif.targetUrl || '/admin'}
-                        onClick={() => setShowNotifMenu(false)}
-                        className="block p-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition"
-                      >
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
-                          <span className="font-bold text-amber-500">{notif.type || 'ALERT'}</span>
-                          <span>{notif.receivedAt || 'Just now'}</span>
-                        </div>
-                        <div className="font-bold text-xs text-slate-900 dark:text-white">{notif.title}</div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">
-                          {notif.message}
-                        </p>
-                      </Link>
-                    ))
-                  )}
-                </div>
+                    <Link
+                      href="/admin/notifications"
+                      onClick={() => setShowNotifMenu(false)}
+                      className="text-[11px] font-bold text-amber-500 hover:text-amber-400"
+                    >
+                      {lang === 'bn' ? 'কনফিগ সেটিংস' : 'Configure'}
+                    </Link>
+                  </div>
 
-                <div className="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 text-center">
-                  <Link
-                    href="/admin/notifications"
-                    onClick={() => setShowNotifMenu(false)}
-                    className="text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:text-amber-500"
-                  >
-                    {lang === 'bn' ? 'সব নোটিফিকেশন কনফিগারেশন দেখুন →' : 'View full notification settings →'}
-                  </Link>
+                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 custom-scrollbar">
+                    {adminNotifications.length === 0 ? (
+                      <div className="p-6 text-center text-xs text-slate-400">
+                        {lang === 'bn' ? 'কোনো নতুন নোটিফিকেশন নেই' : 'No new notifications yet.'}
+                      </div>
+                    ) : (
+                      adminNotifications.map((notif, i) => (
+                        <Link
+                          key={notif.id || i}
+                          href={notif.targetUrl || '/admin'}
+                          onClick={() => setShowNotifMenu(false)}
+                          className="block p-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition"
+                        >
+                          <div className="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
+                            <span className="font-bold text-amber-500">{notif.type || 'ALERT'}</span>
+                            <span>{notif.receivedAt || 'Just now'}</span>
+                          </div>
+                          <div className="font-bold text-xs text-slate-900 dark:text-white">{notif.title}</div>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">
+                            {notif.message}
+                          </p>
+                        </Link>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 text-center">
+                    <Link
+                      href="/admin/notifications"
+                      onClick={() => setShowNotifMenu(false)}
+                      className="text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:text-amber-500"
+                    >
+                      {lang === 'bn' ? 'সব নোটিফিকেশন কনফিগারেশন দেখুন →' : 'View full notification settings →'}
+                    </Link>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
 
           {/* Admin Avatar */}
-          <div className="flex items-center gap-2 pl-1 sm:pl-2">
+          <div className="flex items-center gap-1.5 pl-0.5 sm:pl-1 shrink-0">
             {user.avatarUrl ? (
               <img
                 src={getImageUrl(user.avatarUrl)}
                 alt={user.firstName}
-                className="w-8 h-8 rounded-full object-cover border border-amber-500/40"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border border-amber-500/40 shrink-0"
               />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-amber-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-600 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
                 {user.firstName?.charAt(0) || 'A'}
               </div>
             )}
@@ -575,12 +587,12 @@ export default function AdminLayout({
       </header>
 
       {/* Main Column & Persistent Desktop Sidebar */}
-      <div className="flex-1 flex overflow-hidden min-w-0">
-        <div className="hidden xl:block flex-shrink-0 h-[calc(100vh-4rem)] overflow-hidden">
+      <div className="flex-1 flex min-w-0 xl:overflow-hidden">
+        <div className="hidden xl:block flex-shrink-0 h-[calc(100vh-4rem)] sticky top-16 overflow-hidden">
           <AdminSidebar />
         </div>
-        <main className="flex-1 min-w-0 p-3 sm:p-6 lg:p-8 overflow-y-auto overflow-x-hidden h-[calc(100vh-4rem)]">
-          <div className="w-full max-w-[1680px] mx-auto">
+        <main className="flex-1 min-w-0 max-w-full p-3 sm:p-6 lg:p-8 overflow-x-hidden xl:overflow-y-auto xl:h-[calc(100vh-4rem)]">
+          <div className="w-full max-w-[1680px] mx-auto min-w-0">
             {(() => {
               const matchedItem = adminMenuRegistry.find(
                 (item) => item.href === pathname || (item.href !== '/admin' && pathname.startsWith(item.href))

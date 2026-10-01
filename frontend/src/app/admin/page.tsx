@@ -99,102 +99,102 @@ export default function AdminDashboardPage() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5 sm:space-y-8 min-w-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-200 dark:border-slate-800 pb-4 sm:pb-5">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">Admin Control Center</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">Admin Control Center</h1>
           <p className="text-xs text-slate-600 dark:text-slate-400">Realtime platform telemetry, escrow holds & financial auditing</p>
         </div>
         <div className="flex items-center gap-2">
           <Link
             href="/admin/calling-queue"
-            className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-rose-600/20"
+            className="px-3.5 sm:px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-rose-600/20"
           >
-            <ShieldAlert className="w-4 h-4" />
+            <ShieldAlert className="w-4 h-4 shrink-0" />
             <span>Call Admin Queue</span>
           </Link>
         </div>
       </div>
 
       {/* Main KPI Cards (Spec #47) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
-            <span>Total Users</span>
-            <Users className="w-4 h-4 text-sky-500" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5 sm:space-y-2 shadow-sm min-w-0">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px] sm:text-xs font-medium">
+            <span className="truncate">Total Users</span>
+            <Users className="w-4 h-4 text-sky-500 shrink-0" />
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 dark:text-white">{analytics.users.total}</div>
-          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">{analytics.users.active} Active ({analytics.users.newLast30Days} new 30d)</div>
+          <div className="text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-white truncate">{analytics.users.total}</div>
+          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold truncate">{analytics.users.active} Active ({analytics.users.newLast30Days} new 30d)</div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
-            <span>Available Wallets</span>
-            <Wallet className="w-4 h-4 text-emerald-500" />
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5 sm:space-y-2 shadow-sm min-w-0">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px] sm:text-xs font-medium">
+            <span className="truncate">Available Wallets</span>
+            <Wallet className="w-4 h-4 text-emerald-500 shrink-0" />
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 dark:text-white">৳ {Number(analytics.finance.totalAvailableBalance).toLocaleString()}</div>
-          <div className="text-[10px] text-slate-500 dark:text-slate-400">Liquid balance in system</div>
+          <div className="text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-white truncate">৳ {Number(analytics.finance.totalAvailableBalance).toLocaleString()}</div>
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Liquid balance in system</div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
-            <span>Hold Escrow Balance</span>
-            <Lock className="w-4 h-4 text-amber-500" />
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5 sm:space-y-2 shadow-sm min-w-0">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px] sm:text-xs font-medium">
+            <span className="truncate">Hold Escrow Balance</span>
+            <Lock className="w-4 h-4 text-amber-500 shrink-0" />
           </div>
-          <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-400">৳ {Number(analytics.finance.totalHoldBalance).toLocaleString()}</div>
-          <div className="text-[10px] text-amber-600/90 dark:text-amber-500/80">Pending seller release</div>
+          <div className="text-lg sm:text-2xl font-extrabold text-amber-600 dark:text-amber-400 truncate">৳ {Number(analytics.finance.totalHoldBalance).toLocaleString()}</div>
+          <div className="text-[10px] text-amber-600/90 dark:text-amber-500/80 truncate">Pending seller release</div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
-            <span>Platform Commission</span>
-            <Percent className="w-4 h-4 text-purple-500" />
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5 sm:space-y-2 shadow-sm min-w-0">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px] sm:text-xs font-medium">
+            <span className="truncate">Platform Commission</span>
+            <Percent className="w-4 h-4 text-purple-500 shrink-0" />
           </div>
-          <div className="text-2xl font-extrabold text-purple-600 dark:text-purple-400">৳ {Number(analytics.finance.totalCommissionEarned).toLocaleString()}</div>
-          <div className="text-[10px] text-purple-600/90 dark:text-purple-300">Earned revenue</div>
+          <div className="text-lg sm:text-2xl font-extrabold text-purple-600 dark:text-purple-400 truncate">৳ {Number(analytics.finance.totalCommissionEarned).toLocaleString()}</div>
+          <div className="text-[10px] text-purple-600/90 dark:text-purple-300 truncate">Earned revenue</div>
         </div>
       </div>
 
       {/* Secondary Metrics: Products & Transactions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-        <div className="p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm">
-          <div className="text-slate-500 dark:text-slate-400 font-medium">Total Products</div>
-          <div className="text-lg font-bold text-slate-900 dark:text-white">{analytics.products.total}</div>
-          <div className="text-[10px] text-slate-500">{analytics.products.physical} Physical | {analytics.products.digital} Digital</div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 text-xs">
+        <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm min-w-0">
+          <div className="text-slate-500 dark:text-slate-400 font-medium truncate">Total Products</div>
+          <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">{analytics.products.total}</div>
+          <div className="text-[10px] text-slate-500 truncate">{analytics.products.physical} Physical | {analytics.products.digital} Digital</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm">
-          <div className="text-slate-500 dark:text-slate-400 font-medium">Total Volume</div>
-          <div className="text-lg font-bold text-slate-900 dark:text-white">৳ {Number(analytics.finance.totalTransactionVolume).toLocaleString()}</div>
-          <div className="text-[10px] text-slate-500">Completed deal volume</div>
+        <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm min-w-0">
+          <div className="text-slate-500 dark:text-slate-400 font-medium truncate">Total Volume</div>
+          <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">৳ {Number(analytics.finance.totalTransactionVolume).toLocaleString()}</div>
+          <div className="text-[10px] text-slate-500 truncate">Completed deal volume</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm">
-          <div className="text-slate-500 dark:text-slate-400 font-medium">Recharges Approved</div>
-          <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">৳ {Number(analytics.finance.totalRechargeApproved).toLocaleString()}</div>
-          <div className="text-[10px] text-slate-500">Verified cash-in</div>
+        <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm min-w-0">
+          <div className="text-slate-500 dark:text-slate-400 font-medium truncate">Recharges Approved</div>
+          <div className="text-base sm:text-lg font-bold text-emerald-600 dark:text-emerald-400 truncate">৳ {Number(analytics.finance.totalRechargeApproved).toLocaleString()}</div>
+          <div className="text-[10px] text-slate-500 truncate">Verified cash-in</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm">
-          <div className="text-slate-500 dark:text-slate-400 font-medium">Withdrawals Approved</div>
-          <div className="text-lg font-bold text-rose-600 dark:text-rose-400">৳ {Number(analytics.finance.totalWithdrawalApproved).toLocaleString()}</div>
-          <div className="text-[10px] text-slate-500">Verified payout</div>
+        <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm min-w-0">
+          <div className="text-slate-500 dark:text-slate-400 font-medium truncate">Withdrawals Approved</div>
+          <div className="text-base sm:text-lg font-bold text-rose-600 dark:text-rose-400 truncate">৳ {Number(analytics.finance.totalWithdrawalApproved).toLocaleString()}</div>
+          <div className="text-[10px] text-slate-500 truncate">Verified payout</div>
         </div>
       </div>
 
       {/* Recharts Visualization (Spec #98) */}
-      <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
+      <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm min-w-0">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-sky-500" />
+            <TrendingUp className="w-4 h-4 text-sky-500 shrink-0" />
             <span>Financial Telemetry Overview (BDT)</span>
           </h2>
         </div>
 
-        <div className="h-64 w-full">
+        <div className="h-56 sm:h-64 w-full min-w-0">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+            <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#94a3b833" />
               <XAxis dataKey="name" stroke="#64748b" fontSize={11} />
               <YAxis stroke="#64748b" fontSize={11} />
@@ -209,21 +209,21 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Recent Activity Tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 text-xs min-w-0">
         {/* Recent Transactions */}
-        <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
+        <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3 sm:space-y-4 shadow-sm min-w-0">
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
             <h3 className="font-bold text-slate-900 dark:text-white">Recent Transactions</h3>
             <Link href="/admin/transactions" className="text-sky-600 dark:text-sky-400 hover:underline font-semibold">View All</Link>
           </div>
           <div className="space-y-2">
             {analytics.recentTransactions?.map((t: any) => (
-              <div key={t.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <div>
-                  <div className="font-mono font-bold text-sky-600 dark:text-sky-400">{t.trackingNumber}</div>
-                  <div className="text-slate-600 dark:text-slate-400 text-[11px]">{t.sender?.uniqueUserId} ➔ {t.receiver?.uniqueUserId}</div>
+              <div key={t.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between gap-2 min-w-0">
+                <div className="min-w-0">
+                  <div className="font-mono font-bold text-sky-600 dark:text-sky-400 truncate">{t.trackingNumber}</div>
+                  <div className="text-slate-600 dark:text-slate-400 text-[11px] truncate">{t.sender?.uniqueUserId} ➔ {t.receiver?.uniqueUserId}</div>
                 </div>
-                <div className="text-right">
+                <div className="text-right shrink-0">
                   <div className="font-bold text-slate-900 dark:text-white">৳ {Number(t.amount).toLocaleString()}</div>
                   <span className="text-[10px] text-slate-500 font-semibold">{t.status}</span>
                 </div>
@@ -233,15 +233,15 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Recent Users */}
-        <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
+        <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3 sm:space-y-4 shadow-sm min-w-0">
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
             <h3 className="font-bold text-slate-900 dark:text-white">Recently Joined Users</h3>
             <Link href="/admin/users" className="text-sky-600 dark:text-sky-400 hover:underline font-semibold">Manage</Link>
           </div>
           <div className="space-y-2">
             {analytics.recentUsers?.map((u: any) => (
-              <div key={u.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
+              <div key={u.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between gap-2 min-w-0">
+                <div className="flex items-center gap-2.5 min-w-0">
                   {u.avatarUrl ? (
                     <img
                       src={getImageUrl(u.avatarUrl)}
@@ -253,14 +253,14 @@ export default function AdminDashboardPage() {
                       {u.firstName?.charAt(0) || 'U'}
                     </div>
                   )}
-                  <div>
-                    <div className="font-bold text-slate-900 dark:text-white">{u.firstName} {u.lastName}</div>
-                    <div className="font-mono text-sky-600 dark:text-sky-400 text-[11px]">{u.uniqueUserId}</div>
+                  <div className="min-w-0">
+                    <div className="font-bold text-slate-900 dark:text-white truncate">{u.firstName} {u.lastName}</div>
+                    <div className="font-mono text-sky-600 dark:text-sky-400 text-[11px] truncate">{u.uniqueUserId}</div>
                   </div>
                 </div>
-                <div className="text-right text-slate-600 dark:text-slate-400 text-[11px]">
-                  <div>{u.email}</div>
-                  <div>{u.phone}</div>
+                <div className="text-right text-slate-600 dark:text-slate-400 text-[11px] min-w-0 max-w-[45%]">
+                  <div className="truncate">{u.email}</div>
+                  <div className="truncate">{u.phone}</div>
                 </div>
               </div>
             ))}

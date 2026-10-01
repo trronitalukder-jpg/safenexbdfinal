@@ -188,25 +188,29 @@ export const AdminSidebar = ({ onClose, isMobile = false }: AdminSidebarProps) =
   }, [filteredLinks]);
 
   return (
-    <aside className="w-76 sm:w-80 bg-slate-900 text-slate-200 border-r border-slate-800 flex flex-col h-full select-none shadow-2xl">
+    <aside
+      className={`${
+        isMobile ? 'w-full max-w-full flex-1' : 'w-72 xl:w-80'
+      } bg-slate-900 text-slate-200 border-r border-slate-800 flex flex-col h-full min-h-0 max-h-full overflow-hidden select-none shadow-2xl`}
+    >
       {/* 1. FIXED TOP HEADER (BRANDING, SEARCH & ACCORDION TOGGLE) */}
-      <div className="flex-shrink-0 p-4 border-b border-slate-800 bg-slate-900/95 backdrop-blur z-10 space-y-3.5">
+      <div className="flex-shrink-0 p-3.5 sm:p-4 border-b border-slate-800 bg-slate-900/95 backdrop-blur z-10 space-y-3">
         {/* Branding & Mobile Close */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-black shadow-md shadow-amber-500/25">
-              <ShieldCheck className="w-5 h-5" />
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-black shadow-md shadow-amber-500/25 shrink-0">
+              <ShieldCheck className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="font-black text-sm sm:text-base text-white tracking-wide flex items-center gap-1.5">
-                <span>SafnexBD Admin</span>
+                <span className="truncate">SafnexBD Admin</span>
                 {isSuperAdmin() && (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
                     SUPER
                   </span>
                 )}
               </div>
-              <div className="text-xs text-amber-400/90 font-semibold tracking-wide">Control Center</div>
+              <div className="text-[11px] sm:text-xs text-amber-400/90 font-semibold tracking-wide">Control Center</div>
             </div>
           </div>
 
@@ -214,7 +218,7 @@ export const AdminSidebar = ({ onClose, isMobile = false }: AdminSidebarProps) =
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              className="p-2 rounded-xl text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 transition shrink-0"
               title="Close Menu"
             >
               <X className="w-5 h-5" />
@@ -231,7 +235,7 @@ export const AdminSidebar = ({ onClose, isMobile = false }: AdminSidebarProps) =
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={lang === 'bn' ? 'মেনু খুঁজুন...' : 'Search menus...'}
-              className="w-full bg-slate-800/90 hover:bg-slate-800 focus:bg-slate-800 border border-slate-700 focus:border-amber-500/80 rounded-xl pl-9 pr-8 py-2 text-sm text-slate-100 placeholder-slate-400 outline-none transition shadow-inner"
+              className="w-full bg-slate-800/90 hover:bg-slate-800 focus:bg-slate-800 border border-slate-700 focus:border-amber-500/80 rounded-xl pl-9 pr-8 py-2 text-xs sm:text-sm text-slate-100 placeholder-slate-400 outline-none transition shadow-inner"
             />
             {searchQuery && (
               <button
@@ -268,7 +272,7 @@ export const AdminSidebar = ({ onClose, isMobile = false }: AdminSidebarProps) =
 
       {/* 2. DEDICATED SCROLLABLE MENU BODY WITH SECTION DROPDOWNS */}
       <div
-        className="flex-1 overflow-y-auto p-3.5 space-y-3.5 overscroll-contain [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-700/60 hover:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb]:rounded-full"
+        className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-3.5 space-y-3 overscroll-contain [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-700/60 hover:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb]:rounded-full"
         style={{ scrollbarGutter: 'stable' }}
       >
         {filteredLinks.length === 0 ? (

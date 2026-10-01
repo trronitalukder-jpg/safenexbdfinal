@@ -21,6 +21,7 @@ import {
   Trash2,
   Edit3,
   Sparkles,
+  ChevronLeft,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
@@ -90,6 +91,7 @@ export default function AdminSupportChatPage() {
 
   const [conversations, setConversations] = useState<any[]>([]);
   const [selectedConv, setSelectedConv] = useState<any | null>(null);
+  const [mobileShowChat, setMobileShowChat] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -190,7 +192,7 @@ export default function AdminSupportChatPage() {
           setSelectedConv((prev: any) => ({ ...prev, ...updated }));
         }
       } else if (list.length > 0 && !silent) {
-        handleSelectConversation(list[0]);
+        handleSelectConversation(list[0], false);
       }
     } catch (err) {
       console.error('Failed to fetch Admin Support conversations:', err);
@@ -226,8 +228,11 @@ export default function AdminSupportChatPage() {
     };
   }, [searchQuery]);
 
-  const handleSelectConversation = async (conv: any) => {
+  const handleSelectConversation = async (conv: any, openMobile = true) => {
     setSelectedConv(conv);
+    if (openMobile) {
+      setMobileShowChat(true);
+    }
     setLoadingMessages(true);
     try {
       const res: any = await api.get(`/chat/conversations/${conv.id}/messages`);
@@ -532,26 +537,26 @@ export default function AdminSupportChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-5rem)] bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+    <div className="flex flex-col h-[calc(100dvh-4.5rem)] sm:h-[calc(100vh-5rem)] bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl">
       {/* Top Bar: Title + Master ON/OFF Toggle + Custom Messages + Welcome Message Settings + Start Chat */}
-      <div className="flex-shrink-0 px-4 sm:px-6 py-3.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/20 relative">
-            <Headset className="w-5 h-5" />
+      <div className="flex-shrink-0 px-3 sm:px-6 py-2.5 sm:py-3.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/20 relative shrink-0">
+            <Headset className="w-4 h-4 sm:w-5 sm:h-5" />
             {adminLiveCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-rose-500 animate-ping" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-rose-500 animate-ping" />
             )}
           </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                {lang === 'bn' ? 'অ্যাডমিন চ্যাট (SafnexBD Admin)' : 'SafnexBD Admin Chat'}
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <h1 className="text-sm sm:text-lg font-black text-slate-900 dark:text-white truncate">
+                {lang === 'bn' ? 'অ্যাডমিন চ্যাট' : 'SafnexBD Admin Chat'}
               </h1>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30">
+              <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30">
                 SafnexBD Admin
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="hidden sm:block text-xs text-slate-500 dark:text-slate-400">
               {lang === 'bn'
                 ? 'অ্যাডমিন বা স্টাফ যেই মেসেজ দিক, ইউজারের কাছে শুধুমাত্র "SafnexBD Admin" নাম দেখাবে'
                 : 'All admin & staff replies appear to users as "SafnexBD Admin"'}
@@ -559,15 +564,15 @@ export default function AdminSupportChatPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {/* New Chat with Any User Button */}
           <button
             type="button"
             onClick={openNewChatModal}
-            className="px-3 py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-600 dark:text-sky-400 border border-sky-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+            className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-600 dark:text-sky-400 border border-sky-500/30 text-[11px] sm:text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
           >
-            <UserPlus className="w-4 h-4" />
-            <span>{lang === 'bn' ? 'ইউজার খুঁজুন ও চ্যাট করুন' : 'Find User & Chat'}</span>
+            <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>{lang === 'bn' ? 'ইউজার খুঁজুন' : 'Find User'}</span>
           </button>
 
           {/* Custom Quick Replies Manager Button */}
@@ -579,10 +584,10 @@ export default function AdminSupportChatPage() {
               setCustomReplyText('');
               setShowQuickRepliesModal(true);
             }}
-            className="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+            className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-[11px] sm:text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
           >
-            <Sparkles className="w-4 h-4" />
-            <span>{lang === 'bn' ? 'কাস্টম মেসেজ যোগ/এডিট' : 'Custom Messages'}</span>
+            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>{lang === 'bn' ? 'কাস্টম মেসেজ' : 'Custom Messages'}</span>
           </button>
 
           {/* Master Admin Chat ON / OFF Switch */}
@@ -590,21 +595,21 @@ export default function AdminSupportChatPage() {
             type="button"
             disabled={savingSettings}
             onClick={handleToggleMasterAdminChat}
-            className={`px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-2 border transition cursor-pointer ${
+            className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black flex items-center gap-1.5 border transition cursor-pointer ${
               adminChatEnabled
                 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
                 : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30 hover:bg-rose-500/25'
             }`}
           >
-            <Power className="w-4 h-4" />
+            <Power className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span>
               {adminChatEnabled
                 ? lang === 'bn'
-                  ? 'অ্যাডমিন চ্যাট: চালু (ON)'
-                  : 'Admin Chat: ON'
+                  ? 'চ্যাট: ON'
+                  : 'Chat: ON'
                 : lang === 'bn'
-                  ? 'অ্যাডমিন চ্যাট: বন্ধ (OFF)'
-                  : 'Admin Chat: OFF'}
+                  ? 'চ্যাট: OFF'
+                  : 'Chat: OFF'}
             </span>
           </button>
 
@@ -612,17 +617,17 @@ export default function AdminSupportChatPage() {
           <button
             type="button"
             onClick={() => setShowSettingsModal(true)}
-            className="px-3.5 py-2 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+            className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 text-[11px] sm:text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
           >
-            <Settings className="w-4 h-4" />
-            <span>{lang === 'bn' ? 'স্বাগতম মেসেজ কাস্টমাইজ' : 'Welcome Message'}</span>
+            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>{lang === 'bn' ? 'স্বাগতম মেসেজ' : 'Welcome Msg'}</span>
           </button>
 
           {/* Refresh */}
           <button
             type="button"
             onClick={() => fetchConversations(false)}
-            className="p-2 rounded-xl bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition cursor-pointer"
+            className="p-1.5 sm:p-2 rounded-xl bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition cursor-pointer"
             title="Refresh"
           >
             <RefreshCw className={`w-4 h-4 ${loadingList ? 'animate-spin' : ''}`} />
@@ -633,7 +638,11 @@ export default function AdminSupportChatPage() {
       {/* Main Split Body */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Left Sidebar: Conversation List & Direct User Search */}
-        <div className="w-80 sm:w-96 border-r border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 flex flex-col min-h-0 shrink-0">
+        <div
+          className={`${
+            mobileShowChat ? 'hidden lg:flex' : 'flex'
+          } w-full lg:w-80 xl:w-96 border-r border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 flex-col min-h-0 shrink-0`}
+        >
           {/* Filter Tabs + Search */}
           <div className="p-3 border-b border-slate-200 dark:border-slate-800 space-y-2.5">
             <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-200/70 dark:bg-slate-950 border border-slate-300/60 dark:border-slate-800">
@@ -702,7 +711,7 @@ export default function AdminSupportChatPage() {
           </div>
 
           {/* Conversations + Matched Users Scroll List */}
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-200/70 dark:divide-slate-800/60 custom-scrollbar">
+          <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-200/70 dark:divide-slate-800/60 custom-scrollbar">
             {/* If admin is searching, show direct matched users so admin can start chat with ANY user */}
             {searchQuery.trim() && (
               <div className="p-2.5 bg-sky-500/5 border-b border-sky-500/20">
@@ -775,7 +784,7 @@ export default function AdminSupportChatPage() {
                 return (
                   <div
                     key={conv.id}
-                    onClick={() => handleSelectConversation(conv)}
+                    onClick={() => handleSelectConversation(conv, true)}
                     className={`p-3.5 flex items-start gap-3 cursor-pointer transition ${
                       isSelected
                         ? 'bg-sky-500/15 border-l-4 border-l-sky-500'
@@ -844,7 +853,11 @@ export default function AdminSupportChatPage() {
         </div>
 
         {/* Right Column: Active Chat Workspace */}
-        <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-slate-950">
+        <div
+          className={`${
+            mobileShowChat ? 'flex' : 'hidden lg:flex'
+          } flex-1 flex-col min-w-0 min-h-0 bg-white dark:bg-slate-950`}
+        >
           {!selectedConv ? (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500 space-y-3">
               <Headset className="w-12 h-12 text-slate-400" />
@@ -862,10 +875,19 @@ export default function AdminSupportChatPage() {
           ) : (
             <>
               {/* Active Chat Header */}
-              <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
+              <div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-50 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => setMobileShowChat(false)}
+                    className="lg:hidden p-1.5 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-sky-500 transition shrink-0"
+                    title={lang === 'bn' ? 'তালিকায় ফিরুন' : 'Back to List'}
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs text-white overflow-hidden shrink-0 ${
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-xs text-white overflow-hidden shrink-0 ${
                       selectedConv.isLiveChat
                         ? 'ring-2 ring-rose-500 animate-pulse bg-rose-600'
                         : 'bg-sky-600'
@@ -882,49 +904,49 @@ export default function AdminSupportChatPage() {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="text-sm font-black text-slate-900 dark:text-white truncate">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                      <h2 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
                         {activeTargetUser
                           ? `${activeTargetUser.firstName || ''} ${activeTargetUser.lastName || ''}`.trim()
                           : 'User'}
                       </h2>
                       {activeTargetUser?.uniqueUserId && (
-                        <span className="text-[11px] font-mono text-sky-600 dark:text-sky-400">
+                        <span className="text-[10px] sm:text-[11px] font-mono text-sky-600 dark:text-sky-400">
                           (@{activeTargetUser.uniqueUserId})
                         </span>
                       )}
                       {activeTargetUser?.phone && (
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                        <span className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400">
                           • {activeTargetUser.phone}
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold">
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>
+                    <p className="text-[10px] sm:text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold truncate">
+                      <ShieldCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                      <span className="truncate">
                         {lang === 'bn'
-                          ? 'ইউজারের কাছে আপনার পরিচয়: SafnexBD Admin'
-                          : 'Visible to user as: SafnexBD Admin'}
+                          ? 'ইউজারের কাছে পরিচয়: SafnexBD Admin'
+                          : 'Visible as: SafnexBD Admin'}
                       </span>
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 shrink-0">
                   {selectedConv.isLiveChat && (
                     <button
                       type="button"
                       onClick={() => handleToggleLiveStatus(selectedConv.id, false)}
-                      className="px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-600 text-rose-600 dark:text-rose-400 hover:text-white border border-rose-500/30 text-xs font-bold transition cursor-pointer"
+                      className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-600 text-rose-600 dark:text-rose-400 hover:text-white border border-rose-500/30 text-[11px] sm:text-xs font-bold transition cursor-pointer"
                     >
-                      {lang === 'bn' ? '🔴 লাইভ চ্যাট অফ করুন' : '🔴 Turn Off Live Chat'}
+                      {lang === 'bn' ? '🔴 লাইভ অফ' : '🔴 Live Off'}
                     </button>
                   )}
                 </div>
               </div>
 
               {/* Messages List */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar bg-slate-50/50 dark:bg-slate-950">
+              <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3 custom-scrollbar bg-slate-50/50 dark:bg-slate-950">
                 {loadingMessages ? (
                   <div className="p-8 text-center text-xs text-slate-500">
                     {lang === 'bn' ? 'মেসেজ লোড হচ্ছে...' : 'Loading messages...'}
@@ -947,7 +969,7 @@ export default function AdminSupportChatPage() {
                         className={`flex ${isFromUser ? 'justify-start' : 'justify-end'}`}
                       >
                         <div
-                          className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-xs sm:text-sm shadow-xs ${
+                          className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm shadow-xs ${
                             isFromUser
                               ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700'
                               : 'bg-sky-600 text-white'
@@ -1016,14 +1038,14 @@ export default function AdminSupportChatPage() {
               </div>
 
               {/* Quick Custom Messages Bar */}
-              <div className="px-3 py-2 bg-slate-50 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-800 space-y-1.5">
+              <div className="px-2.5 sm:px-3 py-2 bg-slate-50 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-800 space-y-1.5 shrink-0">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-extrabold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                    <span>
+                  <span className="text-[10px] sm:text-[11px] font-extrabold text-slate-600 dark:text-slate-300 flex items-center gap-1 min-w-0 truncate">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span className="truncate">
                       {lang === 'bn'
-                        ? 'রেডি কাস্টম মেসেজ (ক্লিক করলে বক্সে বসবে, সেন্ড আইকনে ক্লিক করলে সরাসরি যাবে):'
-                        : 'Quick Custom Messages (Click to insert, or click Send icon):'}
+                        ? 'রেডি কাস্টম মেসেজ:'
+                        : 'Quick Custom Messages:'}
                     </span>
                   </span>
                   <button
@@ -1034,24 +1056,24 @@ export default function AdminSupportChatPage() {
                       setCustomReplyText('');
                       setShowQuickRepliesModal(true);
                     }}
-                    className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-[11px] font-extrabold flex items-center gap-1 transition cursor-pointer shrink-0"
+                    className="px-2 sm:px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-300 border border-amber-500/30 text-[10px] sm:text-[11px] font-extrabold flex items-center gap-1 transition cursor-pointer shrink-0"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                     <span>
-                      {lang === 'bn' ? '+ কাস্টম মেসেজ যোগ / এডিট' : '+ Add / Edit Custom'}
+                      {lang === 'bn' ? '+ কাস্টম মেসেজ' : '+ Add Custom'}
                     </span>
                   </button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5 max-h-24 overflow-y-auto custom-scrollbar pr-1">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 custom-scrollbar">
                   {quickReplies.map((item) => (
                     <div
                       key={item.id}
                       onClick={() => handleInsertQuickReply(item)}
                       title={formatReplyForUser(item.text)}
-                      className="group inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-xl bg-white dark:bg-slate-950 hover:bg-sky-500/10 border border-slate-200 dark:border-slate-800 hover:border-sky-500/40 text-xs font-bold text-slate-700 dark:text-slate-200 transition cursor-pointer shadow-2xs"
+                      className="group inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-xl bg-white dark:bg-slate-950 hover:bg-sky-500/10 border border-slate-200 dark:border-slate-800 hover:border-sky-500/40 text-xs font-bold text-slate-700 dark:text-slate-200 transition cursor-pointer shadow-2xs shrink-0"
                     >
-                      <span className="truncate max-w-[190px]">{item.title}</span>
+                      <span className="truncate max-w-[150px] sm:max-w-[190px]">{item.title}</span>
                       <button
                         type="button"
                         onClick={(e) => handleDirectSendQuickReply(item, e)}
@@ -1073,7 +1095,7 @@ export default function AdminSupportChatPage() {
               {/* Message Input Box */}
               <form
                 onSubmit={handleSendMessage}
-                className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-end gap-2"
+                className="p-2 sm:p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-end gap-1.5 sm:gap-2 w-full max-w-full overflow-hidden shrink-0"
               >
                 <textarea
                   rows={2}
@@ -1087,17 +1109,17 @@ export default function AdminSupportChatPage() {
                   }}
                   placeholder={
                     lang === 'bn'
-                      ? 'SafnexBD Admin হিসেবে মেসেজ লিখুন অথবা উপরের কাস্টম মেসেজে ক্লিক করুন...'
-                      : 'Reply as SafnexBD Admin or click a custom message above...'
+                      ? 'SafnexBD Admin হিসেবে মেসেজ লিখুন...'
+                      : 'Reply as SafnexBD Admin...'
                   }
-                  className="flex-1 max-h-36 min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-sky-500 resize-none"
+                  className="flex-1 min-w-0 w-full max-h-32 min-h-[44px] px-3 sm:px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-sky-500 resize-none"
                 />
                 <button
                   type="submit"
                   disabled={sending || !messageInput.trim()}
-                  className="px-5 h-[48px] rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer shrink-0"
+                  className="px-3.5 sm:px-5 h-[44px] rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition cursor-pointer shrink-0"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-4 h-4 shrink-0" />
                   <span>{lang === 'bn' ? 'পাঠান' : 'Send'}</span>
                 </button>
               </form>
