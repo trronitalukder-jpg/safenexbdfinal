@@ -34,7 +34,15 @@ export class ChatController {
   @Roles('SUPER_ADMIN', 'ADMIN', 'SUPPORT_ADMIN', 'EMPLOYEE')
   async getAllConversationsAdmin(
     @CurrentUser() user: any,
-    @Query('filter') filter?: 'ALL' | 'LIVE_CHAT' | 'ADMIN_SUPPORT' | 'ACTIVE_ESCROW' | 'DISPUTED' | 'REQUESTS',
+    @Query('filter')
+    filter?:
+      | 'ALL'
+      | 'LIVE_CHAT'
+      | 'ADMIN_SUPPORT'
+      | 'ADMIN_LIVE_CHAT'
+      | 'ACTIVE_ESCROW'
+      | 'DISPUTED'
+      | 'REQUESTS',
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -183,6 +191,16 @@ export class ChatController {
       isEnabled: updated.isEnabled,
     });
     return updated;
+  }
+
+  /**
+   * Admin & Staff: Search users by ID, Name, Phone, or Email to start an Admin Chat
+   */
+  @Get('admin/search-users')
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'SUPPORT_ADMIN', 'EMPLOYEE')
+  async searchUsersForAdminChat(@Query('q') q?: string) {
+    return this.chatService.searchUsersForAdminChat(q || '');
   }
 
   /**

@@ -628,7 +628,11 @@ export default function AdminLiveChatPage() {
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
                 }`}
               >
-                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    (stats.liveChatCount || 0) > 0 ? 'bg-white animate-ping' : 'bg-slate-400'
+                  }`}
+                />
                 <span>
                   {lang === 'bn'
                     ? `লাইভ চ্যাট: ${stats.liveChatCount || 0} জন`
@@ -638,55 +642,14 @@ export default function AdminLiveChatPage() {
             </h1>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
               {lang === 'bn'
-                ? 'রিয়েল-টাইমে ইউজারদের চ্যাট পর্যবেক্ষণ করুন, SafnexBD Admin নামে চ্যাট করুন এবং প্রশাসনিক নোটিশ দিন।'
-                : 'Supervise live user negotiations in real-time, chat as SafnexBD Admin, and post official notices.'}
+                ? 'রিয়েল-টাইমে ইউজারদের এসক্রো ও ডিল চ্যাট পর্যবেক্ষণ করুন এবং প্রশাসনিক নোটিশ দিন।'
+                : 'Supervise live user-to-user escrow negotiations in real-time and post official notices.'}
             </p>
           </div>
         </div>
 
         {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {/* Admin Chat Master ON/OFF & Welcome Message Settings Button */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-xs">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                adminChatSettings.isEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
-              }`}
-            />
-            <span className="font-bold text-[11px] text-slate-800 dark:text-slate-200">
-              {lang === 'bn' ? 'অ্যাডমিন চ্যাট:' : 'Admin Chat:'}
-            </span>
-            <button
-              type="button"
-              disabled={savingAdminChatSettings}
-              onClick={() =>
-                handleSaveAdminChatSettings({ isEnabled: !adminChatSettings.isEnabled })
-              }
-              className={`px-2 py-0.5 rounded-lg text-[10px] font-black transition flex items-center gap-1 shadow-2xs ${
-                adminChatSettings.isEnabled
-                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                  : 'bg-rose-600 hover:bg-rose-500 text-white'
-              }`}
-              title={
-                adminChatSettings.isEnabled
-                  ? 'অ্যাডমিন চ্যাট চালু আছে (বন্ধ করতে ক্লিক করুন)'
-                  : 'অ্যাডমিন চ্যাট বন্ধ আছে (চালু করতে ক্লিক করুন)'
-              }
-            >
-              <Power className="w-2.5 h-2.5" />
-              <span>{adminChatSettings.isEnabled ? 'ON' : 'OFF'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSettingsModalOpen(true)}
-              className="px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[10px] flex items-center gap-1 transition"
-              title="ওয়েলকাম মেসেজ ও অ্যাডমিন চ্যাট সেটিংস কাস্টমাইজ করুন"
-            >
-              <SlidersHorizontal className="w-2.5 h-2.5" />
-              <span>{lang === 'bn' ? 'ওয়েলকাম মেসেজ' : 'Welcome Msg'}</span>
-            </button>
-          </div>
 
           {/* Super Admin Chat Presence Switch */}
           {currentUser?.roles?.includes('SUPER_ADMIN') && (
@@ -878,7 +841,7 @@ export default function AdminLiveChatPage() {
           className={`${
             isFocusMode
               ? 'hidden'
-              : 'lg:col-span-4 xl:col-span-3 flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs overflow-hidden'
+              : 'lg:col-span-5 xl:col-span-4 flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs overflow-hidden'
           }`}
         >
           {/* Search & Filters */}
@@ -907,23 +870,24 @@ export default function AdminLiveChatPage() {
               )}
             </div>
 
-            {/* Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px]">
+            {/* Filter Pills - Wrapped cleanly so all 5 tabs are always visible on Desktop & Mobile */}
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
               {[
-                { key: 'ALL', labelBn: 'সব', labelEn: 'All' },
+                { key: 'ALL', labelBn: 'সব (All)', labelEn: 'All' },
                 {
                   key: 'LIVE_CHAT',
                   labelBn: `🔴 লাইভ চ্যাট (${stats.liveChatCount || 0})`,
                   labelEn: `🔴 Live Chat (${stats.liveChatCount || 0})`,
                 },
                 { key: 'ACTIVE_ESCROW', labelBn: '🔒 এসক্রো', labelEn: '🔒 Escrow' },
-                { key: 'REQUESTS', labelBn: '💸 রিকোয়েস্ট', labelEn: '💸 Req' },
+                { key: 'REQUESTS', labelBn: '💸 রিকোয়েস্ট', labelEn: '💸 Request' },
                 { key: 'DISPUTED', labelBn: '⚠️ ডিসপ্যুট', labelEn: '⚠️ Dispute' },
               ].map((f) => (
                 <button
                   key={f.key}
+                  type="button"
                   onClick={() => setActiveFilter(f.key as any)}
-                  className={`px-2.5 py-1 rounded-xl font-bold whitespace-nowrap transition text-xs ${
+                  className={`px-2.5 py-1.5 rounded-xl font-bold whitespace-nowrap transition text-[11px] cursor-pointer ${
                     activeFilter === f.key
                       ? f.key === 'LIVE_CHAT'
                         ? 'bg-rose-600 text-white shadow-xs'
@@ -1114,7 +1078,7 @@ export default function AdminLiveChatPage() {
           className={`${
             isFocusMode
               ? 'col-span-12'
-              : 'lg:col-span-8 xl:col-span-9'
+              : 'lg:col-span-7 xl:col-span-8'
           } bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm flex flex-col overflow-hidden`}
         >
           {!selectedConv ? (

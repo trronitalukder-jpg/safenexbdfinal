@@ -1273,11 +1273,60 @@ export class AdminService {
           typeof liveSessionsSetting.value === 'string'
             ? JSON.parse(liveSessionsSetting.value)
             : (liveSessionsSetting.value as Record<string, any>);
-        activeLiveChatIds = Object.keys(map || {}).filter((cid) => map[cid]?.isLive === true);
+        const nowMs = Date.now();
+        const maxAgeMs = 10 * 60 * 1000; // 10 minutes
+        activeLiveChatIds = Object.keys(map || {}).filter((cid) => {
+          const entry = map[cid];
+          if (!entry || !entry.isLive) return false;
+          const ts = entry.updatedAt || entry.startedAt;
+          const ageMs = ts ? nowMs - new Date(ts).getTime() : maxAgeMs + 1;
+          return ageMs <= maxAgeMs;
+        });
       }
     } catch {
       activeLiveChatIds = [];
     }
+
+    const adminSupportParticipantFilter = {
+      participants: {
+        some: {
+          user: {
+            userRoles: {
+              some: {
+                role: {
+                  name: { in: ['SUPER_ADMIN', 'ADMIN'] },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const userToUserFilter = {
+      OR: [
+        {
+          participants: {
+            none: {
+              user: {
+                userRoles: {
+                  some: {
+                    role: {
+                      name: { in: ['SUPER_ADMIN', 'ADMIN'] },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          transactions: {
+            some: {},
+          },
+        },
+      ],
+    };
 
     const [
       newUsersCount,
@@ -1285,7 +1334,8 @@ export class AdminService {
       pendingWithdrawalsCount,
       pendingMicroJobsCount,
       pendingMicroJobSubmissionsCount,
-      liveChatCount,
+      userLiveChatCount,
+      adminLiveChatCount,
       pendingDisputesCount,
       pendingComplaintsCount,
       pendingScammersCount,
@@ -1312,7 +1362,16 @@ export class AdminService {
       }),
       activeLiveChatIds.length > 0
         ? this.prisma.conversation.count({
-            where: { id: { in: activeLiveChatIds } },
+            where: {
+              AND: [{ id: { in: activeLiveChatIds } }, userToUserFilter],
+            },
+          })
+        : Promise.resolve(0),
+      activeLiveChatIds.length > 0
+        ? this.prisma.conversation.count({
+            where: {
+              AND: [{ id: { in: activeLiveChatIds } }, adminSupportParticipantFilter],
+            },
           })
         : Promise.resolve(0),
       this.prisma.dispute.count({
@@ -1340,8 +1399,8 @@ export class AdminService {
         recharges: pendingRechargesCount,
         withdrawals: pendingWithdrawalsCount,
         micro_jobs: microJobsTotal,
-        cms: liveChatCount,
-        admin_chat: liveChatCount,
+        cms: userLiveChatCount,
+        admin_chat: adminLiveChatCount,
         disputes: pendingDisputesCount,
         complaints: pendingComplaintsCount,
         scammers: pendingScammersCount,
@@ -1355,7 +1414,8 @@ export class AdminService {
           pendingSubmissions: pendingMicroJobSubmissionsCount,
           total: microJobsTotal,
         },
-        liveChatCount,
+        liveChatCount: userLiveChatCount,
+        adminLiveChatCount,
       },
     };
   }

@@ -728,7 +728,14 @@ export class ChatService {
    * Super Admin & Staff: Fetch all platform conversations with live deal and escrow telemetry
    */
   async getAllConversationsAdmin(query: {
-    filter?: 'ALL' | 'LIVE_CHAT' | 'ADMIN_SUPPORT' | 'ACTIVE_ESCROW' | 'DISPUTED' | 'REQUESTS';
+    filter?:
+      | 'ALL'
+      | 'LIVE_CHAT'
+      | 'ADMIN_SUPPORT'
+      | 'ADMIN_LIVE_CHAT'
+      | 'ACTIVE_ESCROW'
+      | 'DISPUTED'
+      | 'REQUESTS';
     search?: string;
     page?: number;
     limit?: number;
@@ -744,16 +751,58 @@ export class ChatService {
       (cid) => liveSessionsMap[cid]?.isLive === true,
     );
 
-    // 1. Calculate platform-wide live telemetry stats
+    const adminSupportParticipantFilter: Prisma.ConversationWhereInput = {
+      participants: {
+        some: {
+          user: {
+            userRoles: {
+              some: {
+                role: {
+                  name: { in: ['SUPER_ADMIN', 'ADMIN'] },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const userToUserFilter: Prisma.ConversationWhereInput = {
+      OR: [
+        {
+          participants: {
+            none: {
+              user: {
+                userRoles: {
+                  some: {
+                    role: {
+                      name: { in: ['SUPER_ADMIN', 'ADMIN'] },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          transactions: {
+            some: {},
+          },
+        },
+      ],
+    };
+
+    // 1. Calculate platform-wide live telemetry stats (separated for User-to-User vs Admin Support)
     const [
       totalConversations,
       activeEscrowDealsCount,
       heldTransactions,
       activeDisputesCount,
       pendingRequestsCount,
-      liveChatCount,
+      userLiveChatCount,
+      adminLiveChatCount,
     ] = await Promise.all([
-      this.prisma.conversation.count(),
+      this.prisma.conversation.count({ where: userToUserFilter }),
       this.prisma.transaction.count({
         where: {
           status: { in: ['HOLD', 'WORKING'] },
@@ -773,7 +822,16 @@ export class ChatService {
       }),
       activeLiveIds.length > 0
         ? this.prisma.conversation.count({
-            where: { id: { in: activeLiveIds } },
+            where: {
+              AND: [{ id: { in: activeLiveIds } }, userToUserFilter],
+            },
+          })
+        : Promise.resolve(0),
+      activeLiveIds.length > 0
+        ? this.prisma.conversation.count({
+            where: {
+              AND: [{ id: { in: activeLiveIds } }, adminSupportParticipantFilter],
+            },
           })
         : Promise.resolve(0),
     ]);
@@ -784,97 +842,99 @@ export class ChatService {
     );
 
     // 2. Build where filter for conversations
-    const where: Prisma.ConversationWhereInput = {};
+    const andConditions: Prisma.ConversationWhereInput[] = [];
 
     if (search) {
-      where.OR = [
-        {
-          participants: {
-            some: {
-              user: {
-                OR: [
-                  { uniqueUserId: { contains: search } },
-                  { firstName: { contains: search } },
-                  { lastName: { contains: search } },
-                  { phone: { contains: search } },
-                  { email: { contains: search } },
-                ],
-              },
-            },
-          },
-        },
-        {
-          transactions: {
-            some: {
-              trackingNumber: { contains: search },
-            },
-          },
-        },
-        {
-          messages: {
-            some: {
-              content: { contains: search },
-            },
-          },
-        },
-      ];
-    }
-
-    if (filter === 'LIVE_CHAT') {
-      where.id = { in: activeLiveIds.length > 0 ? activeLiveIds : ['__no_live_chat__'] };
-    } else if (filter === 'ADMIN_SUPPORT') {
-      where.participants = {
-        some: {
-          user: {
-            userRoles: {
+      andConditions.push({
+        OR: [
+          {
+            participants: {
               some: {
-                role: {
-                  name: { in: ['SUPER_ADMIN', 'ADMIN'] },
+                user: {
+                  OR: [
+                    { uniqueUserId: { contains: search } },
+                    { firstName: { contains: search } },
+                    { lastName: { contains: search } },
+                    { phone: { contains: search } },
+                    { email: { contains: search } },
+                  ],
                 },
               },
             },
           },
-        },
-      };
-    } else if (filter === 'ACTIVE_ESCROW') {
-      where.transactions = {
-        some: {
-          status: { in: ['HOLD', 'WORKING'] },
-        },
-      };
-    } else if (filter === 'DISPUTED') {
-      where.transactions = {
-        some: {
-          OR: [
-            { status: 'DISPUTED' },
-            { dispute: { isNot: null } },
-          ],
-        },
-      };
-    } else if (filter === 'REQUESTS') {
-      const reqFilter: Prisma.ConversationWhereInput[] = [
-        {
+          {
+            transactions: {
+              some: {
+                trackingNumber: { contains: search },
+              },
+            },
+          },
+          {
+            messages: {
+              some: {
+                content: { contains: search },
+              },
+            },
+          },
+        ],
+      });
+    }
+
+    if (filter === 'ADMIN_SUPPORT') {
+      andConditions.push(adminSupportParticipantFilter);
+    } else if (filter === 'ADMIN_LIVE_CHAT') {
+      andConditions.push(adminSupportParticipantFilter);
+      andConditions.push({
+        id: { in: activeLiveIds.length > 0 ? activeLiveIds : ['__no_live_chat__'] },
+      });
+    } else {
+      // For /admin/cms (ALL, LIVE_CHAT, ACTIVE_ESCROW, DISPUTED, REQUESTS), show User-to-User conversations only
+      andConditions.push(userToUserFilter);
+
+      if (filter === 'LIVE_CHAT') {
+        andConditions.push({
+          id: { in: activeLiveIds.length > 0 ? activeLiveIds : ['__no_live_chat__'] },
+        });
+      } else if (filter === 'ACTIVE_ESCROW') {
+        andConditions.push({
           transactions: {
             some: {
-              status: 'REQUESTED',
+              status: { in: ['HOLD', 'WORKING'] },
             },
           },
-        },
-        {
-          messages: {
+        });
+      } else if (filter === 'DISPUTED') {
+        andConditions.push({
+          transactions: {
             some: {
-              messageType: { in: ['PAY_REQUEST', 'RECEIVE_REQUEST'] },
+              OR: [{ status: 'DISPUTED' }, { dispute: { isNot: null } }],
             },
           },
-        },
-      ];
-      if (where.OR) {
-        where.AND = [{ OR: where.OR }, { OR: reqFilter }];
-        delete where.OR;
-      } else {
-        where.OR = reqFilter;
+        });
+      } else if (filter === 'REQUESTS') {
+        andConditions.push({
+          OR: [
+            {
+              transactions: {
+                some: {
+                  status: 'REQUESTED',
+                },
+              },
+            },
+            {
+              messages: {
+                some: {
+                  messageType: { in: ['PAY_REQUEST', 'RECEIVE_REQUEST'] },
+                },
+              },
+            },
+          ],
+        });
       }
     }
+
+    const where: Prisma.ConversationWhereInput =
+      andConditions.length > 0 ? { AND: andConditions } : {};
 
     // 3. Query matching conversations
     const [conversations, total] = await Promise.all([
@@ -965,8 +1025,28 @@ export class ChatService {
 
     // Format & enrich conversations
     const items = conversations.map((conv) => {
-      const p1 = conv.participants[0]?.user || null;
-      const p2 = conv.participants[1]?.user || null;
+      const formatParticipant = (u: any) => {
+        if (!u) return null;
+        const roles = Array.isArray(u.userRoles)
+          ? u.userRoles.map((ur: any) => ur?.role?.name).filter(Boolean)
+          : [];
+        return {
+          ...u,
+          roles,
+        };
+      };
+
+      const p1 = formatParticipant(conv.participants[0]?.user);
+      const p2 = formatParticipant(conv.participants[1]?.user);
+      const participantsList = [p1, p2].filter(Boolean);
+      const targetUser =
+        participantsList.find(
+          (u: any) => !u.roles?.includes('SUPER_ADMIN') && !u.roles?.includes('ADMIN'),
+        ) ||
+        p1 ||
+        p2 ||
+        null;
+
       const lastMessage = conv.messages[0] || null;
 
       // Prioritize active escrow deals: HOLD, WORKING, DISPUTED, REQUESTED
@@ -995,6 +1075,8 @@ export class ChatService {
         participantCount: conv.participants.length,
         user1: p1,
         user2: p2,
+        participants: participantsList,
+        targetUser,
         isLiveChat,
         liveStartedAt: liveItem?.startedAt || null,
         liveUpdatedAt: liveItem?.updatedAt || null,
@@ -1042,10 +1124,14 @@ export class ChatService {
       };
     });
 
+    const isAdminSupportMode = filter === 'ADMIN_SUPPORT' || filter === 'ADMIN_LIVE_CHAT';
+
     return {
       stats: {
         totalConversations,
-        liveChatCount,
+        liveChatCount: isAdminSupportMode ? adminLiveChatCount : userLiveChatCount,
+        userLiveChatCount,
+        adminLiveChatCount,
         activeEscrowDeals: activeEscrowDealsCount,
         totalEscrowHeld,
         activeDisputes: activeDisputesCount,
@@ -1102,6 +1188,9 @@ export class ChatService {
         sentAt: new Date().toISOString(),
       },
     });
+
+    // When Admin/Staff replies, clear the active Live Chat blink for this conversation until the user messages again
+    await this.setConversationLiveStatus(conversationId, false).catch(() => null);
 
     return saved;
   }
@@ -1334,7 +1423,7 @@ export class ChatService {
   }
 
   /**
-   * Fetch all active live chat sessions dictionary
+   * Fetch all active live chat sessions dictionary (auto-expires after 10 minutes of inactivity)
    */
   async getLiveChatSessions(): Promise<
     Record<string, { isLive: boolean; startedAt?: string; updatedAt?: string; userId?: string }>
@@ -1344,11 +1433,90 @@ export class ChatService {
         where: { key: 'chat_live_sessions' },
       });
       if (!setting || !setting.value) return {};
-      const val = typeof setting.value === 'string' ? JSON.parse(setting.value) : setting.value;
-      return val || {};
+      const val =
+        (typeof setting.value === 'string' ? JSON.parse(setting.value) : setting.value) || {};
+      const nowMs = Date.now();
+      const maxAgeMs = 10 * 60 * 1000; // 10 minutes
+      const cleaned: Record<
+        string,
+        { isLive: boolean; startedAt?: string; updatedAt?: string; userId?: string }
+      > = {};
+      let pruned = false;
+
+      for (const [cid, entry] of Object.entries<any>(val)) {
+        if (!entry || !entry.isLive) {
+          pruned = true;
+          continue;
+        }
+        const ts = entry.updatedAt || entry.startedAt;
+        const ageMs = ts ? nowMs - new Date(ts).getTime() : maxAgeMs + 1;
+        if (ageMs <= maxAgeMs) {
+          cleaned[cid] = entry;
+        } else {
+          pruned = true;
+        }
+      }
+
+      if (pruned) {
+        await this.prisma.systemSetting
+          .update({
+            where: { key: 'chat_live_sessions' },
+            data: { value: cleaned },
+          })
+          .catch(() => null);
+      }
+
+      return cleaned;
     } catch {
       return {};
     }
+  }
+
+  /**
+   * Search users by ID, Name, Phone, or Email for Admin/Staff Support Chat
+   */
+  async searchUsersForAdminChat(rawQuery: string) {
+    const q = (rawQuery || '').trim();
+    const where: Prisma.UserWhereInput = {
+      deletedAt: null,
+      isActive: true,
+      userRoles: {
+        none: {
+          role: {
+            name: { in: ['SUPER_ADMIN', 'ADMIN'] },
+          },
+        },
+      },
+    };
+
+    if (q) {
+      where.OR = [
+        { uniqueUserId: { contains: q } },
+        { firstName: { contains: q } },
+        { lastName: { contains: q } },
+        { phone: { contains: q } },
+        { email: { contains: q } },
+      ];
+    }
+
+    const users = await this.prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        uniqueUserId: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        email: true,
+        avatarUrl: true,
+        isVerified: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 25,
+    });
+
+    return users;
   }
 
   /**
