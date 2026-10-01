@@ -23,6 +23,7 @@ import {
   Briefcase,
   Sparkles,
   Megaphone,
+  Headset,
   LucideIcon,
 } from 'lucide-react';
 
@@ -58,9 +59,9 @@ export const EMPLOYEE_ROLE_PRESETS: RolePreset[] = [
     nameEn: 'Customer Support Specialist',
     nameBn: 'কাস্টমার সাপোর্ট স্পেশালিস্ট',
     badgeColor: 'sky',
-    descriptionEn: 'Live chat monitoring, keyword search, dispute queue & user help guides',
-    descriptionBn: 'লাইভ চ্যাট সহায়তা, চ্যাট সার্চ, কল অ্যাডমিন কিউ ও হেল্প গাইড',
-    permissions: ['cms', 'chat_monitor', 'disputes', 'complaints', 'guides'],
+    descriptionEn: 'Live chat monitoring, Admin Chat, keyword search, dispute queue & user help guides',
+    descriptionBn: 'লাইভ চ্যাট সহায়তা, অ্যাডমিন চ্যাট, চ্যাট সার্চ, কল অ্যাডমিন কিউ ও হেল্প গাইড',
+    permissions: ['cms', 'admin_chat', 'chat_monitor', 'disputes', 'complaints', 'guides'],
   },
   {
     id: 'finance_officer',
@@ -78,7 +79,7 @@ export const EMPLOYEE_ROLE_PRESETS: RolePreset[] = [
     badgeColor: 'amber',
     descriptionEn: 'Resolve calling disputes, chat lock control, and mediate escrow deals',
     descriptionBn: 'এসক্রো ডিসপ্যুট নিষ্পত্তি, চ্যাট অন/অফ ও লক কন্ট্রোল এবং ইউজার অডিট',
-    permissions: ['disputes', 'complaints', 'cms', 'chat_monitor', 'chat_manage', 'transactions', 'users'],
+    permissions: ['disputes', 'complaints', 'cms', 'admin_chat', 'chat_monitor', 'chat_manage', 'transactions', 'users'],
   },
   {
     id: 'content_moderator',
@@ -270,6 +271,16 @@ export const adminMenuRegistry: AdminMenuItem[] = [
     icon: MessageSquare,
     descriptionEn: 'Real-time user conversation monitoring, chat intervention, and deal supervision',
     descriptionBn: 'লাইভ ইউজার চ্যাট মনিটরিং, চ্যাটে অংশগ্রহণ এবং লেনদেন ও রিকোয়েস্ট পর্যবেক্ষণ',
+    category: 'chat',
+  },
+  {
+    key: 'admin_chat',
+    labelEn: 'Admin Chat',
+    labelBn: 'অ্যাডমিন চ্যাট (Admin Chat)',
+    href: '/admin/admin-chat',
+    icon: Headset,
+    descriptionEn: 'Chat directly with users as SafnexBD Admin, toggle Admin Chat ON/OFF & edit welcome message',
+    descriptionBn: 'SafnexBD Admin নামে ইউজারদের সাথে চ্যাট, অন/অফ কন্ট্রোল ও স্বাগতম মেসেজ সেটিংস',
     category: 'chat',
   },
   {

@@ -1341,6 +1341,7 @@ export class AdminService {
         withdrawals: pendingWithdrawalsCount,
         micro_jobs: microJobsTotal,
         cms: liveChatCount,
+        admin_chat: liveChatCount,
         disputes: pendingDisputesCount,
         complaints: pendingComplaintsCount,
         scammers: pendingScammersCount,

@@ -822,6 +822,20 @@ export class ChatService {
 
     if (filter === 'LIVE_CHAT') {
       where.id = { in: activeLiveIds.length > 0 ? activeLiveIds : ['__no_live_chat__'] };
+    } else if (filter === 'ADMIN_SUPPORT') {
+      where.participants = {
+        some: {
+          user: {
+            userRoles: {
+              some: {
+                role: {
+                  name: { in: ['SUPER_ADMIN', 'ADMIN'] },
+                },
+              },
+            },
+          },
+        },
+      };
     } else if (filter === 'ACTIVE_ESCROW') {
       where.transactions = {
         some: {

@@ -34,7 +34,7 @@ export class ChatController {
   @Roles('SUPER_ADMIN', 'ADMIN', 'SUPPORT_ADMIN', 'EMPLOYEE')
   async getAllConversationsAdmin(
     @CurrentUser() user: any,
-    @Query('filter') filter?: 'ALL' | 'LIVE_CHAT' | 'ACTIVE_ESCROW' | 'DISPUTED' | 'REQUESTS',
+    @Query('filter') filter?: 'ALL' | 'LIVE_CHAT' | 'ADMIN_SUPPORT' | 'ACTIVE_ESCROW' | 'DISPUTED' | 'REQUESTS',
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -45,8 +45,8 @@ export class ChatController {
       !user.roles?.includes('ADMIN')
     ) {
       const perms: string[] = user.adminPermissions || [];
-      if (!perms.includes('*') && !perms.includes('cms')) {
-        throw new ForbiddenException('Access denied: missing Live Chat permission');
+      if (!perms.includes('*') && !perms.includes('cms') && !perms.includes('admin_chat')) {
+        throw new ForbiddenException('Access denied: missing Live Chat / Admin Chat permission');
       }
     }
 
@@ -87,8 +87,8 @@ export class ChatController {
       !user.roles?.includes('ADMIN')
     ) {
       const perms: string[] = user.adminPermissions || [];
-      if (!perms.includes('*') && !perms.includes('cms')) {
-        throw new ForbiddenException('Access denied: missing Live Chat permission');
+      if (!perms.includes('*') && !perms.includes('cms') && !perms.includes('admin_chat')) {
+        throw new ForbiddenException('Access denied: missing Live Chat / Admin Chat permission');
       }
     }
 
@@ -139,8 +139,8 @@ export class ChatController {
       !user.roles?.includes('ADMIN')
     ) {
       const perms: string[] = user.adminPermissions || [];
-      if (!perms.includes('*') && !perms.includes('cms')) {
-        throw new ForbiddenException('Access denied: missing Live Chat permission');
+      if (!perms.includes('*') && !perms.includes('cms') && !perms.includes('admin_chat')) {
+        throw new ForbiddenException('Access denied: missing Live Chat / Admin Chat permission');
       }
     }
 
@@ -183,6 +183,21 @@ export class ChatController {
       isEnabled: updated.isEnabled,
     });
     return updated;
+  }
+
+  /**
+   * Admin & Staff: Open or create official "SafnexBD Admin" support conversation with a specific user
+   */
+  @Post('admin/support-conversation')
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'SUPPORT_ADMIN', 'EMPLOYEE')
+  async getOrCreateAdminSupportConversationForUser(
+    @Body() body: { targetUserId: string },
+  ) {
+    if (!body?.targetUserId) {
+      throw new BadRequestException('targetUserId is required');
+    }
+    return this.chatService.getOrCreateAdminSupportConversation(body.targetUserId);
   }
 
   /**
