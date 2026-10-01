@@ -270,7 +270,7 @@ function MessengerChatContent() {
   });
   const [isRulesExpanded, setIsRulesExpanded] = useState(false);
   const [templateAudienceFilter, setTemplateAudienceFilter] = useState<'ALL' | 'BUYER' | 'SELLER'>('ALL');
-  const [showTemplatesBar, setShowTemplatesBar] = useState(true);
+  const [showTemplatesBar, setShowTemplatesBar] = useState(false);
   const textInputRef = useRef<HTMLInputElement>(null);
 
   // Wallet
@@ -337,6 +337,7 @@ function MessengerChatContent() {
       topRatedMinDeals: 50,
     },
   });
+  const [isDeliveryTimerEnabled, setIsDeliveryTimerEnabled] = useState<boolean>(false);
   const [selectedDeliveryHours, setSelectedDeliveryHours] = useState<number>(24);
   const [deliveryTimeValue, setDeliveryTimeValue] = useState<string>('24');
   const [deliveryTimeUnit, setDeliveryTimeUnit] = useState<'m' | 'h' | 'd'>('h');
@@ -352,27 +353,39 @@ function MessengerChatContent() {
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatFeedRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Clean display note helper (removes raw [⏱️ Delivery: ...] tag from UI text)
+  const cleanDealNote = (str?: string) => {
+    if (!str) return '';
+    return String(str).replace(/\s*\[⏱️\s*Delivery:\s*\d+(?:\.\d+)?\s*[mhd]\]/gi, '').trim();
+  };
 
   // Delivery duration helpers (Minute / Hour / Day)
   const updateDeliveryDuration = (val: string | number, unit: 'm' | 'h' | 'd') => {
     const cleanStr = String(val).replace(/[^0-9]/g, '');
     setDeliveryTimeValue(cleanStr);
     setDeliveryTimeUnit(unit);
+    setIsDeliveryTimerEnabled(true);
     const num = Math.max(1, Number(cleanStr) || 1);
     const eqHours = unit === 'm' ? Math.max(1, Math.round(num / 60)) : unit === 'd' ? num * 24 : num;
     setSelectedDeliveryHours(eqHours);
   };
 
   const getSelectedDeliveryTag = () => {
+    if (!isDeliveryTimerEnabled) return '';
     const num = Math.max(1, Number(deliveryTimeValue) || 1);
     return `[⏱️ Delivery: ${num}${deliveryTimeUnit}]`;
   };
 
   const getSelectedDeliveryLabel = (short = false) => {
+    if (!isDeliveryTimerEnabled) {
+      return short ? (lang === 'bn' ? 'ঐচ্ছিক' : 'Optional') : (lang === 'bn' ? 'টাইমার ছাড়া' : 'No Timer');
+    }
     const num = Math.max(1, Number(deliveryTimeValue) || 1);
     if (short) return `${num}${deliveryTimeUnit}`;
     if (deliveryTimeUnit === 'm') {
@@ -418,9 +431,6 @@ function MessengerChatContent() {
   useEffect(() => {
     fetchWallet();
     fetchCommissionSettings();
-    if (typeof window !== 'undefined' && window.innerWidth < 640) {
-      setShowTemplatesBar(false);
-    }
     api
       .get('/settings/public')
       .then((res: any) => {
@@ -447,27 +457,18 @@ function MessengerChatContent() {
     return () => clearInterval(interval);
   }, [publicAdvancedFeatures?.escrowCountdownTimer?.enabled]);
 
-  // Helper to compute live countdown timer for any deal/transaction (supports m = minutes, h = hours, d = days)
+  // Helper to compute live countdown timer ONLY when a deal explicitly has a delivery timer tag
   const getDealTimerInfo = (txnOrMeta: any) => {
     if (publicAdvancedFeatures?.escrowCountdownTimer?.enabled === false) return null;
-    const defaultHrs = Number(
-      publicAdvancedFeatures?.escrowCountdownTimer?.defaultDeliveryHours || 24,
-    );
     const noteStr = String(txnOrMeta?.notes || txnOrMeta?.reason || '');
-    const matchTag =
-      noteStr.match(/\[⏱️\s*Delivery:\s*(\d+(?:\.\d+)?)\s*([mhd])\]/i) ||
-      noteStr.match(/(\d+(?:\.\d+)?)\s*(minutes?|mins?|hours?|hrs?|days?)/i);
+    const matchTag = noteStr.match(/\[⏱️\s*Delivery:\s*(\d+(?:\.\d+)?)\s*([mhd])\]/i);
 
-    let durationVal = defaultHrs;
-    let durationUnit: 'm' | 'h' | 'd' = 'h';
+    // Delivery time is optional: if no timer tag was set on this deal, return null
+    if (!matchTag) return null;
 
-    if (matchTag) {
-      durationVal = Math.max(1, Number(matchTag[1]) || 1);
-      const u = String(matchTag[2] || 'h').toLowerCase().charAt(0);
-      if (u === 'm' || u === 'd' || u === 'h') {
-        durationUnit = u;
-      }
-    }
+    const durationVal = Math.max(1, Number(matchTag[1]) || 1);
+    const u = String(matchTag[2] || 'h').toLowerCase().charAt(0);
+    const durationUnit: 'm' | 'h' | 'd' = u === 'm' || u === 'd' ? u : 'h';
 
     const durationMs =
       durationUnit === 'm'
@@ -529,7 +530,7 @@ function MessengerChatContent() {
     };
   };
 
-  // Reusable Delivery Time Selector (Minutes, Hours, Days + Quick Presets)
+  // Reusable Optional Delivery Time Selector (Minutes, Hours, Days + Quick Presets)
   const renderDeliveryTimeSelector = () => {
     const presets: Array<{ val: number; unit: 'm' | 'h' | 'd'; labelBn: string; labelEn: string }> = [
       { val: 15, unit: 'm', labelBn: '১৫ মি.', labelEn: '15m' },
@@ -545,73 +546,113 @@ function MessengerChatContent() {
     const currentNum = Math.max(1, Number(deliveryTimeValue) || 1);
 
     return (
-      <div className="p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/70 dark:border-indigo-800/60 space-y-2.5">
+      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/70 space-y-2.5 transition-all">
+        {/* Optional Toggle Header */}
         <div className="flex items-center justify-between gap-2">
-          <label className="text-xs font-extrabold text-indigo-800 dark:text-indigo-300 flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-            <span>{lang === 'bn' ? '⏱️ ডেলিভারি সময়সীমা:' : '⏱️ Delivery Time:'}</span>
-          </label>
-          <span className="text-[11px] font-mono font-extrabold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-800 px-2.5 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800 shadow-2xs">
-            {getSelectedDeliveryLabel(false)}
-          </span>
+          <button
+            type="button"
+            onClick={() => setIsDeliveryTimerEnabled(!isDeliveryTimerEnabled)}
+            className="flex items-center gap-2 text-left cursor-pointer group"
+          >
+            <div
+              className={`w-4 h-4 rounded-md flex items-center justify-center border transition-colors ${
+                isDeliveryTimerEnabled
+                  ? 'bg-emerald-600 border-emerald-600 text-white'
+                  : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600'
+              }`}
+            >
+              {isDeliveryTimerEnabled && <Check className="w-3 h-3 stroke-[3]" />}
+            </div>
+            <div>
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span>
+                  {lang === 'bn'
+                    ? 'ডেলিভারি টাইমার সেট করুন (ঐচ্ছিক)'
+                    : 'Set Delivery Time (Optional)'}
+                </span>
+              </span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsDeliveryTimerEnabled(!isDeliveryTimerEnabled)}
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition cursor-pointer ${
+              isDeliveryTimerEnabled
+                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                : 'bg-slate-200/70 dark:bg-slate-700/70 text-slate-500 dark:text-slate-400'
+            }`}
+          >
+            {isDeliveryTimerEnabled
+              ? `⏱️ ${getSelectedDeliveryLabel(false)}`
+              : lang === 'bn'
+              ? 'টাইমার ছাড়া'
+              : 'No Timer'}
+          </button>
         </div>
 
-        {/* Custom Number Input + Unit Selector (Minute / Hour / Day) */}
-        <div className="flex items-center gap-1.5">
-          <div className="relative w-24 sm:w-28 shrink-0">
-            <input
-              type="number"
-              min={1}
-              max={999}
-              value={deliveryTimeValue}
-              onChange={(e) => updateDeliveryDuration(e.target.value, deliveryTimeUnit)}
-              placeholder="24"
-              className="w-full px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-700/80 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-black text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 text-center"
-            />
+        {/* Expanded Selector only when user enables optional delivery timer */}
+        {isDeliveryTimerEnabled && (
+          <div className="pt-2 border-t border-slate-200/70 dark:border-slate-700/60 space-y-2 animate-in fade-in duration-150">
+            {/* Custom Number Input + Unit Selector (Minute / Hour / Day) */}
+            <div className="flex items-center gap-1.5">
+              <div className="relative w-24 sm:w-28 shrink-0">
+                <input
+                  type="number"
+                  min={1}
+                  max={999}
+                  value={deliveryTimeValue}
+                  onChange={(e) => updateDeliveryDuration(e.target.value, deliveryTimeUnit)}
+                  placeholder="24"
+                  className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-mono font-black text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 text-center"
+                />
+              </div>
+
+              <div className="flex-1 grid grid-cols-3 gap-1 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
+                {[
+                  { u: 'm' as const, bn: 'মিনিট', en: 'Min' },
+                  { u: 'h' as const, bn: 'ঘণ্টা', en: 'Hour' },
+                  { u: 'd' as const, bn: 'দিন', en: 'Day' },
+                ].map((item) => (
+                  <button
+                    key={item.u}
+                    type="button"
+                    onClick={() => updateDeliveryDuration(deliveryTimeValue || '1', item.u)}
+                    className={`py-1 px-1.5 rounded-lg text-[11px] font-extrabold transition cursor-pointer ${
+                      deliveryTimeUnit === item.u
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {lang === 'bn' ? item.bn : item.en}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Preset Chips */}
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-1">
+              {presets.map((p) => {
+                const isActive = currentNum === p.val && deliveryTimeUnit === p.unit;
+                return (
+                  <button
+                    key={`${p.val}${p.unit}`}
+                    type="button"
+                    onClick={() => updateDeliveryDuration(p.val, p.unit)}
+                    className={`py-1.5 px-1 rounded-lg text-[10px] sm:text-[11px] font-extrabold transition cursor-pointer ${
+                      isActive
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                    }`}
+                  >
+                    {lang === 'bn' ? p.labelBn : p.labelEn}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-
-          <div className="flex-1 grid grid-cols-3 gap-1 bg-white/80 dark:bg-slate-900/80 p-1 rounded-xl border border-indigo-200/60 dark:border-indigo-800/60">
-            {[
-              { u: 'm' as const, bn: 'মিনিট', en: 'Min' },
-              { u: 'h' as const, bn: 'ঘণ্টা', en: 'Hour' },
-              { u: 'd' as const, bn: 'দিন', en: 'Day' },
-            ].map((item) => (
-              <button
-                key={item.u}
-                type="button"
-                onClick={() => updateDeliveryDuration(deliveryTimeValue || '1', item.u)}
-                className={`py-1 px-1.5 rounded-lg text-[11px] font-extrabold transition cursor-pointer ${
-                  deliveryTimeUnit === item.u
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-slate-800'
-                }`}
-              >
-                {lang === 'bn' ? item.bn : item.en}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Preset Chips */}
-        <div className="grid grid-cols-4 sm:grid-cols-8 gap-1">
-          {presets.map((p) => {
-            const isActive = currentNum === p.val && deliveryTimeUnit === p.unit;
-            return (
-              <button
-                key={`${p.val}${p.unit}`}
-                type="button"
-                onClick={() => updateDeliveryDuration(p.val, p.unit)}
-                className={`py-1.5 px-1 rounded-lg text-[10px] sm:text-[11px] font-extrabold transition cursor-pointer ${
-                  isActive
-                    ? 'bg-indigo-600 text-white shadow-xs ring-1 ring-indigo-400'
-                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-400'
-                }`}
-              >
-                {lang === 'bn' ? p.labelBn : p.labelEn}
-              </button>
-            );
-          })}
-        </div>
+        )}
       </div>
     );
   };
@@ -1166,9 +1207,14 @@ function MessengerChatContent() {
     };
   }, [socket, activeConversation, user?.id, user?.firstName]);
 
-  // Auto scroll to bottom
+  // Auto scroll only inside the chat feed container (never scroll the outer document/window)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatFeedRef.current) {
+      chatFeedRef.current.scrollTo({
+        top: chatFeedRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
   }, [messages, otherUserTyping]);
 
   // ---------------------------------------------------------------------------
@@ -1572,10 +1618,13 @@ function MessengerChatContent() {
     setActionLoading(true);
     try {
       const basePayNote = payReason.trim() || 'Service Payment';
+      const deliveryTag = getSelectedDeliveryTag();
       const finalPayNote =
         publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false &&
+        isDeliveryTimerEnabled &&
+        deliveryTag &&
         !/\[⏱️\s*Delivery:/i.test(basePayNote)
-          ? `${basePayNote} ${getSelectedDeliveryTag()}`
+          ? `${basePayNote} ${deliveryTag}`
           : basePayNote;
 
       const res: any = await api.post('/transactions/pay-request', {
@@ -1589,6 +1638,7 @@ function MessengerChatContent() {
       setShowPayModal(false);
       setPayAmount('');
       setPayReason('Service Payment');
+      setIsDeliveryTimerEnabled(false);
 
       // Track Meta Pixel & Analytics InitiateCheckout Event
       trackEvent('InitiateCheckout', {
@@ -1648,10 +1698,13 @@ function MessengerChatContent() {
     setActionLoading(true);
     try {
       const baseReqNote = requestReason.trim() || 'Service Payment';
+      const deliveryTag = getSelectedDeliveryTag();
       const finalReqNote =
         publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false &&
+        isDeliveryTimerEnabled &&
+        deliveryTag &&
         !/\[⏱️\s*Delivery:/i.test(baseReqNote)
-          ? `${baseReqNote} ${getSelectedDeliveryTag()}`
+          ? `${baseReqNote} ${deliveryTag}`
           : baseReqNote;
 
       const res: any = await api.post('/transactions/request-money', {
@@ -1665,6 +1718,7 @@ function MessengerChatContent() {
       setShowRequestModal(false);
       setRequestAmount('');
       setRequestReason('Service Payment');
+      setIsDeliveryTimerEnabled(false);
 
       // 1. Immediately append message to chat stream & update conversation list
       if (data?.message) {
@@ -2089,7 +2143,7 @@ function MessengerChatContent() {
           LEFT PANE: Messages & People Discovery (Messenger Style)
       ========================================================================= */}
       <div
-        className={`flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 w-full md:w-[280px] lg:w-[320px] xl:w-[360px] shrink-0 transition-all duration-200 ${
+        className={`flex flex-col h-full min-h-0 overflow-hidden border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 w-full md:w-[280px] lg:w-[320px] xl:w-[360px] shrink-0 transition-all duration-200 ${
           isUserListCollapsed ? 'hidden' : (mobileView === 'chat' ? 'hidden md:flex' : 'flex')
         }`}
       >
@@ -2151,7 +2205,7 @@ function MessengerChatContent() {
         </div>
 
         {/* List Content */}
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/40">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain divide-y divide-slate-100 dark:divide-slate-800/40">
           {/* SEARCH RESULTS VIEW */}
           {searchQuery.trim() ? (
             <div className="p-2">
@@ -2702,8 +2756,26 @@ function MessengerChatContent() {
                 </div>
               </div>
 
-              {/* Center / Right: 4 Header Navigation Tabs + Timer Button */}
-              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+              {/* Center / Right: Quick Deal Buttons + Header Navigation Tabs + Timer Button */}
+              <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                {/* Quick Deal Action Pills on Desktop/Tablet */}
+                <div className="hidden lg:flex items-center gap-1.5 mr-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowPayModal(true)}
+                    className="px-2.5 py-1.5 rounded-xl text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>💸 Pay</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowRequestModal(true)}
+                    className="px-2.5 py-1.5 rounded-xl text-xs font-extrabold bg-blue-600 hover:bg-blue-700 text-white shadow-2xs transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>💰 Request</span>
+                  </button>
+                </div>
+
                 {/* Visible Delivery Timer Button in Header (Controlled by Admin ON/OFF switch) */}
                 {publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false &&
                   (() => {
@@ -2722,21 +2794,30 @@ function MessengerChatContent() {
                     return (
                       <button
                         type="button"
-                        onClick={() => setShowTimerModal(true)}
+                        onClick={() => {
+                          setIsDeliveryTimerEnabled(true);
+                          setShowTimerModal(true);
+                        }}
                         title={
                           lang === 'bn'
-                            ? 'এসক্রো ডেলিভারি কাউন্টডাউন টাইমার দেখুন ও সেট করুন'
-                            : 'View & Set Escrow Delivery Countdown Timer'
+                            ? 'এসক্রো ডেলিভারি কাউন্টডাউন টাইমার (ঐচ্ছিক)'
+                            : 'Escrow Delivery Countdown Timer (Optional)'
                         }
-                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-extrabold border transition-all cursor-pointer shrink-0 shadow-2xs ${
-                          activeHoldTx
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-extrabold border transition-all cursor-pointer shrink-0 ${
+                          activeHoldTx && timerInfo
                             ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border-amber-500/40 ring-1 ring-amber-500/20'
-                            : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                            : timerInfo || isDeliveryTimerEnabled
+                            ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                            : 'bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200/70 dark:border-slate-700'
                         }`}
                       >
                         <Clock
                           className={`w-3.5 h-3.5 shrink-0 ${
-                            activeHoldTx ? 'text-amber-500 animate-spin' : 'text-emerald-500'
+                            activeHoldTx && timerInfo
+                              ? 'text-amber-500 animate-spin'
+                              : timerInfo || isDeliveryTimerEnabled
+                              ? 'text-emerald-500'
+                              : 'text-slate-500 dark:text-slate-400'
                           }`}
                         />
                         {activeHoldTx && timerInfo ? (
@@ -2745,11 +2826,17 @@ function MessengerChatContent() {
                               ? `${timerInfo.days}d ${timerInfo.remHrs}:${timerInfo.mins}:${timerInfo.secs}`
                               : `${timerInfo.hrs}:${timerInfo.mins}:${timerInfo.secs}`}
                           </span>
+                        ) : timerInfo ? (
+                          <span className="text-[11px] sm:text-xs">
+                            ⏱️ {lang === 'bn' ? timerInfo.labelBn : timerInfo.shortLabel}
+                          </span>
+                        ) : isDeliveryTimerEnabled ? (
+                          <span className="text-[11px] sm:text-xs">
+                            ⏱️ {getSelectedDeliveryLabel(true)}
+                          </span>
                         ) : (
-                          <span>
-                            {lang === 'bn'
-                              ? `⏱️ টাইমার (${timerInfo?.shortLabel || getSelectedDeliveryLabel(true)})`
-                              : `⏱️ Timer (${timerInfo?.shortLabel || getSelectedDeliveryLabel(true)})`}
+                          <span className="hidden sm:inline text-[11px]">
+                            {lang === 'bn' ? 'টাইমার' : 'Timer'}
                           </span>
                         )}
                       </button>
@@ -2934,6 +3021,7 @@ function MessengerChatContent() {
                           <button
                             onClick={() => {
                               setShowOptionsDropdown(false);
+                              setIsDeliveryTimerEnabled(true);
                               setShowTimerModal(true);
                             }}
                             className="w-full px-3.5 py-2 text-left text-xs font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center gap-2.5"
@@ -2996,7 +3084,7 @@ function MessengerChatContent() {
             </div>
 
             {/* Mobile Quick Tab & Deal Action Bar (1-Tap Comfort on Phones) */}
-            <div className="md:hidden flex items-center justify-between gap-1.5 px-2.5 py-1.5 bg-slate-50/90 dark:bg-slate-900/90 border-b border-slate-200/70 dark:border-slate-800 overflow-x-auto no-scrollbar shrink-0">
+            <div className="md:hidden flex items-center justify-between gap-1.5 px-2.5 py-1.5 bg-white/95 dark:bg-slate-900/95 border-b border-slate-200/70 dark:border-slate-800 overflow-x-auto no-scrollbar shrink-0">
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   type="button"
@@ -3004,7 +3092,7 @@ function MessengerChatContent() {
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition whitespace-nowrap ${
                     activeHeaderTab === 'chat'
                       ? 'bg-emerald-600 text-white shadow-2xs'
-                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                   }`}
                 >
                   <MessageSquare className="w-3 h-3" />
@@ -3016,7 +3104,7 @@ function MessengerChatContent() {
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition whitespace-nowrap ${
                     activeHeaderTab === 'transaction'
                       ? 'bg-emerald-600 text-white shadow-2xs'
-                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                   }`}
                 >
                   <Wallet className="w-3 h-3" />
@@ -3039,7 +3127,7 @@ function MessengerChatContent() {
                   className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition whitespace-nowrap ${
                     activeHeaderTab === 'rules'
                       ? 'bg-emerald-600 text-white shadow-2xs'
-                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                   }`}
                 >
                   <FileText className="w-3 h-3" />
@@ -3051,7 +3139,7 @@ function MessengerChatContent() {
                   className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition whitespace-nowrap relative ${
                     activeHeaderTab === 'admin_calling'
                       ? 'bg-amber-600 text-white shadow-2xs'
-                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                   }`}
                 >
                   <ShieldAlert className="w-3 h-3 text-amber-500" />
@@ -3066,14 +3154,14 @@ function MessengerChatContent() {
                 <button
                   type="button"
                   onClick={() => setShowPayModal(true)}
-                  className="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 whitespace-nowrap"
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white whitespace-nowrap shadow-2xs"
                 >
                   💸 Pay
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowRequestModal(true)}
-                  className="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 whitespace-nowrap"
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap shadow-2xs"
                 >
                   💰 Req
                 </button>
@@ -3085,106 +3173,83 @@ function MessengerChatContent() {
             ========================================================================= */}
             {activeHeaderTab === 'chat' && (
               <>
-                {/* Top Safety Awareness Banner */}
+                {/* Slim, Modern Top Safety Awareness Bar */}
                 {chatRulesConfig?.isEnabled && (
-                  <div className="px-3 sm:px-4 pt-2.5 pb-1 shrink-0">
+                  <div className="border-b border-slate-200/70 dark:border-slate-800/80 bg-amber-500/[0.06] dark:bg-amber-500/[0.04] shrink-0">
                     <div
-                      className={`rounded-2xl border transition-all duration-300 overflow-hidden shadow-xs ${
-                        (bannerThemeStyles[chatRulesConfig.banner?.theme] || bannerThemeStyles.amber).bg
-                      } ${
-                        (bannerThemeStyles[chatRulesConfig.banner?.theme] || bannerThemeStyles.amber).border
-                      }`}
+                      onClick={() => setIsRulesExpanded(!isRulesExpanded)}
+                      className="px-3 sm:px-4 py-1.5 flex items-center justify-between gap-2 cursor-pointer select-none hover:bg-amber-500/10 transition-colors"
                     >
-                      {/* Clickable Header Bar */}
-                      <div
-                        onClick={() => setIsRulesExpanded(!isRulesExpanded)}
-                        className="px-3.5 py-2 sm:py-2.5 flex items-center justify-between gap-2 cursor-pointer select-none hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                      >
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <span className="text-base sm:text-lg shrink-0">🛡️</span>
-                          <div className="flex items-center gap-2 flex-wrap min-w-0">
-                            {chatRulesConfig.banner?.badgeText && (
-                              <span
-                                className={`text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
-                                  (bannerThemeStyles[chatRulesConfig.banner?.theme] || bannerThemeStyles.amber).badge
-                                }`}
-                              >
-                                {chatRulesConfig.banner.badgeText}
-                              </span>
-                            )}
-                            <span className="text-xs sm:text-xs md:text-sm font-bold text-slate-900 dark:text-white truncate">
-                              {chatRulesConfig.banner?.title || 'SafnexBD অফিসিয়াল সুরক্ষা ও লেনদেন গাইডলাইন'}
-                            </span>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsRulesExpanded(!isRulesExpanded);
-                          }}
-                          className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg transition shrink-0 ${
-                            (bannerThemeStyles[chatRulesConfig.banner?.theme] || bannerThemeStyles.amber).link
-                          }`}
-                        >
-                          <span className="hidden xs:inline">
-                            {isRulesExpanded
-                              ? (lang === 'bn' ? 'সংক্ষিপ্ত করুন' : 'Collapse')
-                              : (lang === 'bn' ? 'নিয়মগুলো দেখুন' : 'View Rules')}
-                          </span>
-                          <ChevronDown
-                            className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                              isRulesExpanded ? 'rotate-180' : ''
-                            }`}
-                          />
-                        </button>
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <Shield className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                        <span className="text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">
+                          {chatRulesConfig.banner?.title || 'SafnexBD অফিসিয়াল সুরক্ষা ও লেনদেন গাইডলাইন'}
+                        </span>
                       </div>
 
-                      {/* Expandable Body */}
-                      {isRulesExpanded && (
-                        <div className="px-3.5 pb-3 sm:pb-3.5 pt-1 border-t border-black/5 dark:border-white/5 space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
-                          {chatRulesConfig.banner?.subtitle && (
-                            <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                              {chatRulesConfig.banner.subtitle}
-                            </p>
-                          )}
-
-                          {/* Rules Grid */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5">
-                            {(chatRulesConfig.banner?.rules || []).map((rule: any, idx: number) => (
-                              <div
-                                key={rule.id || idx}
-                                className="p-2.5 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-start gap-2.5"
-                              >
-                                <span className="text-lg sm:text-xl shrink-0 mt-0.5">{rule.icon || '🛡️'}</span>
-                                <div className="min-w-0 flex-1">
-                                  <h5 className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
-                                    {rule.title}
-                                  </h5>
-                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                                    {rule.desc}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsRulesExpanded(!isRulesExpanded);
+                        }}
+                        className="flex items-center gap-1 text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:underline shrink-0"
+                      >
+                        <span>
+                          {isRulesExpanded
+                            ? (lang === 'bn' ? 'লুকান' : 'Hide')
+                            : (lang === 'bn' ? 'নিয়মাবলী' : 'Rules')}
+                        </span>
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                            isRulesExpanded ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
                     </div>
+
+                    {/* Expandable Body */}
+                    {isRulesExpanded && (
+                      <div className="px-3 sm:px-4 pb-3 pt-1.5 border-t border-amber-500/15 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                        {chatRulesConfig.banner?.subtitle && (
+                          <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                            {chatRulesConfig.banner.subtitle}
+                          </p>
+                        )}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                          {(chatRulesConfig.banner?.rules || []).map((rule: any, idx: number) => (
+                            <div
+                              key={rule.id || idx}
+                              className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-start gap-2"
+                            >
+                              <span className="text-base shrink-0 mt-0.5">{rule.icon || '🛡️'}</span>
+                              <div className="min-w-0 flex-1">
+                                <h5 className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
+                                  {rule.title}
+                                </h5>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                                  {rule.desc}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* 🚨 AI Real-Time Safety Warning Banner */}
                 {safetyAlerts.length > 0 && (
-                  <div className="px-3 sm:px-4 pt-2 space-y-2">
+                  <div className="px-3 sm:px-4 pt-2 space-y-2 shrink-0">
                     {safetyAlerts.map((alert, idx) => (
                       <div
                         key={alert.id || idx}
-                        className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-amber-500/15 border border-amber-500/30 shadow-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-200"
+                        className="p-3 rounded-2xl bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-amber-500/15 border border-amber-500/30 shadow-xs flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200"
                       >
-                        <div className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex-shrink-0">
-                          <ShieldAlert className="w-5 h-5" />
+                        <div className="p-1.5 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex-shrink-0">
+                          <ShieldAlert className="w-4 h-4" />
                         </div>
                         <div className="flex-1 text-xs">
                           <p className="font-black text-amber-900 dark:text-amber-200">
@@ -3210,10 +3275,10 @@ function MessengerChatContent() {
 
                 {/* 💡 AI Smart Deal Proposal Card */}
                 {smartDealProposal && (
-                  <div className="px-3 sm:px-4 pt-2">
-                    <div className="p-3.5 rounded-2xl bg-indigo-500/10 dark:bg-indigo-950/30 border border-indigo-500/30 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-3 sm:px-4 pt-2 shrink-0">
+                    <div className="p-3 rounded-2xl bg-indigo-500/10 dark:bg-indigo-950/30 border border-indigo-500/30 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="flex items-center gap-2.5">
-                        <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex-shrink-0">
+                        <div className="p-1.5 rounded-xl bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex-shrink-0">
                           <Sparkles className="w-4 h-4" />
                         </div>
                         <div>
@@ -3237,7 +3302,7 @@ function MessengerChatContent() {
                             setShowPayModal(true);
                             setSmartDealProposal(null);
                           }}
-                          className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition"
+                          className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition"
                         >
                           {lang === 'bn' ? 'এসক্রো তৈরি করুন' : 'Create Escrow'}
                         </button>
@@ -3253,14 +3318,16 @@ function MessengerChatContent() {
                   </div>
                 )}
 
-                {/* Escrow Delivery Countdown Timer Banner (When enabled in Admin Settings & HOLD/REQUESTED deal exists) */}
+                {/* Escrow Delivery Countdown Timer Banner (Only when a deal has an explicit timer set) */}
                 {publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false &&
                   (() => {
                     const activeHoldTx = conversationTransactions.find(
-                      (t: any) => t.status === 'HOLD',
+                      (t: any) => t.status === 'HOLD' && getDealTimerInfo(t) !== null,
                     );
                     const activeReqTx = !activeHoldTx
-                      ? conversationTransactions.find((t: any) => t.status === 'REQUESTED')
+                      ? conversationTransactions.find(
+                          (t: any) => t.status === 'REQUESTED' && getDealTimerInfo(t) !== null,
+                        )
                       : null;
                     const targetTx = activeHoldTx || activeReqTx;
                     if (!targetTx) return null;
@@ -3268,43 +3335,43 @@ function MessengerChatContent() {
                     const timerInfo = getDealTimerInfo(targetTx);
                     if (!timerInfo) return null;
 
+                    const cleanNote = cleanDealNote(targetTx.notes || targetTx.reason);
+
                     return (
-                      <div className="mx-3 sm:mx-4 mt-2 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-sky-500/10 border border-amber-500/30 dark:border-amber-500/20 flex flex-wrap items-center justify-between gap-2 shadow-2xs shrink-0">
+                      <div className="px-3 sm:px-4 py-1.5 bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-sky-500/10 border-b border-amber-500/25 flex flex-wrap items-center justify-between gap-2 shrink-0">
                         <div className="flex items-center gap-2 min-w-0">
-                          <div className="p-1.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 shrink-0">
-                            <Clock className="w-4 h-4 animate-pulse" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-extrabold text-slate-900 dark:text-white truncate">
-                              {activeHoldTx
-                                ? lang === 'bn'
-                                  ? `⏳ এসক্রো ডেলিভারি কাউন্টডাউন: ৳${Number(targetTx.amount || 0).toLocaleString()}`
-                                  : `⏳ Escrow Delivery Countdown: ৳${Number(targetTx.amount || 0).toLocaleString()}`
-                                : lang === 'bn'
-                                ? `⏱️ প্রস্তাবিত ডিল টাইমার (${timerInfo.labelBn}): ৳${Number(targetTx.amount || 0).toLocaleString()}`
-                                : `⏱️ Proposed Deal Timer (${timerInfo.shortLabel}): ৳${Number(targetTx.amount || 0).toLocaleString()}`}{' '}
+                          <Clock className="w-3.5 h-3.5 text-amber-500 animate-pulse shrink-0" />
+                          <p className="text-xs font-extrabold text-slate-900 dark:text-white truncate">
+                            {activeHoldTx
+                              ? lang === 'bn'
+                                ? `⏳ ডেলিভারি কাউন্টডাউন: ৳${Number(targetTx.amount || 0).toLocaleString()}`
+                                : `⏳ Delivery Countdown: ৳${Number(targetTx.amount || 0).toLocaleString()}`
+                              : lang === 'bn'
+                              ? `⏱️ প্রস্তাবিত ডিল টাইমার (${timerInfo.labelBn}): ৳${Number(targetTx.amount || 0).toLocaleString()}`
+                              : `⏱️ Proposed Timer (${timerInfo.shortLabel}): ৳${Number(targetTx.amount || 0).toLocaleString()}`}{' '}
+                            {cleanNote && (
                               <span className="font-normal text-slate-500 dark:text-slate-400">
-                                ({targetTx.notes || targetTx.reason || 'Escrow Deal'})
+                                ({cleanNote})
                               </span>
-                            </p>
-                          </div>
+                            )}
+                          </p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           {activeHoldTx ? (
                             timerInfo.remainingSec > 0 ? (
-                              <span className="px-2.5 py-1 rounded-xl bg-slate-900 dark:bg-slate-800 text-amber-400 font-mono text-xs font-black tracking-wider shadow-xs">
+                              <span className="px-2 py-0.5 rounded-lg bg-slate-900 dark:bg-slate-800 text-amber-400 font-mono text-[11px] font-black tracking-wider">
                                 {timerInfo.formatted}
                               </span>
                             ) : (
-                              <span className="px-2.5 py-1 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 text-[11px] font-extrabold border border-rose-500/30">
-                                নির্ধারিত সময় সমাপ্ত (Ready for Review)
+                              <span className="px-2 py-0.5 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 text-[11px] font-extrabold border border-rose-500/30">
+                                সময় শেষ (Ready for Review)
                               </span>
                             )
                           ) : (
-                            <span className="px-2.5 py-1 rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[11px] font-extrabold border border-amber-500/30">
+                            <span className="px-2 py-0.5 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[11px] font-extrabold border border-amber-500/30">
                               {lang === 'bn'
                                 ? `Approve করলে ${timerInfo.labelBn} কাউন্টডাউন শুরু হবে`
-                                : `Starts ${timerInfo.shortLabel} countdown on Approve`}
+                                : `Starts ${timerInfo.shortLabel} on Approve`}
                             </span>
                           )}
                         </div>
@@ -3313,7 +3380,10 @@ function MessengerChatContent() {
                   })()}
 
                 {/* Chat Feed */}
-                <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 sm:py-4 space-y-3 sm:space-y-4 min-h-0">
+                <div
+                  ref={chatFeedRef}
+                  className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-3 sm:py-4 space-y-3 sm:space-y-4"
+                >
               {loadingMessages ? (
                 <div className="flex items-center justify-center py-20 text-slate-400 text-sm gap-2">
                   <RefreshCw className="w-4 h-4 animate-spin text-emerald-500" /> Loading messages...
@@ -3457,16 +3527,16 @@ function MessengerChatContent() {
                                 </div>
                               )}
 
-                              {/* Sender Details & Notes Box */}
+                                {/* Sender Details & Notes Box */}
                               <div className="mt-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs space-y-2 border border-slate-100 dark:border-slate-800">
                                 <div className="flex items-center justify-between text-slate-500 font-mono text-[11px]">
                                   <span>প্রেরক: <strong>{senderDisplayName}</strong></span>
                                   <span>ID: <strong>{senderUniqueId}</strong></span>
                                 </div>
-                                {meta.notes && (
+                                {cleanDealNote(meta.notes) && (
                                   <div className="text-slate-700 dark:text-slate-300">
                                     <span className="text-slate-400 font-medium">নোট: </span>
-                                    <span>&ldquo;{meta.notes}&rdquo;</span>
+                                    <span>&ldquo;{cleanDealNote(meta.notes)}&rdquo;</span>
                                   </div>
                                 )}
                                 <div className="text-[11px] text-slate-500 dark:text-slate-400 bg-white/70 dark:bg-slate-900/60 p-2 rounded-lg leading-relaxed border border-slate-200/40 dark:border-slate-700/40">
@@ -3748,10 +3818,10 @@ function MessengerChatContent() {
                                   <span>রিকোয়েস্টার: <strong>{requesterDisplayName}</strong></span>
                                   <span>ID: <strong>{requesterUniqueId}</strong></span>
                                 </div>
-                                {(meta.reason || meta.notes) && (
+                                {cleanDealNote(meta.reason || meta.notes) && (
                                   <div className="text-slate-700 dark:text-slate-300">
                                     <span className="text-slate-400 font-medium">নোট: </span>
-                                    <span>&ldquo;{meta.reason || meta.notes}&rdquo;</span>
+                                    <span>&ldquo;{cleanDealNote(meta.reason || meta.notes)}&rdquo;</span>
                                   </div>
                                 )}
                                 <div className="text-[11px] text-slate-500 dark:text-slate-400 bg-white/70 dark:bg-slate-900/60 p-2 rounded-lg leading-relaxed border border-slate-200/40 dark:border-slate-700/40">
@@ -4373,10 +4443,12 @@ function MessengerChatContent() {
                 </div>
               )}
 
-              {/* Quick Message Templates Chips Bar */}
-              {!isConvLocked && Array.isArray(chatRulesConfig?.templates) && chatRulesConfig.templates.length > 0 && (
-                showTemplatesBar ? (
-                  <div className="mb-2 pb-1.5 border-b border-slate-100 dark:border-slate-800/80 space-y-1.5">
+              {/* Quick Message Templates Chips Bar (Only rendered when expanded) */}
+              {!isConvLocked &&
+                showTemplatesBar &&
+                Array.isArray(chatRulesConfig?.templates) &&
+                chatRulesConfig.templates.length > 0 && (
+                  <div className="mb-2 pb-1.5 border-b border-slate-100 dark:border-slate-800/80 space-y-1.5 animate-in fade-in slide-in-from-bottom-1 duration-150">
                     {/* Filter Tabs & Close */}
                     <div className="flex items-center justify-between gap-2 px-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -4444,20 +4516,7 @@ function MessengerChatContent() {
                         ))}
                     </div>
                   </div>
-                ) : (
-                  /* Collapsed trigger button */
-                  <div className="mb-1 flex items-center justify-between px-1">
-                    <button
-                      type="button"
-                      onClick={() => setShowTemplatesBar(true)}
-                      className="px-2.5 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 rounded-full flex items-center gap-1 transition"
-                    >
-                      <Sparkles className="w-3 h-3" />
-                      <span>{lang === 'bn' ? '⚡ কুইক মেসেজ চিপস দেখান' : '⚡ Show Quick Replies'}</span>
-                    </button>
-                  </div>
-                )
-              )}
+                )}
 
               {isConvLocked ? (
                 <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 flex items-center gap-3 text-rose-700 dark:text-rose-400">
@@ -4507,7 +4566,7 @@ function MessengerChatContent() {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-1 sm:gap-2 w-full max-w-full min-w-0">
+                <div className="flex items-center gap-1 sm:gap-1.5 w-full max-w-full min-w-0">
                   {/* ＋ Button */}
                   <button
                     type="button"
@@ -4529,6 +4588,22 @@ function MessengerChatContent() {
                   >
                     <Smile className="w-5 h-5" />
                   </button>
+
+                  {/* Quick Replies Toggle Button (Inline in Composer) */}
+                  {Array.isArray(chatRulesConfig?.templates) && chatRulesConfig.templates.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowTemplatesBar(!showTemplatesBar)}
+                      title={lang === 'bn' ? 'কুইক মেসেজ চিপস' : 'Quick Replies'}
+                      className={`p-1.5 sm:p-2 rounded-full transition-colors shrink-0 ${
+                        showTemplatesBar
+                          ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                          : 'text-slate-500 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      <Sparkles className="w-5 h-5" />
+                    </button>
+                  )}
 
                   {/* Voice Note Button (Only shown when enabled in Admin Settings) */}
                   {publicAdvancedFeatures?.chatMediaFeatures?.voiceMessageEnabled === true && (
@@ -6008,7 +6083,9 @@ function MessengerChatContent() {
                 className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
               >
                 <ArrowUpRight className="w-4 h-4" />
-                <span>💸 Pay ({getSelectedDeliveryLabel(true)})</span>
+                <span>
+                  💸 Pay{isDeliveryTimerEnabled ? ` (${getSelectedDeliveryLabel(true)})` : ''}
+                </span>
               </button>
               <button
                 type="button"
@@ -6019,7 +6096,9 @@ function MessengerChatContent() {
                 className="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
               >
                 <ArrowDownLeft className="w-4 h-4" />
-                <span>💰 Request ({getSelectedDeliveryLabel(true)})</span>
+                <span>
+                  💰 Request{isDeliveryTimerEnabled ? ` (${getSelectedDeliveryLabel(true)})` : ''}
+                </span>
               </button>
             </div>
           </div>

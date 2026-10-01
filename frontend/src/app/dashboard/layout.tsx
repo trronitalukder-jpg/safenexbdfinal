@@ -139,7 +139,7 @@ export default function DashboardLayout({
   const available = Number(user?.wallet?.availableBalance || 0);
 
   return (
-    <div className="flex h-[100dvh] w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+    <div className="fixed inset-0 z-30 flex h-[100dvh] w-full overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       {/* 1. Desktop Fixed Left Sidebar (Visible on xl >= 1280px; Tablet & Mobile use slide-out drawer for full screen width) */}
       <div className="flex-shrink-0 h-full hidden xl:block">
         <DashboardSidebar />
@@ -516,7 +516,7 @@ export default function DashboardLayout({
 
         {/* Workspace Body Area */}
         {pathname === '/dashboard/chat' || pathname === '/dashboard/admin-chat' ? (
-          <main className="flex-1 h-full min-h-0 overflow-hidden p-0 m-0 bg-slate-50/70 dark:bg-slate-950/70">
+          <main className="flex-1 flex flex-col h-full min-h-0 overflow-hidden p-0 m-0 bg-slate-50/70 dark:bg-slate-950/70">
             {children}
           </main>
         ) : (
