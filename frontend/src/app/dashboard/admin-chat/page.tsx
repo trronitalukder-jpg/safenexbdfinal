@@ -536,7 +536,7 @@ export default function AdminChatPage() {
                 </div>
               )}
 
-              <div className="flex items-end gap-2">
+              <div className="flex items-end gap-1.5 sm:gap-2 w-full max-w-full overflow-hidden">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -547,7 +547,7 @@ export default function AdminChatPage() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition shrink-0 cursor-pointer"
+                  className="p-2.5 sm:p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition shrink-0 cursor-pointer"
                   title={lang === 'bn' ? 'ছবি বা ফাইল যুক্ত করুন' : 'Attach image or file'}
                 >
                   <Paperclip className="w-5 h-5" />
@@ -568,16 +568,16 @@ export default function AdminChatPage() {
                       ? 'SafnexBD Admin-কে মেসেজ লিখুন...'
                       : 'Write a message to SafnexBD Admin...'
                   }
-                  className="flex-1 max-h-32 min-h-[46px] px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-sky-500 resize-none"
+                  className="flex-1 min-w-0 w-full max-h-32 min-h-[44px] sm:min-h-[46px] px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-sky-500 resize-none"
                 />
 
                 <button
                   type="submit"
                   disabled={sending || (!messageInput.trim() && !selectedFile)}
-                  className="px-5 py-3 h-[46px] rounded-2xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-sky-600/20 transition shrink-0 cursor-pointer"
+                  className="px-3.5 sm:px-5 py-2.5 sm:py-3 h-[44px] sm:h-[46px] rounded-2xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 shadow-md shadow-sky-600/20 transition shrink-0 cursor-pointer"
                 >
-                  <Send className="w-4 h-4" />
-                  <span className="hidden sm:inline">
+                  <Send className="w-4 h-4 shrink-0" />
+                  <span className="hidden xs:inline">
                     {sending
                       ? lang === 'bn'
                         ? 'পাঠানো হচ্ছে...'

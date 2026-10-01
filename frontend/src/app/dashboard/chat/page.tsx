@@ -325,8 +325,20 @@ function MessengerChatContent() {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
 
-  // Advanced Features (Controlled by Admin ON/OFF switches)
-  const [publicAdvancedFeatures, setPublicAdvancedFeatures] = useState<any>(null);
+  // Advanced Features (Controlled by Admin ON/OFF switches; defaults match backend defaults until fetched)
+  const [publicAdvancedFeatures, setPublicAdvancedFeatures] = useState<any>({
+    escrowCountdownTimer: { enabled: true, defaultDeliveryHours: 24 },
+    chatMediaFeatures: { voiceMessageEnabled: true, maxVoiceSeconds: 60, ctrlVPasteEnabled: true },
+    sellerLevelBadges: {
+      enabled: true,
+      risingTalentMinDeals: 1,
+      level1MinDeals: 5,
+      level2MinDeals: 20,
+      topRatedMinDeals: 50,
+    },
+  });
+  const [selectedDeliveryHours, setSelectedDeliveryHours] = useState<number>(24);
+  const [showTimerModal, setShowTimerModal] = useState<boolean>(false);
   const [activeOtherUserProfile, setActiveOtherUserProfile] = useState<any>(null);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [voiceRecordingSeconds, setVoiceRecordingSeconds] = useState(0);
@@ -383,6 +395,11 @@ function MessengerChatContent() {
         const data = unwrap(res);
         if (data?.advancedFeatures) {
           setPublicAdvancedFeatures(data.advancedFeatures);
+          if (data.advancedFeatures?.escrowCountdownTimer?.defaultDeliveryHours) {
+            setSelectedDeliveryHours(
+              Number(data.advancedFeatures.escrowCountdownTimer.defaultDeliveryHours) || 24,
+            );
+          }
         }
       })
       .catch(() => {});
@@ -390,12 +407,39 @@ function MessengerChatContent() {
 
   // Tick every 1s only when escrowCountdownTimer is enabled
   useEffect(() => {
-    if (publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== true) return;
+    if (publicAdvancedFeatures?.escrowCountdownTimer?.enabled === false) return;
     const interval = setInterval(() => {
       setNowTick(Date.now());
     }, 1000);
     return () => clearInterval(interval);
   }, [publicAdvancedFeatures?.escrowCountdownTimer?.enabled]);
+
+  // Helper to compute live countdown timer for any deal/transaction
+  const getDealTimerInfo = (txnOrMeta: any) => {
+    if (publicAdvancedFeatures?.escrowCountdownTimer?.enabled === false) return null;
+    const defaultHrs = Number(
+      publicAdvancedFeatures?.escrowCountdownTimer?.defaultDeliveryHours || 24,
+    );
+    const noteStr = String(txnOrMeta?.notes || txnOrMeta?.reason || '');
+    const matchHrs = noteStr.match(/\[⏱️\s*Delivery:\s*(\d+)h\]/i) || noteStr.match(/(\d+)\s*hours?/i);
+    const deliveryHours = matchHrs ? Math.max(1, Number(matchHrs[1])) : defaultHrs;
+    const startMs = new Date(
+      txnOrMeta?.updatedAt || txnOrMeta?.createdAt || Date.now(),
+    ).getTime();
+    const endMs = startMs + deliveryHours * 3600 * 1000;
+    const remainingSec = Math.max(0, Math.floor((endMs - nowTick) / 1000));
+    const hrs = String(Math.floor(remainingSec / 3600)).padStart(2, '0');
+    const mins = String(Math.floor((remainingSec % 3600) / 60)).padStart(2, '0');
+    const secs = String(remainingSec % 60).padStart(2, '0');
+    return {
+      deliveryHours,
+      remainingSec,
+      hrs,
+      mins,
+      secs,
+      formatted: `${hrs}h : ${mins}m : ${secs}s`,
+    };
+  };
 
   // Fetch counterpart public profile stats when sellerLevelBadges is enabled
   useEffect(() => {
@@ -1352,10 +1396,17 @@ function MessengerChatContent() {
 
     setActionLoading(true);
     try {
+      const basePayNote = payReason.trim() || 'Service Payment';
+      const finalPayNote =
+        publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false &&
+        !/\[⏱️\s*Delivery:/i.test(basePayNote)
+          ? `${basePayNote} [⏱️ Delivery: ${selectedDeliveryHours}h]`
+          : basePayNote;
+
       const res: any = await api.post('/transactions/pay-request', {
         receiverId: activeConversation.otherUser.id,
         amount: amountNum,
-        notes: payReason.trim() || 'Service Payment',
+        notes: finalPayNote,
         conversationId: activeConversation.conversationId,
       });
       const data = unwrap(res);
@@ -1421,10 +1472,17 @@ function MessengerChatContent() {
 
     setActionLoading(true);
     try {
+      const baseReqNote = requestReason.trim() || 'Service Payment';
+      const finalReqNote =
+        publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false &&
+        !/\[⏱️\s*Delivery:/i.test(baseReqNote)
+          ? `${baseReqNote} [⏱️ Delivery: ${selectedDeliveryHours}h]`
+          : baseReqNote;
+
       const res: any = await api.post('/transactions/request-money', {
         targetId: activeConversation.otherUser.id,
         amount: amountNum,
-        reason: requestReason.trim() || 'Service Payment',
+        reason: finalReqNote,
         conversationId: activeConversation.conversationId,
       });
       const data = unwrap(res);
@@ -1810,7 +1868,12 @@ function MessengerChatContent() {
       if (txnId) {
         const existing = map.get(txnId);
         if (existing) {
-          if (meta.status) existing.status = meta.status;
+          if (meta.status) {
+            if (meta.status === 'HOLD' && existing.status !== 'HOLD') {
+              existing.updatedAt = msg.createdAt;
+            }
+            existing.status = meta.status;
+          }
           if (meta.trackingNumber && !existing.trackingNumber) existing.trackingNumber = meta.trackingNumber;
           if (meta.amount && !existing.amount) existing.amount = Number(meta.amount);
           if (meta.commissionAmount && !existing.commission) existing.commission = Number(meta.commissionAmount);
@@ -2464,8 +2527,58 @@ function MessengerChatContent() {
                 </div>
               </div>
 
-              {/* Center / Right: 4 Header Navigation Tabs (Compact on md/lg, full text on xl) */}
+              {/* Center / Right: 4 Header Navigation Tabs + Timer Button */}
               <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                {/* Visible Delivery Timer Button in Header (Controlled by Admin ON/OFF switch) */}
+                {publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false &&
+                  (() => {
+                    const activeHoldTx = conversationTransactions.find(
+                      (t: any) => t.status === 'HOLD',
+                    );
+                    const activeReqTx = conversationTransactions.find(
+                      (t: any) => t.status === 'REQUESTED',
+                    );
+                    const timerInfo = activeHoldTx
+                      ? getDealTimerInfo(activeHoldTx)
+                      : activeReqTx
+                      ? getDealTimerInfo(activeReqTx)
+                      : null;
+
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => setShowTimerModal(true)}
+                        title={
+                          lang === 'bn'
+                            ? 'এসক্রো ডেলিভারি কাউন্টডাউন টাইমার দেখুন ও সেট করুন'
+                            : 'View & Set Escrow Delivery Countdown Timer'
+                        }
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-extrabold border transition-all cursor-pointer shrink-0 shadow-2xs ${
+                          activeHoldTx
+                            ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border-amber-500/40 ring-1 ring-amber-500/20'
+                            : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                        }`}
+                      >
+                        <Clock
+                          className={`w-3.5 h-3.5 shrink-0 ${
+                            activeHoldTx ? 'text-amber-500 animate-spin' : 'text-emerald-500'
+                          }`}
+                        />
+                        {activeHoldTx && timerInfo ? (
+                          <span className="font-mono text-[11px] sm:text-xs tracking-tight">
+                            {timerInfo.hrs}:{timerInfo.mins}:{timerInfo.secs}
+                          </span>
+                        ) : (
+                          <span>
+                            {lang === 'bn'
+                              ? `⏱️ টাইমার (${timerInfo?.deliveryHours || selectedDeliveryHours}h)`
+                              : `⏱️ Timer (${timerInfo?.deliveryHours || selectedDeliveryHours}h)`}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })()}
+
                 <div className="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
                   <button
                     onClick={() => setActiveHeaderTab('chat')}
@@ -2639,7 +2752,24 @@ function MessengerChatContent() {
 
                         <div className="my-1.5 border-t border-slate-100 dark:border-slate-800" />
 
-                        {/* Financial & Profile Actions */}
+                        {/* Financial, Timer & Profile Actions */}
+                        {publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false && (
+                          <button
+                            onClick={() => {
+                              setShowOptionsDropdown(false);
+                              setShowTimerModal(true);
+                            }}
+                            className="w-full px-3.5 py-2 text-left text-xs font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center gap-2.5"
+                          >
+                            <Clock className="w-4 h-4 text-amber-500" />
+                            <span>
+                              {lang === 'bn'
+                                ? '⏱️ ডেলিভারি টাইমার দেখুন / সেট করুন'
+                                : '⏱️ Delivery Countdown Timer'}
+                            </span>
+                          </button>
+                        )}
+
                         <button
                           onClick={() => {
                             setShowOptionsDropdown(false);
@@ -2861,48 +2991,58 @@ function MessengerChatContent() {
                   </div>
                 )}
 
-                {/* Escrow Delivery Countdown Timer Banner (Only when enabled in Admin Settings & HOLD deal exists) */}
-                {publicAdvancedFeatures?.escrowCountdownTimer?.enabled === true &&
+                {/* Escrow Delivery Countdown Timer Banner (When enabled in Admin Settings & HOLD/REQUESTED deal exists) */}
+                {publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false &&
                   (() => {
                     const activeHoldTx = conversationTransactions.find(
                       (t: any) => t.status === 'HOLD',
                     );
-                    if (!activeHoldTx) return null;
-                    const deliveryHours = Number(
-                      publicAdvancedFeatures.escrowCountdownTimer.defaultDeliveryHours || 24,
-                    );
-                    const startMs = new Date(
-                      activeHoldTx.updatedAt || activeHoldTx.createdAt || Date.now(),
-                    ).getTime();
-                    const endMs = startMs + deliveryHours * 3600 * 1000;
-                    const remainingSec = Math.max(0, Math.floor((endMs - nowTick) / 1000));
-                    const hrs = String(Math.floor(remainingSec / 3600)).padStart(2, '0');
-                    const mins = String(Math.floor((remainingSec % 3600) / 60)).padStart(2, '0');
-                    const secs = String(remainingSec % 60).padStart(2, '0');
+                    const activeReqTx = !activeHoldTx
+                      ? conversationTransactions.find((t: any) => t.status === 'REQUESTED')
+                      : null;
+                    const targetTx = activeHoldTx || activeReqTx;
+                    if (!targetTx) return null;
+
+                    const timerInfo = getDealTimerInfo(targetTx);
+                    if (!timerInfo) return null;
 
                     return (
-                      <div className="mx-3 sm:mx-4 mt-2 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-sky-500/10 border border-amber-500/30 dark:border-amber-500/20 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+                      <div className="mx-3 sm:mx-4 mt-2 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-sky-500/10 border border-amber-500/30 dark:border-amber-500/20 flex flex-wrap items-center justify-between gap-2 shadow-2xs shrink-0">
                         <div className="flex items-center gap-2 min-w-0">
                           <div className="p-1.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 shrink-0">
                             <Clock className="w-4 h-4 animate-pulse" />
                           </div>
                           <div className="min-w-0">
                             <p className="text-xs font-extrabold text-slate-900 dark:text-white truncate">
-                              ⏳ এসক্রো ডেলিভারি কাউন্টডাউন: ৳{Number(activeHoldTx.amount || 0).toLocaleString()}{' '}
+                              {activeHoldTx
+                                ? lang === 'bn'
+                                  ? `⏳ এসক্রো ডেলিভারি কাউন্টডাউন: ৳${Number(targetTx.amount || 0).toLocaleString()}`
+                                  : `⏳ Escrow Delivery Countdown: ৳${Number(targetTx.amount || 0).toLocaleString()}`
+                                : lang === 'bn'
+                                ? `⏱️ প্রস্তাবিত ডিল টাইমার (${timerInfo.deliveryHours} ঘণ্টা): ৳${Number(targetTx.amount || 0).toLocaleString()}`
+                                : `⏱️ Proposed Deal Timer (${timerInfo.deliveryHours}h): ৳${Number(targetTx.amount || 0).toLocaleString()}`}{' '}
                               <span className="font-normal text-slate-500 dark:text-slate-400">
-                                ({activeHoldTx.reason || 'Escrow Hold'})
+                                ({targetTx.notes || targetTx.reason || 'Escrow Deal'})
                               </span>
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          {remainingSec > 0 ? (
-                            <span className="px-2.5 py-1 rounded-xl bg-slate-900 dark:bg-slate-800 text-amber-400 font-mono text-xs font-black tracking-wider shadow-xs">
-                              {hrs}h : {mins}m : {secs}s
-                            </span>
+                          {activeHoldTx ? (
+                            timerInfo.remainingSec > 0 ? (
+                              <span className="px-2.5 py-1 rounded-xl bg-slate-900 dark:bg-slate-800 text-amber-400 font-mono text-xs font-black tracking-wider shadow-xs">
+                                {timerInfo.hrs}h : {timerInfo.mins}m : {timerInfo.secs}s
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 text-[11px] font-extrabold border border-rose-500/30">
+                                নির্ধারিত সময় সমাপ্ত (Ready for Review)
+                              </span>
+                            )
                           ) : (
-                            <span className="px-2.5 py-1 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 text-[11px] font-extrabold border border-rose-500/30">
-                              নির্ধারিত সময় সমাপ্ত (Ready for Review)
+                            <span className="px-2.5 py-1 rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[11px] font-extrabold border border-amber-500/30">
+                              {lang === 'bn'
+                                ? `Approve করলে ${timerInfo.deliveryHours}h কাউন্টডাউন শুরু হবে`
+                                : `Starts ${timerInfo.deliveryHours}h countdown on Approve`}
                             </span>
                           )}
                         </div>
@@ -2946,13 +3086,19 @@ function MessengerChatContent() {
                       // 1. IN-CHAT PAYMENT REQUEST CARD (💸 Pay Request)
                       if (msg.messageType === 'PAY_REQUEST') {
                         const meta = msg.metadata || {};
+                        const syncedTx = conversationTransactions.find(
+                          (t: any) =>
+                            t.transactionId &&
+                            (t.transactionId === meta.transactionId || t.transactionId === meta.id),
+                        );
                         const isSender = meta.senderId === user?.id || (isMe && meta.receiverId !== user?.id);
                         const isReceiver = meta.receiverId === user?.id || (!isMe && meta.senderId !== user?.id);
-                        const status = meta.status || 'REQUESTED';
-                        const amount = Number(meta.amount || 0);
-                        const trackingNumber = meta.trackingNumber || 'TXN-PENDING';
+                        const status = syncedTx?.status || meta.status || 'REQUESTED';
+                        const amount = Number(syncedTx?.amount || meta.amount || 0);
+                        const trackingNumber = syncedTx?.trackingNumber || meta.trackingNumber || 'TXN-PENDING';
                         const senderDisplayName = meta.senderName || getUserDisplayName(msg.sender);
                         const senderUniqueId = meta.uniqueUserId || msg.sender?.uniqueUserId || 'User';
+                        const timerInfo = getDealTimerInfo(syncedTx || { ...meta, createdAt: msg.createdAt });
 
                         return (
                           <div key={msg.id} className="flex justify-center my-3">
@@ -3015,6 +3161,39 @@ function MessengerChatContent() {
                                   </div>
                                 )}
                               </div>
+
+                              {/* Live Delivery Countdown Timer inside Card */}
+                              {timerInfo && (status === 'HOLD' || status === 'REQUESTED') && (
+                                <div className="mt-2.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500/15 via-emerald-500/10 to-sky-500/15 border border-amber-500/30 flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+                                    <Clock className="w-3.5 h-3.5 text-amber-500 animate-pulse shrink-0" />
+                                    <span>
+                                      {status === 'HOLD'
+                                        ? lang === 'bn'
+                                          ? '⏳ ডেলিভারি কাউন্টডাউন:'
+                                          : '⏳ Delivery Timer:'
+                                        : lang === 'bn'
+                                        ? '⏱️ নির্ধারিত ডেলিভারি সময়:'
+                                        : '⏱️ Delivery Time Limit:'}
+                                    </span>
+                                  </div>
+                                  {status === 'HOLD' ? (
+                                    timerInfo.remainingSec > 0 ? (
+                                      <span className="px-2.5 py-0.5 rounded-lg bg-slate-900 dark:bg-slate-950 text-amber-400 font-mono text-xs font-black tracking-wider">
+                                        {timerInfo.formatted}
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 rounded-lg bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[11px] font-extrabold">
+                                        সময় শেষ (Ready for Review)
+                                      </span>
+                                    )
+                                  ) : (
+                                    <span className="px-2.5 py-0.5 rounded-lg bg-amber-500/20 text-amber-800 dark:text-amber-300 font-mono text-xs font-extrabold">
+                                      {timerInfo.deliveryHours} {lang === 'bn' ? 'ঘণ্টা' : 'Hours'}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
 
                               {/* Sender Details & Notes Box */}
                               <div className="mt-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs space-y-2 border border-slate-100 dark:border-slate-800">
@@ -3193,13 +3372,19 @@ function MessengerChatContent() {
                       // 2. IN-CHAT REQUEST MONEY CARD (💰 Request Money)
                       if (msg.messageType === 'RECEIVE_REQUEST') {
                         const meta = msg.metadata || {};
-                        const amount = Number(meta.amount || 0);
-                        const status = meta.status || 'REQUESTED';
-                        const trackingNumber = meta.trackingNumber || 'TXN-PENDING';
+                        const syncedTx = conversationTransactions.find(
+                          (t: any) =>
+                            t.transactionId &&
+                            (t.transactionId === meta.transactionId || t.transactionId === meta.id),
+                        );
+                        const amount = Number(syncedTx?.amount || meta.amount || 0);
+                        const status = syncedTx?.status || meta.status || 'REQUESTED';
+                        const trackingNumber = syncedTx?.trackingNumber || meta.trackingNumber || 'TXN-PENDING';
                         const requesterDisplayName = meta.requesterName || getUserDisplayName(msg.sender);
                         const requesterUniqueId = meta.uniqueUserId || msg.sender?.uniqueUserId || 'User';
                         const isRequester = msg.senderId === user?.id || (meta.requesterId === user?.id);
                         const isPayer = !isRequester;
+                        const timerInfo = getDealTimerInfo(syncedTx || { ...meta, createdAt: msg.createdAt });
 
                         return (
                           <div key={msg.id} className="flex justify-center my-3">
@@ -3261,6 +3446,39 @@ function MessengerChatContent() {
                                   </div>
                                 )}
                               </div>
+
+                              {/* Live Delivery Countdown Timer inside Card */}
+                              {timerInfo && (status === 'HOLD' || status === 'REQUESTED') && (
+                                <div className="mt-2.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500/15 via-blue-500/10 to-sky-500/15 border border-amber-500/30 flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+                                    <Clock className="w-3.5 h-3.5 text-amber-500 animate-pulse shrink-0" />
+                                    <span>
+                                      {status === 'HOLD'
+                                        ? lang === 'bn'
+                                          ? '⏳ ডেলিভারি কাউন্টডাউন:'
+                                          : '⏳ Delivery Timer:'
+                                        : lang === 'bn'
+                                        ? '⏱️ নির্ধারিত ডেলিভারি সময়:'
+                                        : '⏱️ Delivery Time Limit:'}
+                                    </span>
+                                  </div>
+                                  {status === 'HOLD' ? (
+                                    timerInfo.remainingSec > 0 ? (
+                                      <span className="px-2.5 py-0.5 rounded-lg bg-slate-900 dark:bg-slate-950 text-amber-400 font-mono text-xs font-black tracking-wider">
+                                        {timerInfo.formatted}
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 rounded-lg bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[11px] font-extrabold">
+                                        সময় শেষ (Ready for Review)
+                                      </span>
+                                    )
+                                  ) : (
+                                    <span className="px-2.5 py-0.5 rounded-lg bg-amber-500/20 text-amber-800 dark:text-amber-300 font-mono text-xs font-extrabold">
+                                      {timerInfo.deliveryHours} {lang === 'bn' ? 'ঘণ্টা' : 'Hours'}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
 
                               {/* Details Box */}
                               <div className="mt-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs space-y-2 border border-slate-100 dark:border-slate-800">
@@ -3806,10 +4024,10 @@ function MessengerChatContent() {
             )}
 
             {/* Input Composer (Messenger Style) */}
-            <div className="p-2 sm:p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 relative shrink-0">
+            <div className="p-2 sm:p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 relative shrink-0 w-full max-w-full">
               {/* PLUS BUTTON POPOVER MENU */}
               {showPlusMenu && (
-                <div className="absolute bottom-16 left-3 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-2 z-30 space-y-1">
+                <div className="absolute bottom-16 left-2 sm:left-3 w-60 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-2 z-30 space-y-1">
                   <button
                     onClick={() => {
                       setShowPlusMenu(false);
@@ -3817,7 +4035,7 @@ function MessengerChatContent() {
                     }}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-800 dark:text-slate-200 text-sm font-semibold transition-colors"
                   >
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center shrink-0">
                       <ArrowUpRight className="w-4 h-4" />
                     </div>
                     <span>💸 Pay Money</span>
@@ -3830,17 +4048,32 @@ function MessengerChatContent() {
                     }}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-800 dark:text-slate-200 text-sm font-semibold transition-colors"
                   >
-                    <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center shrink-0">
                       <ArrowDownLeft className="w-4 h-4" />
                     </div>
                     <span>💰 Request Money</span>
                   </button>
 
+                  {publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false && (
+                    <button
+                      onClick={() => {
+                        setShowPlusMenu(false);
+                        setShowTimerModal(true);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-sm font-semibold transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 flex items-center justify-center shrink-0">
+                        <Clock className="w-4 h-4" />
+                      </div>
+                      <span>⏱️ {lang === 'bn' ? 'ডেলিভারি টাইমার' : 'Delivery Timer'}</span>
+                    </button>
+                  )}
+
                   <button
                     onClick={() => imageInputRef.current?.click()}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm transition-colors"
                   >
-                    <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-600 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-600 flex items-center justify-center shrink-0">
                       <ImageIcon className="w-4 h-4" />
                     </div>
                     <span>📷 Photo</span>
@@ -3850,7 +4083,7 @@ function MessengerChatContent() {
                     onClick={() => fileInputRef.current?.click()}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm transition-colors"
                   >
-                    <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-600 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-600 flex items-center justify-center shrink-0">
                       <Paperclip className="w-4 h-4" />
                     </div>
                     <span>📎 File</span>
@@ -3860,7 +4093,7 @@ function MessengerChatContent() {
 
               {/* EMOJI PICKER POPOVER */}
               {showEmojiPicker && (
-                <div className="absolute bottom-16 left-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-3 z-30 w-64">
+                <div className="absolute bottom-16 left-2 sm:left-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-3 z-30 w-64 max-w-[calc(100vw-1rem)]">
                   <div className="grid grid-cols-6 gap-2">
                     {quickEmojis.map((emoji) => (
                       <button
@@ -3982,21 +4215,21 @@ function MessengerChatContent() {
                   </div>
                 </div>
               ) : isRecordingVoice ? (
-                <div className="flex items-center justify-between gap-3 px-4 py-2 rounded-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
-                    <span className="text-xs font-extrabold text-rose-700 dark:text-rose-300">
-                      🎙️ {lang === 'bn' ? 'ভয়েস রেকর্ড হচ্ছে...' : 'Recording Voice...'} (
+                <div className="flex items-center justify-between gap-2 px-3 sm:px-4 py-2 rounded-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 w-full max-w-full overflow-hidden">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping shrink-0" />
+                    <span className="text-xs font-extrabold text-rose-700 dark:text-rose-300 truncate">
+                      🎙️ {lang === 'bn' ? 'রেকর্ড হচ্ছে...' : 'Recording...'} (
                       {Math.floor(voiceRecordingSeconds / 60)}:
                       {String(voiceRecordingSeconds % 60).padStart(2, '0')} /{' '}
                       {Number(publicAdvancedFeatures?.chatMediaFeatures?.maxVoiceSeconds || 60)}s)
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       type="button"
                       onClick={cancelVoiceRecording}
-                      className="px-3 py-1.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 transition flex items-center gap-1"
+                      className="px-2.5 py-1.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 transition flex items-center gap-1"
                     >
                       <X className="w-3.5 h-3.5" />
                       <span>{lang === 'bn' ? 'বাতিল' : 'Cancel'}</span>
@@ -4004,20 +4237,20 @@ function MessengerChatContent() {
                     <button
                       type="button"
                       onClick={stopAndSendVoiceRecording}
-                      className="px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+                      className="px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1 shadow-xs"
                     >
                       <Send className="w-3.5 h-3.5" />
-                      <span>{lang === 'bn' ? 'পাঠান' : 'Send Voice'}</span>
+                      <span>{lang === 'bn' ? 'পাঠান' : 'Send'}</span>
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 w-full max-w-full min-w-0">
                   {/* ＋ Button */}
                   <button
                     type="button"
                     onClick={() => setShowPlusMenu(!showPlusMenu)}
-                    className={`p-2.5 rounded-full transition-colors ${
+                    className={`p-2 sm:p-2.5 rounded-full transition-colors shrink-0 ${
                       showPlusMenu
                         ? 'bg-emerald-600 text-white'
                         : 'text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -4030,7 +4263,7 @@ function MessengerChatContent() {
                   <button
                     type="button"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="p-2 text-slate-500 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                    className="p-1.5 sm:p-2 text-slate-500 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors shrink-0"
                   >
                     <Smile className="w-5 h-5" />
                   </button>
@@ -4042,7 +4275,7 @@ function MessengerChatContent() {
                       onClick={startVoiceRecording}
                       disabled={uploadingAttachment}
                       title={lang === 'bn' ? 'ভয়েস মেসেজ রেকর্ড করুন' : 'Record Voice Note'}
-                      className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-full transition-colors disabled:opacity-40"
+                      className="p-1.5 sm:p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-full transition-colors disabled:opacity-40 shrink-0"
                     >
                       <Mic className="w-5 h-5" />
                     </button>
@@ -4079,11 +4312,11 @@ function MessengerChatContent() {
                     placeholder={
                       publicAdvancedFeatures?.chatMediaFeatures?.ctrlVPasteEnabled === true
                         ? lang === 'bn'
-                          ? 'মেসেজ লিখুন বা Ctrl+V চাপে স্ক্রিনশট পেস্ট করুন...'
-                          : 'Type a message or press Ctrl+V to paste screenshot...'
+                          ? 'মেসেজ লিখুন...'
+                          : 'Type a message...'
                         : 'Type a message...'
                     }
-                    className="flex-1 py-2.5 px-4 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm rounded-full placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white dark:focus:bg-slate-800/90 border border-transparent focus:border-emerald-500/30 transition-all"
+                    className="flex-1 min-w-0 w-full py-2 sm:py-2.5 px-3 sm:px-4 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm rounded-full placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white dark:focus:bg-slate-800/90 border border-transparent focus:border-emerald-500/30 transition-all"
                   />
 
                   {/* Send Button */}
@@ -4091,6 +4324,7 @@ function MessengerChatContent() {
                     type="button"
                     onClick={sendMessage}
                     disabled={!messageInput.trim() && !selectedFile}
+                    aria-label="Send message"
                     className="p-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white transition-all shrink-0 shadow-sm"
                   >
                     <Send className="w-4 h-4" />
@@ -4332,6 +4566,46 @@ function MessengerChatContent() {
                             )}
                           </div>
                         </div>
+
+                        {/* Live Delivery Countdown Timer inside Transaction Card */}
+                        {publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false &&
+                          (status === 'HOLD' || status === 'REQUESTED') &&
+                          (() => {
+                            const tInfo = getDealTimerInfo(txn);
+                            return (
+                              <div
+                                className={`px-3.5 py-2.5 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs border ${
+                                  status === 'HOLD'
+                                    ? tInfo.isExpired
+                                      ? 'bg-rose-50 dark:bg-rose-950/50 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
+                                      : 'bg-indigo-50 dark:bg-indigo-950/50 border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300'
+                                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                                }`}
+                              >
+                                <span className="font-bold flex items-center gap-1.5">
+                                  <Clock className={`w-4 h-4 ${status === 'HOLD' ? 'animate-spin' : ''}`} />
+                                  <span>
+                                    {status === 'HOLD'
+                                      ? lang === 'bn'
+                                        ? `ডেলিভারি কাউন্টডাউন (${tInfo.hours}h):`
+                                        : `Delivery Countdown (${tInfo.hours}h):`
+                                      : lang === 'bn'
+                                      ? 'নির্ধারিত ডেলিভারি সময়সীমা:'
+                                      : 'Scheduled Delivery Time:'}
+                                  </span>
+                                </span>
+                                <span className="font-mono font-black text-xs px-2.5 py-1 rounded-lg bg-white/80 dark:bg-slate-900/80 shadow-2xs">
+                                  {status === 'HOLD'
+                                    ? tInfo.isExpired
+                                      ? lang === 'bn'
+                                        ? '⚠️ সময় শেষ (Overdue)'
+                                        : '⚠️ Time Expired'
+                                      : `⏳ ${String(tInfo.remH).padStart(2, '0')}h : ${String(tInfo.remM).padStart(2, '0')}m : ${String(tInfo.remS).padStart(2, '0')}s`
+                                    : `⏱️ ${tInfo.hours} ${lang === 'bn' ? 'ঘণ্টা (অ্যাপ্রুভ করলে চালু হবে)' : 'Hours (Starts on Approve)'}`}
+                                </span>
+                              </div>
+                            );
+                          })()}
 
                         {/* Contextual Actions in Card */}
                         <div className="pt-2">
@@ -5118,6 +5392,37 @@ function MessengerChatContent() {
                 />
               </div>
 
+              {/* Delivery Countdown Timer Duration Selector */}
+              {publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false && (
+                <div className="p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/70 dark:border-indigo-800/60 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-extrabold text-indigo-800 dark:text-indigo-300 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                      <span>{lang === 'bn' ? '⏱️ ডেলিভারি কাউন্টডাউন টাইমার:' : '⏱️ Delivery Time Limit:'}</span>
+                    </label>
+                    <span className="text-[11px] font-mono font-bold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800">
+                      {selectedDeliveryHours} {lang === 'bn' ? 'ঘণ্টা' : 'Hours'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-6 gap-1.5">
+                    {[6, 12, 24, 48, 72, 168].map((hrs) => (
+                      <button
+                        key={hrs}
+                        type="button"
+                        onClick={() => setSelectedDeliveryHours(hrs)}
+                        className={`py-1.5 rounded-lg text-[11px] font-extrabold font-mono transition ${
+                          selectedDeliveryHours === hrs
+                            ? 'bg-indigo-600 text-white shadow-xs'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-400'
+                        }`}
+                      >
+                        {hrs === 168 ? '7d' : `${hrs}h`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Insufficient Balance warning */}
               {parseFloat(payAmount) > 0 &&
                 parseFloat(payAmount) + payCommission > (wallet?.availableBalance || 0) && (
@@ -5232,6 +5537,37 @@ function MessengerChatContent() {
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
+
+              {/* Delivery Countdown Timer Duration Selector */}
+              {publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false && (
+                <div className="p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/70 dark:border-indigo-800/60 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-extrabold text-indigo-800 dark:text-indigo-300 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                      <span>{lang === 'bn' ? '⏱️ ডেলিভারি কাউন্টডাউন টাইমার:' : '⏱️ Delivery Time Limit:'}</span>
+                    </label>
+                    <span className="text-[11px] font-mono font-bold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800">
+                      {selectedDeliveryHours} {lang === 'bn' ? 'ঘণ্টা' : 'Hours'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-6 gap-1.5">
+                    {[6, 12, 24, 48, 72, 168].map((hrs) => (
+                      <button
+                        key={hrs}
+                        type="button"
+                        onClick={() => setSelectedDeliveryHours(hrs)}
+                        className={`py-1.5 rounded-lg text-[11px] font-extrabold font-mono transition ${
+                          selectedDeliveryHours === hrs
+                            ? 'bg-indigo-600 text-white shadow-xs'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-400'
+                        }`}
+                      >
+                        {hrs === 168 ? '7d' : `${hrs}h`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="mt-4 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed bg-blue-50/50 dark:bg-blue-950/30 p-3 rounded-xl border border-blue-100 dark:border-blue-900/40">
@@ -5345,6 +5681,167 @@ function MessengerChatContent() {
               >
                 {actionLoading && <RefreshCw className="w-4 h-4 animate-spin" />}
                 ডিসপ্যুট সাবমিট করুন
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 5: Escrow Delivery Countdown Timer Modal
+      ========================================================================= */}
+      {showTimerModal && publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl relative space-y-4">
+            <button
+              onClick={() => setShowTimerModal(false)}
+              className="absolute right-4 top-4 p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                <Clock className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                  {lang === 'bn' ? '⏱️ এসক্রো ডেলিভারি কাউন্টডাউন টাইমার' : '⏱️ Escrow Delivery Countdown Timer'}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {lang === 'bn'
+                    ? 'লেনদেন বা কাজের ডেলিভারি সময়সীমা নির্ধারণ ও লাইভ কাউন্টডাউন ট্র্যাকার'
+                    : 'Set delivery time limits & monitor live escrow deal countdowns'}
+                </p>
+              </div>
+            </div>
+
+            {/* Active / Requested Deals Countdown Status */}
+            {(() => {
+              const activeOrRequestedDeals = conversationTransactions.filter(
+                (t: any) => t.status === 'HOLD' || t.status === 'REQUESTED',
+              );
+              if (activeOrRequestedDeals.length === 0) {
+                return (
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/70 text-center space-y-1.5">
+                    <div className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                      {lang === 'bn'
+                        ? 'এই চ্যাটে বর্তমানে কোনো সক্রিয় এসক্রো হোল্ড টাইমার চালু নেই'
+                        : 'No active escrow hold timer running in this conversation'}
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {lang === 'bn'
+                        ? 'নিচ থেকে ডেলিভারি সময় সিলেক্ট করে Pay বা Request পাঠালে এবং অপর পক্ষ Approve করার সাথে সাথে লাইভ কাউন্টডাউন শুরু হবে।'
+                        : 'Select a delivery duration below and send a Pay or Request deal. Live countdown starts immediately upon approval.'}
+                    </p>
+                  </div>
+                );
+              }
+              return (
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  <div className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                    {lang === 'bn' ? 'চলমান লেনদেনের টাইমার:' : 'Active Deal Timers:'}
+                  </div>
+                  {activeOrRequestedDeals.map((deal: any, idx: number) => {
+                    const tInfo = getDealTimerInfo(deal);
+                    const isHold = deal.status === 'HOLD';
+                    return (
+                      <div
+                        key={deal.transactionId || deal.id || idx}
+                        className={`p-3 rounded-2xl border flex items-center justify-between gap-2 text-xs ${
+                          isHold
+                            ? tInfo.isExpired
+                              ? 'bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300'
+                              : 'bg-indigo-50 dark:bg-indigo-950/50 border-indigo-200 dark:border-indigo-800 text-indigo-800 dark:text-indigo-200'
+                            : 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-200/70 dark:border-amber-800/50 text-amber-800 dark:text-amber-300'
+                        }`}
+                      >
+                        <div>
+                          <div className="font-bold font-mono">
+                            #{deal.trackingNumber || 'DEAL'} • ৳{Number(deal.amount || 0).toLocaleString()}
+                          </div>
+                          <div className="text-[11px] opacity-80">
+                            {isHold
+                              ? lang === 'bn'
+                                ? 'এসক্রো হোল্ডে সক্রিয়'
+                                : 'Active in Escrow Hold'
+                              : lang === 'bn'
+                              ? 'অ্যাপ্রুভালের অপেক্ষায় (Requested)'
+                              : 'Waiting for Approval'}
+                          </div>
+                        </div>
+                        <div className="font-mono font-black text-xs px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 shadow-2xs">
+                          {isHold
+                            ? tInfo.isExpired
+                              ? '⚠️ Overdue'
+                              : `⏳ ${String(tInfo.remH).padStart(2, '0')}:${String(tInfo.remM).padStart(2, '0')}:${String(tInfo.remS).padStart(2, '0')}`
+                            : `⏱️ ${tInfo.hours}h`}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            {/* Default Timer Selector for New Deals */}
+            <div className="p-3.5 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/70 dark:border-indigo-800/60 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold text-indigo-900 dark:text-indigo-200">
+                  {lang === 'bn' ? 'নতুন লেনদেনের ডেলিভারি সময়সীমা:' : 'Delivery Time for New Deal:'}
+                </span>
+                <span className="text-xs font-mono font-black text-indigo-600 dark:text-indigo-400">
+                  {selectedDeliveryHours} {lang === 'bn' ? 'ঘণ্টা' : 'Hours'}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                {[
+                  { h: 6, label: '6h' },
+                  { h: 12, label: '12h' },
+                  { h: 24, label: '24h (1d)' },
+                  { h: 48, label: '48h (2d)' },
+                  { h: 72, label: '72h (3d)' },
+                  { h: 168, label: '7 Days' },
+                ].map((item) => (
+                  <button
+                    key={item.h}
+                    type="button"
+                    onClick={() => setSelectedDeliveryHours(item.h)}
+                    className={`py-2 px-1.5 rounded-xl text-[11px] font-extrabold font-mono transition ${
+                      selectedDeliveryHours === item.h
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-400'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Launch Deal Buttons */}
+            <div className="grid grid-cols-2 gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTimerModal(false);
+                  setShowPayModal(true);
+                }}
+                className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <ArrowUpRight className="w-4 h-4" />
+                <span>💸 Pay ({selectedDeliveryHours}h)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTimerModal(false);
+                  setShowRequestModal(true);
+                }}
+                className="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <ArrowDownLeft className="w-4 h-4" />
+                <span>💰 Request ({selectedDeliveryHours}h)</span>
               </button>
             </div>
           </div>

@@ -247,9 +247,9 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased font-sans">
-      {/* Mobile Drawer Navigation */}
+      {/* Mobile & Tablet Drawer Navigation */}
       {mobileDrawerOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
+        <div className="fixed inset-0 z-50 xl:hidden flex">
           <div
             className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
             onClick={() => setMobileDrawerOpen(false)}
@@ -261,13 +261,13 @@ export default function AdminLayout({
       )}
 
       {/* Top Header Bar */}
-      <header className="h-16 flex-shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 lg:px-8 flex items-center justify-between z-20 sticky top-0">
-        {/* Left: Mobile Menu Toggle & Admin Title */}
-        <div className="flex items-center gap-3">
+      <header className="h-16 flex-shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-3 sm:px-6 lg:px-8 flex items-center justify-between z-20 sticky top-0 gap-2 overflow-x-clip">
+        {/* Left: Mobile & Tablet Menu Toggle & Admin Title */}
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             type="button"
             onClick={() => setMobileDrawerOpen(true)}
-            className="md:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-amber-500 transition"
+            className="xl:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-amber-500 transition shrink-0"
             title="Open Admin Navigation"
           >
             <Menu className="w-5 h-5" />
@@ -575,11 +575,11 @@ export default function AdminLayout({
       </header>
 
       {/* Main Column & Persistent Desktop Sidebar */}
-      <div className="flex-1 flex overflow-hidden">
-        <div className="hidden md:block flex-shrink-0 h-[calc(100vh-4rem)] overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-w-0">
+        <div className="hidden xl:block flex-shrink-0 h-[calc(100vh-4rem)] overflow-hidden">
           <AdminSidebar />
         </div>
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto h-[calc(100vh-4rem)]">
+        <main className="flex-1 min-w-0 p-3 sm:p-6 lg:p-8 overflow-y-auto overflow-x-hidden h-[calc(100vh-4rem)]">
           <div className="w-full max-w-[1680px] mx-auto">
             {(() => {
               const matchedItem = adminMenuRegistry.find(

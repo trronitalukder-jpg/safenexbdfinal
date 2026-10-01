@@ -150,7 +150,7 @@ export const Navbar = () => {
                   >
                     {settings.general.logoText || settings.general.siteName || 'SafnexBD'}
                   </div>
-                  <p className="hidden md:block text-xs text-slate-700 dark:text-slate-300 font-medium tracking-wide truncate">
+                  <p className="hidden xl:block text-xs text-slate-700 dark:text-slate-300 font-medium tracking-wide truncate">
                     {settings.general.siteTagline || t('site_tagline')}
                   </p>
                 </div>
@@ -164,7 +164,7 @@ export const Navbar = () => {
                   <div className="text-lg sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-1">
                     Safnex<span className="text-sky-500">BD</span>
                   </div>
-                  <p className="hidden md:block text-xs text-slate-700 dark:text-slate-300 font-medium tracking-wide truncate">
+                  <p className="hidden xl:block text-xs text-slate-700 dark:text-slate-300 font-medium tracking-wide truncate">
                     {settings.general.siteTagline || t('site_tagline')}
                   </p>
                 </div>
@@ -172,26 +172,26 @@ export const Navbar = () => {
             )}
           </Link>
 
-          {/* Search Bar */}
-          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md relative">
+          {/* Search Bar (Tablet & Desktop) */}
+          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-[240px] lg:max-w-xs xl:max-w-md relative min-w-0">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('search_placeholder')}
-              className="w-full pl-10 pr-4 py-2 text-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-full border border-transparent focus:border-sky-500 focus:bg-white dark:focus:bg-slate-950 focus:outline-none transition"
+              className="w-full min-w-0 pl-9 pr-4 py-2 text-xs xl:text-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-full border border-transparent focus:border-sky-500 focus:bg-white dark:focus:bg-slate-950 focus:outline-none transition"
             />
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           </form>
 
           {/* Right Controls: Theme, Lang, Wallet, Auth */}
-          <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0 ml-auto md:ml-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-auto md:ml-0">
             {/* Micro Jobs Link Button (Desktop Header) */}
             {settings.microJob?.enabled !== false && (
               <Link
                 href="/micro-jobs"
                 title={lang === 'bn' ? 'মাইক্রো জব (কাজ ও আয়)' : 'Micro Jobs (Work & Earn)'}
-                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 hover:bg-amber-600 hover:text-white dark:hover:bg-amber-500 dark:hover:text-slate-950 transition shadow-xs flex-shrink-0"
+                className="hidden lg:flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 text-xs font-bold rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 hover:bg-amber-600 hover:text-white dark:hover:bg-amber-500 dark:hover:text-slate-950 transition shadow-xs flex-shrink-0 whitespace-nowrap"
               >
                 <Briefcase className="w-3.5 h-3.5" />
                 <span>{lang === 'bn' ? 'মাইক্রো জব' : 'Micro Jobs'}</span>
@@ -205,7 +205,7 @@ export const Navbar = () => {
             <Link
               href="/guides"
               title={lang === 'bn' ? 'ব্যবহারবিধি ও ভিডিও নির্দেশিকা' : 'Guides & Video Instructions'}
-              className="hidden md:flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 text-sky-600 dark:text-sky-400 hover:bg-sky-600 hover:text-white dark:hover:bg-sky-500 dark:hover:text-slate-950 transition shadow-xs flex-shrink-0"
+              className="hidden xl:flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 text-sky-600 dark:text-sky-400 hover:bg-sky-600 hover:text-white dark:hover:bg-sky-500 dark:hover:text-slate-950 transition shadow-xs flex-shrink-0 whitespace-nowrap"
             >
               <BookOpen className="w-3.5 h-3.5" />
               <span>{lang === 'bn' ? 'গাইডস' : 'Guides'}</span>
@@ -215,23 +215,23 @@ export const Navbar = () => {
             <Link
               href="/check"
               title={lang === 'bn' ? 'স্ক্যামার ও ট্রাস্ট চেকার' : 'Scammer & Trust Checker'}
-              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-slate-950 transition shadow-xs flex-shrink-0"
+              className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-slate-950 transition shadow-xs flex-shrink-0 whitespace-nowrap"
             >
               <ShieldAlert className="w-3.5 h-3.5 text-red-500 shrink-0" />
               <span>{lang === 'bn' ? 'স্ক্যামার চেকার' : 'Trust Check'}</span>
             </Link>
 
-            {/* Language Switch (Desktop) */}
+            {/* Language Switch (Tablet & Desktop) */}
             <button
               onClick={toggleLang}
               title="Toggle Language"
-              className="hidden md:flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex-shrink-0"
+              className="hidden md:flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex-shrink-0 whitespace-nowrap"
             >
               <Globe className="w-3.5 h-3.5" />
               <span>{lang === 'bn' ? 'বাংলা' : 'EN'}</span>
             </button>
 
-            {/* Theme Toggle (Desktop) */}
+            {/* Theme Toggle (Tablet & Desktop) */}
             <button
               onClick={toggleTheme}
               title="Toggle Theme"
@@ -240,7 +240,7 @@ export const Navbar = () => {
               {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
             </button>
 
-            {/* Desktop User Menu Dropdown */}
+            {/* Desktop & Tablet User Menu Dropdown */}
             {user ? (
               <div className="hidden md:flex items-center gap-2">
                 <div className="relative">
@@ -259,8 +259,8 @@ export const Navbar = () => {
                         {user.firstName ? user.firstName.charAt(0) : 'U'}
                       </div>
                     )}
-                    <div className="text-left text-xs">
-                      <div className="font-semibold text-slate-900 dark:text-slate-100">{user.firstName}</div>
+                    <div className="text-left text-xs hidden lg:block">
+                      <div className="font-semibold text-slate-900 dark:text-slate-100 max-w-[100px] truncate">{user.firstName}</div>
                       <div className="text-[10px] text-sky-600 dark:text-sky-400 font-mono">{user.uniqueUserId}</div>
                     </div>
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
@@ -365,21 +365,21 @@ export const Navbar = () => {
               <div className="hidden md:flex items-center gap-2">
                 <Link
                   href="/login"
-                  className="px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-sky-600 dark:hover:text-sky-400 transition"
+                  className="px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-sky-600 dark:hover:text-sky-400 transition whitespace-nowrap"
                 >
                   {t('login')}
                 </Link>
                 <Link
                   href="/register"
-                  className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700 shadow-sm transition"
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700 shadow-sm transition whitespace-nowrap"
                 >
                   {t('register')}
                 </Link>
               </div>
             )}
 
-            {/* Mobile Header Controls: Search, Auth/User Panel, Hamburger */}
-            <div className="md:hidden flex items-center gap-1.5 sm:gap-2">
+            {/* Mobile & Tablet Header Controls: Search, Auth/User Panel, Hamburger */}
+            <div className="xl:hidden flex items-center gap-1.5 sm:gap-2">
               {/* Mobile Search Toggle Button */}
               <button
                 type="button"
@@ -387,7 +387,7 @@ export const Navbar = () => {
                   setMobileSearchOpen(!mobileSearchOpen);
                   if (mobileMenuOpen) setMobileMenuOpen(false);
                 }}
-                className={`p-2 sm:p-2.5 rounded-xl transition flex-shrink-0 border shadow-xs active:scale-95 ${
+                className={`md:hidden p-2 sm:p-2.5 rounded-xl transition flex-shrink-0 border shadow-xs active:scale-95 ${
                   mobileSearchOpen
                     ? 'bg-sky-600 text-white border-sky-600'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -398,28 +398,29 @@ export const Navbar = () => {
                 <Search className="w-4 h-4" />
               </button>
 
-              {/* Mobile User Panel / Auth Controls */}
+              {/* Mobile & Tablet User Panel Quick Pill */}
               {user ? (
                 <Link
                   href="/dashboard"
-                  className="flex items-center gap-1.5 p-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/80 shadow-xs hover:bg-sky-100 transition active:scale-95 flex-shrink-0"
+                  className="flex items-center gap-1.5 p-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/80 shadow-xs hover:bg-sky-100 transition active:scale-95 flex-shrink-0 whitespace-nowrap"
                   title={lang === 'bn' ? 'ইউজার প্যানেল' : 'User Panel'}
                 >
                   {user.avatarUrl ? (
                     <img
                       src={getImageUrl(user.avatarUrl)}
                       alt={user.firstName}
-                      className="w-6 h-6 rounded-full object-cover border border-sky-500/50 flex-shrink-0"
+                      className="w-6 h-6 rounded-full object-cover border border-sky-500/50 flex-shrink-0 md:hidden"
                     />
                   ) : (
-                    <div className="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 md:hidden">
                       {user.firstName ? user.firstName.charAt(0) : 'U'}
                     </div>
                   )}
-                  <span className="text-[11px] font-bold hidden xs:inline">{lang === 'bn' ? 'প্যানেল' : 'Panel'}</span>
+                  <Layers className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 hidden md:inline" />
+                  <span className="text-[11px] font-bold hidden xs:inline">{lang === 'bn' ? 'ইউজার প্যানেল' : 'User Panel'}</span>
                 </Link>
               ) : (
-                <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="md:hidden flex items-center gap-1.5 flex-shrink-0">
                   <Link
                     href="/login"
                     className="px-2.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700/80 transition shadow-xs whitespace-nowrap"
@@ -435,7 +436,7 @@ export const Navbar = () => {
                 </div>
               )}
 
-              {/* Mobile Hamburger Menu Button (Always visible on mobile on the far right) */}
+              {/* Mobile & Tablet Hamburger Menu Button (Visible on Phone & Tablet <1280px) */}
               <button
                 onClick={() => {
                   setMobileMenuOpen(!mobileMenuOpen);
@@ -460,14 +461,14 @@ export const Navbar = () => {
               }}
               className="relative flex items-center gap-2"
             >
-              <div className="relative flex-1">
+              <div className="relative flex-1 min-w-0">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t('search_placeholder')}
                   autoFocus
-                  className="w-full pl-9 pr-8 py-2 text-xs bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-sky-500 focus:outline-none transition"
+                  className="w-full min-w-0 pl-9 pr-8 py-2 text-xs bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-sky-500 focus:outline-none transition"
                 />
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 {searchQuery && (
@@ -491,14 +492,14 @@ export const Navbar = () => {
         )}
       </div>
 
-      {/* Navigation Links Bar */}
-      <nav className="hidden md:block bg-slate-50/80 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800 text-sm">
-        <div className="max-w-[1650px] w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-6 h-11">
+      {/* Navigation Links Bar (Wraps cleanly on Tablet, single row on Desktop) */}
+      <nav className="hidden md:block bg-slate-50/80 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800 text-xs lg:text-sm">
+        <div className="max-w-[1650px] w-full mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center gap-x-4 lg:gap-x-6 gap-y-1.5 py-2 min-h-[44px]">
           {/* Categories Dropdown */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               onClick={() => setCatDropdownOpen(!catDropdownOpen)}
-              className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200 hover:text-sky-600"
+              className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200 hover:text-sky-600 whitespace-nowrap"
             >
               <Layers className="w-3.5 h-3.5" />
               <span>{t('featured_categories')}</span>
@@ -536,11 +537,11 @@ export const Navbar = () => {
                   return (
                     <div
                       key={item.id}
-                      className="relative"
+                      className="relative shrink-0"
                       onMouseEnter={() => setOpenMenuId(item.id)}
                       onMouseLeave={() => setOpenMenuId(null)}
                     >
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 whitespace-nowrap">
                         <Link
                           href={item.url}
                           target={item.isExternal ? '_blank' : undefined}
@@ -582,7 +583,7 @@ export const Navbar = () => {
                     key={item.id}
                     href={item.url}
                     target={item.isExternal ? '_blank' : undefined}
-                    className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition py-1"
+                    className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition py-1 whitespace-nowrap shrink-0"
                   >
                     {item.title}
                   </Link>
@@ -591,7 +592,7 @@ export const Navbar = () => {
               {settings.microJob?.enabled !== false && (
                 <Link
                   href="/micro-jobs"
-                  className="font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20"
+                  className="font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 whitespace-nowrap shrink-0"
                 >
                   <Briefcase className="w-3.5 h-3.5 text-amber-500" />
                   <span>{lang === 'bn' ? 'মাইক্রো জব' : 'Micro Jobs'}</span>
@@ -603,25 +604,25 @@ export const Navbar = () => {
             </>
           ) : (
             <>
-              <Link href="/shop" className="font-semibold text-slate-800 dark:text-slate-100 hover:text-sky-600 dark:hover:text-sky-400 transition flex items-center gap-1">
+              <Link href="/shop" className="font-semibold text-slate-800 dark:text-slate-100 hover:text-sky-600 dark:hover:text-sky-400 transition flex items-center gap-1 whitespace-nowrap shrink-0">
                 <span>{lang === 'bn' ? 'শপ (SHOP)' : 'SHOP'}</span>
               </Link>
-              <Link href="/digital-products" className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition">
+              <Link href="/digital-products" className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition whitespace-nowrap shrink-0">
                 {t('digital_products')}
               </Link>
-              <Link href="/physical-products" className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition">
+              <Link href="/physical-products" className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition whitespace-nowrap shrink-0">
                 {t('physical_products')}
               </Link>
-              <Link href="/money-exchange" className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition">
+              <Link href="/money-exchange" className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition whitespace-nowrap shrink-0">
                 {t('money_exchange')}
               </Link>
-              <Link href="/transactions" className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition">
+              <Link href="/transactions" className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition whitespace-nowrap shrink-0">
                 {t('safe_transactions')}
               </Link>
               {settings.microJob?.enabled !== false && (
                 <Link
                   href="/micro-jobs"
-                  className="font-semibold text-slate-700 dark:text-slate-200 hover:text-amber-600 dark:hover:text-amber-400 transition flex items-center gap-1.5"
+                  className="font-semibold text-slate-700 dark:text-slate-200 hover:text-amber-600 dark:hover:text-amber-400 transition flex items-center gap-1.5 whitespace-nowrap shrink-0"
                 >
                   <Briefcase className="w-3.5 h-3.5 text-amber-500" />
                   <span>{lang === 'bn' ? 'মাইক্রো জব' : 'Micro Jobs'}</span>
@@ -630,7 +631,7 @@ export const Navbar = () => {
                   </span>
                 </Link>
               )}
-              <Link href="/users" className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition">
+              <Link href="/users" className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition whitespace-nowrap shrink-0">
                 {t('users')}
               </Link>
             </>
@@ -638,9 +639,9 @@ export const Navbar = () => {
         </div>
       </nav>
 
-      {/* Mobile Drawer */}
+      {/* Mobile & Tablet Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain px-4 pt-3 pb-24 space-y-4 shadow-2xl animate-in slide-in-from-top-2 duration-200">
+        <div className="xl:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain px-4 pt-3 pb-24 space-y-4 shadow-2xl animate-in slide-in-from-top-2 duration-200">
           {/* Top Section: Language Switch & Dark/Light Toggle + Search */}
           <div className="space-y-2.5">
             <div className="flex items-center gap-2">

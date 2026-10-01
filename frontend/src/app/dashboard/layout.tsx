@@ -140,15 +140,15 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-[100dvh] w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-      {/* 1. Desktop Fixed Left Sidebar */}
-      <div className={`flex-shrink-0 h-full ${pathname === '/dashboard/chat' ? 'hidden xl:block' : 'hidden md:block'}`}>
+      {/* 1. Desktop Fixed Left Sidebar (Visible on xl >= 1280px; Tablet & Mobile use slide-out drawer for full screen width) */}
+      <div className="flex-shrink-0 h-full hidden xl:block">
         <DashboardSidebar />
       </div>
 
-      {/* 2. Mobile Drawer Navigation Overlay (Opens from Right) */}
+      {/* 2. Mobile & Tablet Drawer Navigation Overlay (Opens from Right on < 1280px) */}
       {mobileDrawerOpen && (
         <div
-          className="fixed inset-0 z-50 md:hidden bg-slate-950/70 backdrop-blur-xs flex justify-end"
+          className="fixed inset-0 z-50 xl:hidden bg-slate-950/70 backdrop-blur-xs flex justify-end"
           onClick={() => setMobileDrawerOpen(false)}
         >
           {/* Backdrop Tap Area on Left */}
@@ -156,7 +156,7 @@ export default function DashboardLayout({
 
           {/* Drawer Anchored to Right */}
           <div
-            className="w-72 max-w-[85vw] bg-white dark:bg-slate-900 h-[100dvh] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-300 shrink-0"
+            className="w-72 sm:w-80 max-w-[85vw] bg-white dark:bg-slate-900 h-[100dvh] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-300 shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Top Fixed Header with Brand & Close Button */}
@@ -344,7 +344,7 @@ export default function DashboardLayout({
       {/* 3. Main Body Column */}
       <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
         {/* Dedicated Clean Dashboard Header Bar */}
-        <header className="h-16 flex-shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-3 sm:px-6 lg:px-8 flex items-center justify-between z-10 gap-2">
+        <header className="h-16 flex-shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-3 sm:px-6 lg:px-8 flex items-center justify-between z-10 gap-2 overflow-hidden">
           {/* Left: Profile Settings, Real-time Notification Bell & Home Link */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
             {/* Quick Profile Link (Avatar + Name & User ID) */}
@@ -406,11 +406,11 @@ export default function DashboardLayout({
           </div>
 
           {/* Right: Actions, Theme & 3-Line Menu Toggle */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Direct Marketplace Link */}
             <Link
               href="/products"
-              className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition"
+              className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition whitespace-nowrap"
             >
               <ShoppingBag className="w-3.5 h-3.5 text-sky-500" />
               <span>{lang === 'bn' ? 'মার্কেটপ্লেস' : 'Marketplace'}</span>
@@ -420,7 +420,7 @@ export default function DashboardLayout({
             <Link
               href="/guides"
               title={lang === 'bn' ? 'ব্যবহারবিধি ও ভিডিও নির্দেশিকা' : 'Guides & Video Instructions'}
-              className="hidden md:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 text-sky-600 dark:text-sky-400 hover:bg-sky-600 hover:text-white dark:hover:bg-sky-500 dark:hover:text-slate-950 transition shadow-xs"
+              className="hidden md:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 text-sky-600 dark:text-sky-400 hover:bg-sky-600 hover:text-white dark:hover:bg-sky-500 dark:hover:text-slate-950 transition shadow-xs whitespace-nowrap"
             >
               <BookOpen className="w-3.5 h-3.5" />
               <span>{lang === 'bn' ? 'গাইডস' : 'Guides'}</span>
@@ -431,7 +431,7 @@ export default function DashboardLayout({
               type="button"
               onClick={toggleLang}
               title={lang === 'bn' ? 'Switch to English' : 'বাংলায় পরিবর্তন করুন'}
-              className="hidden sm:flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 transition"
+              className="hidden sm:flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 transition whitespace-nowrap"
             >
               <Globe className="w-3.5 h-3.5 text-sky-500" />
               <span>{lang === 'bn' ? 'বাং' : 'EN'}</span>
@@ -442,7 +442,7 @@ export default function DashboardLayout({
               type="button"
               onClick={toggleTheme}
               title={theme === 'dark' ? (lang === 'bn' ? 'লাইট মোড' : 'Light Mode') : (lang === 'bn' ? 'ডার্ক মোড' : 'Dark Mode')}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 transition"
+              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 transition shrink-0"
             >
               {theme === 'dark' ? (
                 <Sun className="w-4 h-4 text-amber-400" />
@@ -456,20 +456,21 @@ export default function DashboardLayout({
               type="button"
               onClick={logout}
               title={lang === 'bn' ? 'লগআউট করুন' : 'Logout'}
-              className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 text-xs font-bold transition shadow-xs cursor-pointer shrink-0"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 text-xs font-bold transition shadow-xs cursor-pointer shrink-0 whitespace-nowrap"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">{lang === 'bn' ? 'লগআউট' : 'Logout'}</span>
+              <span className="hidden lg:inline">{lang === 'bn' ? 'লগআউট' : 'Logout'}</span>
             </button>
 
-            {/* Mobile 3-Line Menu Toggle Button (On Right Side!) */}
+            {/* Mobile & Tablet 3-Line Menu Toggle Button (Visible on < 1280px!) */}
             <button
               type="button"
               onClick={() => setMobileDrawerOpen(true)}
-              className="md:hidden p-2 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800 hover:bg-sky-100 dark:hover:bg-sky-900/60 transition shrink-0"
-              title="Open Navigation"
+              className="xl:hidden flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800 hover:bg-sky-100 dark:hover:bg-sky-900/60 transition shrink-0 font-bold text-xs"
+              title="Open Navigation Menu"
             >
               <Menu className="w-5 h-5" />
+              <span className="hidden md:inline">{lang === 'bn' ? 'মেনু' : 'Menu'}</span>
             </button>
           </div>
         </header>
