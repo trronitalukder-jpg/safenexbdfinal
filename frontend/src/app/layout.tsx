@@ -7,6 +7,7 @@ import { Footer } from '@/components/layout/Footer';
 import MobileBottomNav from '@/components/layout/MobileBottomNav';
 import TrafficTracker from '@/components/analytics/TrafficTracker';
 import NewVisitorWelcomeModal from '@/components/common/NewVisitorWelcomeModal';
+import FloatingChatBubble from '@/components/chat/FloatingChatBubble';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -73,6 +74,7 @@ export default function RootLayout({
             {children}
           </main>
           <Footer />
+          <FloatingChatBubble />
           <MobileBottomNav />
         </Providers>
       </body>

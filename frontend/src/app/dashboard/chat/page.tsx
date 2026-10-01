@@ -129,16 +129,30 @@ function MessengerChatContent() {
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
 
-  // Conversations & People
+  // Conversations & People (10 + See More +10 pagination)
   const [conversations, setConversations] = useState<any[]>([]);
+  const [visibleRecentCount, setVisibleRecentCount] = useState<number>(10);
   const totalUnreadCount = useMemo(() => {
     return conversations.reduce((sum, c) => sum + (Number(c.unreadCount) || 0), 0);
   }, [conversations]);
   const [suggestedPeople, setSuggestedPeople] = useState<any[]>([]);
+  const [visiblePeopleCount, setVisiblePeopleCount] = useState<number>(10);
+  const [peopleFetchLimit, setPeopleFetchLimit] = useState<number>(60);
+  const [loadingMorePeople, setLoadingMorePeople] = useState<boolean>(false);
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+
+  // Exclude users with whom we already have a conversation so they only appear in Recent Chats
+  const unChattedPeople = useMemo(() => {
+    const chattedIds = new Set(
+      conversations.map((c) => c.otherUser?.id).filter(Boolean),
+    );
+    return suggestedPeople.filter(
+      (u) => u && u.id && u.id !== user?.id && !chattedIds.has(u.id),
+    );
+  }, [suggestedPeople, conversations, user?.id]);
 
   // Chat stream
   const [messages, setMessages] = useState<any[]>([]);
@@ -477,7 +491,7 @@ function MessengerChatContent() {
 
       // Load registered users for People list
       try {
-        const usersRes: any = await api.get('/users/search');
+        const usersRes: any = await api.get(`/users/search?limit=${peopleFetchLimit}`);
         const usersData = unwrap(usersRes);
         const usersList = Array.isArray(usersData) ? usersData : [];
         setSuggestedPeople(usersList.filter((u: any) => u.id !== user?.id));
@@ -1717,14 +1731,27 @@ function MessengerChatContent() {
               )}
             </div>
           ) : (
-            /* RECENT CONVERSATIONS & PEOPLE DISCOVERY */
+            /* RECENT CONVERSATIONS (10 + See More +10) & UNCHATTED PEOPLE DISCOVERY (10 + See More +10) */
             <div>
               {conversations.length > 0 ? (
                 <div>
-                  <div className="px-4 py-2 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-900/50">
-                    Recent Chats
+                  <div className="px-4 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-50/80 dark:bg-slate-900/70 flex items-center justify-between">
+                    <span>
+                      {lang === 'bn'
+                        ? `সাম্প্রতিক চ্যাট (${Math.min(visibleRecentCount, conversations.length)}/${conversations.length})`
+                        : `Recent Chats (${Math.min(visibleRecentCount, conversations.length)}/${conversations.length})`}
+                    </span>
+                    {visibleRecentCount > 10 && (
+                      <button
+                        type="button"
+                        onClick={() => setVisibleRecentCount(10)}
+                        className="text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:underline normal-case cursor-pointer"
+                      >
+                        {lang === 'bn' ? 'সংক্ষিপ্ত করুন' : 'Show Less'}
+                      </button>
+                    )}
                   </div>
-                  {conversations.map((conv) => {
+                  {conversations.slice(0, visibleRecentCount).map((conv) => {
                     const other = conv.otherUser;
                     const dName = getUserDisplayName(other);
                     const isSelected = activeConversation?.conversationId === conv.conversationId;
@@ -1888,98 +1915,174 @@ function MessengerChatContent() {
                       </div>
                     );
                   })}
+
+                  {/* See More (+10) Button for Recent Chats */}
+                  {conversations.length > visibleRecentCount && (
+                    <div className="px-4 py-2.5 bg-slate-50/60 dark:bg-slate-900/40">
+                      <button
+                        type="button"
+                        onClick={() => setVisibleRecentCount((prev) => prev + 10)}
+                        className="w-full py-2 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-xs font-extrabold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                        <span>
+                          {lang === 'bn'
+                            ? `আরও দেখুন (+১০) — বাকি আছে ${conversations.length - visibleRecentCount} জন`
+                            : `See More (+10) — ${conversations.length - visibleRecentCount} more`}
+                        </span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : null}
 
-              {/* PEOPLE / USERS DISCOVERY (Always visible so user can easily start a chat) */}
+              {/* PEOPLE / USERS DISCOVERY (Users not yet chatted with — 10 at a time + See More +10) */}
               <div className="mt-2">
-                <div className="px-4 py-2 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-900/50 flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>Recent / People ({suggestedPeople.length})</span>
+                <div className="px-4 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-50/80 dark:bg-slate-900/70 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>
+                      {lang === 'bn'
+                        ? `নতুন ইউজার / চ্যাট করুন (${Math.min(visiblePeopleCount, unChattedPeople.length)}/${unChattedPeople.length})`
+                        : `Discover People (${Math.min(visiblePeopleCount, unChattedPeople.length)}/${unChattedPeople.length})`}
+                    </span>
+                  </div>
+                  {visiblePeopleCount > 10 && (
+                    <button
+                      type="button"
+                      onClick={() => setVisiblePeopleCount(10)}
+                      className="text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:underline normal-case cursor-pointer"
+                    >
+                      {lang === 'bn' ? 'সংক্ষিপ্ত করুন' : 'Show Less'}
+                    </button>
+                  )}
                 </div>
 
                 {loadingConversations ? (
                   <div className="flex items-center justify-center py-12 text-slate-400 text-sm gap-2">
                     <RefreshCw className="w-4 h-4 animate-spin text-emerald-500" /> Loading people...
                   </div>
-                ) : suggestedPeople.length === 0 ? (
+                ) : unChattedPeople.length === 0 ? (
                   <div className="py-8 text-center text-sm text-slate-400">
-                    No other users registered yet.
+                    {lang === 'bn' ? 'নতুন কোনো ইউজার পাওয়া যায়নি।' : 'No other users found.'}
                   </div>
                 ) : (
-                  suggestedPeople.map((u) => {
-                    const dName = getUserDisplayName(u);
-                    return (
-                      <div
-                        key={u.id}
-                        onClick={() => startChatWithUser(u)}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-emerald-50/50 dark:hover:bg-slate-800/60 cursor-pointer transition-colors group"
-                      >
-                        {/* Avatar */}
+                  <>
+                    {unChattedPeople.slice(0, visiblePeopleCount).map((u) => {
+                      const dName = getUserDisplayName(u);
+                      return (
                         <div
-                          className="relative shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowProfileModal(u);
-                          }}
+                          key={u.id}
+                          onClick={() => startChatWithUser(u)}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-emerald-50/50 dark:hover:bg-slate-800/60 cursor-pointer transition-colors group"
                         >
-                          {u.avatarUrl ? (
-                            <img
-                              src={getImageUrl(u.avatarUrl)}
-                              alt={dName}
-                              className="w-11 h-11 rounded-full object-cover border border-slate-200 dark:border-slate-700"
-                            />
-                          ) : (
-                            <div className="w-11 h-11 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-bold flex items-center justify-center text-sm border border-emerald-200 dark:border-emerald-800">
-                              {dName.charAt(0)}
-                            </div>
-                          )}
-                          <span
-                            className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 transition-colors ${
-                              onlineUsers.has(u.id)
-                                ? 'bg-emerald-500 ring-1 ring-emerald-400/50'
-                                : 'bg-slate-400 dark:bg-slate-600'
-                            }`}
-                            title={onlineUsers.has(u.id) ? 'Online' : 'Offline'}
-                          />
-                        </div>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate group-hover:text-emerald-600 transition-colors">
-                              {dName}
-                            </h4>
-                            {u.isVerified && <Shield className="w-3.5 h-3.5 text-blue-500 shrink-0" />}
-                          </div>
-                          <div className="flex items-center gap-1.5 text-[11px] font-mono">
-                            <span className="text-slate-400 truncate">
-                              ID: {u.uniqueUserId || 'TBD' + u.id.slice(0, 5).toUpperCase()}
-                            </span>
-                            <span className="text-slate-300 dark:text-slate-600">•</span>
-                            {onlineUsers.has(u.id) ? (
-                              <span className="text-emerald-600 dark:text-emerald-400 font-sans font-semibold inline-flex items-center gap-1 shrink-0">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                Online
-                              </span>
+                          {/* Avatar */}
+                          <div
+                            className="relative shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowProfileModal(u);
+                            }}
+                          >
+                            {u.avatarUrl ? (
+                              <img
+                                src={getImageUrl(u.avatarUrl)}
+                                alt={dName}
+                                className="w-11 h-11 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                              />
                             ) : (
-                              <span className="text-slate-400 dark:text-slate-500 font-sans shrink-0">Offline</span>
+                              <div className="w-11 h-11 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-bold flex items-center justify-center text-sm border border-emerald-200 dark:border-emerald-800">
+                                {dName.charAt(0)}
+                              </div>
                             )}
+                            <span
+                              className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 transition-colors ${
+                                onlineUsers.has(u.id)
+                                  ? 'bg-emerald-500 ring-1 ring-emerald-400/50'
+                                  : 'bg-slate-400 dark:bg-slate-600'
+                              }`}
+                              title={onlineUsers.has(u.id) ? 'Online' : 'Offline'}
+                            />
                           </div>
-                        </div>
 
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate group-hover:text-emerald-600 transition-colors">
+                                {dName}
+                              </h4>
+                              {u.isVerified && <Shield className="w-3.5 h-3.5 text-blue-500 shrink-0" />}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[11px] font-mono">
+                              <span className="text-slate-400 truncate">
+                                ID: {u.uniqueUserId || 'TBD' + u.id.slice(0, 5).toUpperCase()}
+                              </span>
+                              <span className="text-slate-300 dark:text-slate-600">•</span>
+                              {onlineUsers.has(u.id) ? (
+                                <span className="text-emerald-600 dark:text-emerald-400 font-sans font-semibold inline-flex items-center gap-1 shrink-0">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                  Online
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 dark:text-slate-500 font-sans shrink-0">Offline</span>
+                              )}
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startChatWithUser(u);
+                            }}
+                            className="px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors"
+                          >
+                            Chat
+                          </button>
+                        </div>
+                      );
+                    })}
+
+                    {/* See More (+10) Button for Unchatted People */}
+                    {(unChattedPeople.length > visiblePeopleCount || suggestedPeople.length >= peopleFetchLimit - 5) && (
+                      <div className="px-4 py-2.5 bg-slate-50/60 dark:bg-slate-900/40">
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startChatWithUser(u);
+                          type="button"
+                          disabled={loadingMorePeople}
+                          onClick={async () => {
+                            const nextVisible = visiblePeopleCount + 10;
+                            setVisiblePeopleCount(nextVisible);
+                            if (nextVisible + 10 >= unChattedPeople.length) {
+                              const nextLimit = peopleFetchLimit + 40;
+                              setPeopleFetchLimit(nextLimit);
+                              setLoadingMorePeople(true);
+                              try {
+                                const usersRes: any = await api.get(`/users/search?limit=${nextLimit}`);
+                                const usersData = unwrap(usersRes);
+                                const usersList = Array.isArray(usersData) ? usersData : [];
+                                setSuggestedPeople(usersList.filter((u: any) => u.id !== user?.id));
+                              } catch {
+                                // ignore
+                              } finally {
+                                setLoadingMorePeople(false);
+                              }
+                            }
                           }}
-                          className="px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors"
+                          className="w-full py-2 px-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/25 text-xs font-extrabold flex items-center justify-center gap-1.5 transition cursor-pointer"
                         >
-                          Chat
+                          {loadingMorePeople ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
+                          <span>
+                            {lang === 'bn'
+                              ? 'আরও ১০ জন ইউজার দেখুন (See More)'
+                              : 'See 10 More Users'}
+                          </span>
                         </button>
                       </div>
-                    );
-                  })
+                    )}
+                  </>
                 )}
               </div>
             </div>
