@@ -4572,11 +4572,13 @@ function MessengerChatContent() {
                           (status === 'HOLD' || status === 'REQUESTED') &&
                           (() => {
                             const tInfo = getDealTimerInfo(txn);
+                            if (!tInfo) return null;
+                            const isExpired = tInfo.remainingSec <= 0;
                             return (
                               <div
                                 className={`px-3.5 py-2.5 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs border ${
                                   status === 'HOLD'
-                                    ? tInfo.isExpired
+                                    ? isExpired
                                       ? 'bg-rose-50 dark:bg-rose-950/50 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
                                       : 'bg-indigo-50 dark:bg-indigo-950/50 border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300'
                                     : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
@@ -4587,8 +4589,8 @@ function MessengerChatContent() {
                                   <span>
                                     {status === 'HOLD'
                                       ? lang === 'bn'
-                                        ? `ডেলিভারি কাউন্টডাউন (${tInfo.hours}h):`
-                                        : `Delivery Countdown (${tInfo.hours}h):`
+                                        ? `ডেলিভারি কাউন্টডাউন (${tInfo.deliveryHours}h):`
+                                        : `Delivery Countdown (${tInfo.deliveryHours}h):`
                                       : lang === 'bn'
                                       ? 'নির্ধারিত ডেলিভারি সময়সীমা:'
                                       : 'Scheduled Delivery Time:'}
@@ -4596,12 +4598,12 @@ function MessengerChatContent() {
                                 </span>
                                 <span className="font-mono font-black text-xs px-2.5 py-1 rounded-lg bg-white/80 dark:bg-slate-900/80 shadow-2xs">
                                   {status === 'HOLD'
-                                    ? tInfo.isExpired
+                                    ? isExpired
                                       ? lang === 'bn'
                                         ? '⚠️ সময় শেষ (Overdue)'
                                         : '⚠️ Time Expired'
-                                      : `⏳ ${String(tInfo.remH).padStart(2, '0')}h : ${String(tInfo.remM).padStart(2, '0')}m : ${String(tInfo.remS).padStart(2, '0')}s`
-                                    : `⏱️ ${tInfo.hours} ${lang === 'bn' ? 'ঘণ্টা (অ্যাপ্রুভ করলে চালু হবে)' : 'Hours (Starts on Approve)'}`}
+                                      : `⏳ ${tInfo.hrs}h : ${tInfo.mins}m : ${tInfo.secs}s`
+                                    : `⏱️ ${tInfo.deliveryHours} ${lang === 'bn' ? 'ঘণ্টা (অ্যাপ্রুভ করলে চালু হবে)' : 'Hours (Starts on Approve)'}`}
                                 </span>
                               </div>
                             );
@@ -5744,13 +5746,15 @@ function MessengerChatContent() {
                   </div>
                   {activeOrRequestedDeals.map((deal: any, idx: number) => {
                     const tInfo = getDealTimerInfo(deal);
+                    if (!tInfo) return null;
                     const isHold = deal.status === 'HOLD';
+                    const isExpired = tInfo.remainingSec <= 0;
                     return (
                       <div
                         key={deal.transactionId || deal.id || idx}
                         className={`p-3 rounded-2xl border flex items-center justify-between gap-2 text-xs ${
                           isHold
-                            ? tInfo.isExpired
+                            ? isExpired
                               ? 'bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300'
                               : 'bg-indigo-50 dark:bg-indigo-950/50 border-indigo-200 dark:border-indigo-800 text-indigo-800 dark:text-indigo-200'
                             : 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-200/70 dark:border-amber-800/50 text-amber-800 dark:text-amber-300'
@@ -5772,10 +5776,10 @@ function MessengerChatContent() {
                         </div>
                         <div className="font-mono font-black text-xs px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 shadow-2xs">
                           {isHold
-                            ? tInfo.isExpired
+                            ? isExpired
                               ? '⚠️ Overdue'
-                              : `⏳ ${String(tInfo.remH).padStart(2, '0')}:${String(tInfo.remM).padStart(2, '0')}:${String(tInfo.remS).padStart(2, '0')}`
-                            : `⏱️ ${tInfo.hours}h`}
+                              : `⏳ ${tInfo.formatted}`
+                            : `⏱️ ${tInfo.deliveryHours}h`}
                         </div>
                       </div>
                     );
