@@ -7,7 +7,7 @@ import { api } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useSettings } from '@/context/SettingsContext';
 import { useAuthStore } from '@/store/useAuthStore';
-import { compressImage } from '@/lib/imageUtils';
+import { compressImage, getImageUrl } from '@/lib/imageUtils';
 import {
   Briefcase,
   PlusCircle,
@@ -82,6 +82,7 @@ export default function MicroJobsDashboardPage() {
     categoryId: '',
     title: '',
     description: '',
+    thumbnailUrl: '',
     steps: [''],
     proofRequirements: [''],
     rewardPerWorker: settings.microJob?.minJobReward || 2,
@@ -89,6 +90,7 @@ export default function MicroJobsDashboardPage() {
     minKycRequired: false,
     isPinned: false,
   });
+  const [uploadingJobThumbnail, setUploadingJobThumbnail] = useState(false);
   const [creatingJob, setCreatingJob] = useState(false);
   const [createError, setCreateError] = useState('');
   const [createSuccess, setCreateSuccess] = useState(false);
@@ -104,9 +106,11 @@ export default function MicroJobsDashboardPage() {
     categoryId: '',
     title: '',
     description: '',
+    thumbnailUrl: '',
     steps: [''],
     proofRequirements: [''],
   });
+  const [uploadingEditJobThumbnail, setUploadingEditJobThumbnail] = useState(false);
   const [resubmittingJob, setResubmittingJob] = useState(false);
 
   // Edit & Resubmit Rejected Worker Submission Modal State
@@ -299,12 +303,63 @@ export default function MicroJobsDashboardPage() {
       categoryId: job.categoryId || (categories[0]?.id ?? ''),
       title: job.title || '',
       description: job.description || '',
+      thumbnailUrl: job.thumbnailUrl || '',
       steps: Array.isArray(job.steps) && job.steps.length > 0 ? job.steps : [''],
       proofRequirements:
         Array.isArray(job.proofRequirements) && job.proofRequirements.length > 0
           ? job.proofRequirements
           : [''],
     });
+  };
+
+  const handleJobThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingJobThumbnail(true);
+    try {
+      const file = files[0];
+      const compressed = await compressImage(file, 1600, 1200, 0.85);
+      const res: any = await api.post('/uploads', {
+        base64Data: compressed.base64Data,
+        fileName: compressed.fileName,
+        folder: 'micro-jobs',
+      });
+      const url = res?.data?.url || res?.url;
+      if (url) {
+        setCreateForm((prev) => ({ ...prev, thumbnailUrl: url }));
+      }
+    } catch {
+      alert(lang === 'bn' ? 'কাজের কভার ছবি আপলোড ব্যর্থ হয়েছে' : 'Failed to upload job cover image');
+    } finally {
+      setUploadingJobThumbnail(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleEditJobThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingEditJobThumbnail(true);
+    try {
+      const file = files[0];
+      const compressed = await compressImage(file, 1600, 1200, 0.85);
+      const res: any = await api.post('/uploads', {
+        base64Data: compressed.base64Data,
+        fileName: compressed.fileName,
+        folder: 'micro-jobs',
+      });
+      const url = res?.data?.url || res?.url;
+      if (url) {
+        setEditJobForm((prev) => ({ ...prev, thumbnailUrl: url }));
+      }
+    } catch {
+      alert(lang === 'bn' ? 'কাজের কভার ছবি আপলোড ব্যর্থ হয়েছে' : 'Failed to upload job cover image');
+    } finally {
+      setUploadingEditJobThumbnail(false);
+      e.target.value = '';
+    }
   };
 
   const handleResubmitJob = async (e: React.FormEvent) => {
@@ -320,6 +375,7 @@ export default function MicroJobsDashboardPage() {
         categoryId: editJobForm.categoryId,
         title: editJobForm.title.trim(),
         description: editJobForm.description.trim(),
+        thumbnailUrl: editJobForm.thumbnailUrl.trim() || null,
         steps: editJobForm.steps.filter((s) => s.trim() !== ''),
         proofRequirements: editJobForm.proofRequirements.filter((p) => p.trim() !== ''),
       });
@@ -460,6 +516,7 @@ export default function MicroJobsDashboardPage() {
         categoryId: createForm.categoryId,
         title: createForm.title.trim(),
         description: createForm.description.trim(),
+        thumbnailUrl: createForm.thumbnailUrl.trim() || undefined,
         steps: createForm.steps.filter((s) => s.trim() !== ''),
         proofRequirements: createForm.proofRequirements.filter((p) => p.trim() !== ''),
         rewardPerWorker: workerReward,
@@ -476,9 +533,10 @@ export default function MicroJobsDashboardPage() {
 
       // Reset create form
       setCreateForm({
-        categoryId: '',
+        categoryId: categories[0]?.id || '',
         title: '',
         description: '',
+        thumbnailUrl: '',
         steps: [''],
         proofRequirements: [''],
         rewardPerWorker: settings.microJob?.minJobReward || 2,
@@ -638,9 +696,25 @@ export default function MicroJobsDashboardPage() {
                 return (
                   <div
                     key={job.id}
-                    className="flex flex-col justify-between p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-amber-400 transition"
+                    className="flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-amber-400 transition overflow-hidden"
                   >
-                    <div className="space-y-3">
+                    <div>
+                      {job.thumbnailUrl && (
+                        <div
+                          onClick={() => setZoomedImage(getImageUrl(job.thumbnailUrl))}
+                          className="relative w-full aspect-video bg-slate-100 dark:bg-slate-800 overflow-hidden cursor-pointer group/img border-b border-slate-100 dark:border-slate-800"
+                        >
+                          <img
+                            src={getImageUrl(job.thumbnailUrl)}
+                            alt={job.title}
+                            className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/20 transition flex items-center justify-center">
+                            <Maximize2 className="w-5 h-5 text-white opacity-0 group-hover/img:opacity-100 transition" />
+                          </div>
+                        </div>
+                      )}
+                      <div className="p-5 pb-0 space-y-3">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 truncate">
                           <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
@@ -722,10 +796,11 @@ export default function MicroJobsDashboardPage() {
                           />
                         </div>
                       </div>
+                      </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-4 flex items-center gap-2">
+                    <div className="p-5 pt-4 border-t border-slate-100 dark:border-slate-800 mt-4 flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => handleOpenSubmissions(job)}
@@ -863,6 +938,89 @@ export default function MicroJobsDashboardPage() {
               onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
               className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
+          </div>
+
+          {/* Job Cover / Thumbnail Picture (Optional) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <UploadCloud className="w-4 h-4 text-amber-500" />
+                <span>{lang === 'bn' ? 'কাজের কভার ছবি / স্যাম্পল পিকচার (ঐচ্ছিক)' : 'Job Cover Picture / Sample Image (Optional)'}</span>
+              </label>
+              {createForm.thumbnailUrl && (
+                <button
+                  type="button"
+                  onClick={() => setCreateForm((prev) => ({ ...prev, thumbnailUrl: '' }))}
+                  className="text-[11px] font-bold text-rose-500 hover:text-rose-600 flex items-center gap-1"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>{lang === 'bn' ? 'ছবি মুছুন' : 'Remove Image'}</span>
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              {lang === 'bn'
+                ? 'কাজের থাম্বনেইল বা নমুনা স্ক্রিনশট আপলোড করলে পাবলিক পেজে আপনার কাজটি আকর্ষণীয় প্রোডাক্ট কার্ডের মতো দেখাবে।'
+                : 'Upload a cover banner or sample screenshot to display your job like an attractive product card on the public page.'}
+            </p>
+
+            {createForm.thumbnailUrl ? (
+              <div className="relative w-full sm:w-80 aspect-video rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 group">
+                <img
+                  src={getImageUrl(createForm.thumbnailUrl)}
+                  alt="Job Cover Preview"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setZoomedImage(getImageUrl(createForm.thumbnailUrl))}
+                    className="px-3 py-1.5 rounded-xl bg-white/90 text-slate-900 font-bold text-xs flex items-center gap-1 shadow-sm"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                    <span>{lang === 'bn' ? 'বড় করে দেখুন' : 'Preview'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCreateForm((prev) => ({ ...prev, thumbnailUrl: '' }))}
+                    className="px-3 py-1.5 rounded-xl bg-rose-500 text-white font-bold text-xs flex items-center gap-1 shadow-sm"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{lang === 'bn' ? 'মুছুন' : 'Remove'}</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center w-full sm:w-96 h-36 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40 hover:border-amber-500 hover:bg-amber-500/5 transition cursor-pointer p-4 text-center">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleJobThumbnailUpload}
+                  disabled={uploadingJobThumbnail}
+                  className="hidden"
+                />
+                {uploadingJobThumbnail ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <RefreshCw className="w-6 h-6 text-amber-500 animate-spin" />
+                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
+                      {lang === 'bn' ? 'ছবি আপলোড হচ্ছে...' : 'Uploading image...'}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="w-10 h-10 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                      <UploadCloud className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                      {lang === 'bn' ? 'কভার ছবি নির্বাচন করতে এখানে ক্লিক করুন' : 'Click to upload Job Cover Picture'}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      JPG, PNG, WEBP (16:9 Landscape recommended)
+                    </span>
+                  </div>
+                )}
+              </label>
+            )}
           </div>
 
           {/* Step-by-Step Instructions */}
@@ -1454,6 +1612,46 @@ export default function MicroJobsDashboardPage() {
                   onChange={(e) => setEditJobForm({ ...editJobForm, description: e.target.value })}
                   className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
                 />
+              </div>
+
+              {/* Cover Picture in Edit Modal */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <UploadCloud className="w-3.5 h-3.5 text-amber-500" />
+                    <span>কাজের কভার ছবি / থাম্বনেইল (ঐচ্ছিক)</span>
+                  </label>
+                  {editJobForm.thumbnailUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setEditJobForm((prev) => ({ ...prev, thumbnailUrl: '' }))}
+                      className="text-[11px] font-bold text-rose-500 hover:text-rose-600"
+                    >
+                      ছবি মুছুন
+                    </button>
+                  )}
+                </div>
+                {editJobForm.thumbnailUrl ? (
+                  <div className="relative w-full sm:w-64 aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
+                    <img
+                      src={getImageUrl(editJobForm.thumbnailUrl)}
+                      alt="Cover Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <label className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 hover:border-amber-500 cursor-pointer text-xs font-bold text-slate-600 dark:text-slate-300">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleEditJobThumbnailUpload}
+                      disabled={uploadingEditJobThumbnail}
+                      className="hidden"
+                    />
+                    <UploadCloud className="w-4 h-4 text-amber-500" />
+                    <span>{uploadingEditJobThumbnail ? 'আপলোড হচ্ছে...' : 'কভার ছবি আপলোড করুন'}</span>
+                  </label>
+                )}
               </div>
 
               {/* Steps */}

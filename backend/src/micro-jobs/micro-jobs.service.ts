@@ -169,6 +169,7 @@ export class MicroJobsService {
           categoryId: dto.categoryId,
           title: dto.title.trim(),
           description: dto.description.trim(),
+          thumbnailUrl: dto.thumbnailUrl?.trim() || null,
           steps: dto.steps || [],
           proofRequirements: dto.proofRequirements || [],
           rewardPerWorker: dto.rewardPerWorker,
@@ -1001,6 +1002,7 @@ export class MicroJobsService {
       title?: string;
       description?: string;
       categoryId?: string;
+      thumbnailUrl?: string | null;
       steps?: string[];
       proofRequirements?: string[];
     },
@@ -1029,6 +1031,9 @@ export class MicroJobsService {
     if (dto.title?.trim()) updateData.title = dto.title.trim();
     if (dto.description?.trim()) updateData.description = dto.description.trim();
     if (dto.categoryId) updateData.categoryId = dto.categoryId;
+    if (dto.thumbnailUrl !== undefined) {
+      updateData.thumbnailUrl = dto.thumbnailUrl?.trim() || null;
+    }
     if (Array.isArray(dto.steps)) updateData.steps = dto.steps.filter((s) => s && s.trim());
     if (Array.isArray(dto.proofRequirements)) {
       updateData.proofRequirements = dto.proofRequirements.filter((p) => p && p.trim());

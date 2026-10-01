@@ -1432,6 +1432,7 @@ model MicroJob {
   categoryId         String
   title              String               @db.VarChar(200)
   description        String               @db.Text
+  thumbnailUrl       String?              @db.VarChar(500)
   steps              Json
   proofRequirements  Json
   rewardPerWorker    Decimal              @db.Decimal(18, 4)

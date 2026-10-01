@@ -969,15 +969,33 @@ export default function AdminMicroJobsPage() {
                     return (
                       <tr key={job.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
                         <td className="py-3.5 px-3 max-w-xs">
-                          <div className="font-bold text-slate-900 dark:text-white line-clamp-1">
-                            {job.title}
-                          </div>
-                          <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-400">
-                            <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 font-semibold">
-                              {job.category?.name || 'General'}
-                            </span>
-                            <span>•</span>
-                            <span className="font-mono text-[10px]">{job.id.slice(-6)}</span>
+                          <div className="flex items-start gap-2.5">
+                            {job.thumbnailUrl && (
+                              <button
+                                type="button"
+                                onClick={() => setZoomedImage(getImageUrl(job.thumbnailUrl))}
+                                title="কাজের কভার ছবি বড় করে দেখুন"
+                                className="relative w-14 h-10 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shrink-0 group/thumb"
+                              >
+                                <img
+                                  src={getImageUrl(job.thumbnailUrl)}
+                                  alt={job.title}
+                                  className="w-full h-full object-cover group-hover/thumb:scale-110 transition-transform"
+                                />
+                              </button>
+                            )}
+                            <div className="min-w-0">
+                              <div className="font-bold text-slate-900 dark:text-white line-clamp-1">
+                                {job.title}
+                              </div>
+                              <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-400">
+                                <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 font-semibold">
+                                  {job.category?.name || 'General'}
+                                </span>
+                                <span>•</span>
+                                <span className="font-mono text-[10px]">{job.id.slice(-6)}</span>
+                              </div>
+                            </div>
                           </div>
                           {job.rejectReason && job.status === 'REJECTED' && (
                             <div className="mt-1.5 p-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[10px] text-rose-500">

@@ -38,4 +38,8 @@ export class CreateMicroJobDto {
   @IsOptional()
   @IsBoolean()
   isPinned?: boolean;
+
+  @IsOptional()
+  @IsString()
+  thumbnailUrl?: string;
 }

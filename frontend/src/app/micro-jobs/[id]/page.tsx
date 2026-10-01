@@ -7,7 +7,7 @@ import { api } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useSettings } from '@/context/SettingsContext';
 import { useAuthStore } from '@/store/useAuthStore';
-import { compressImage } from '@/lib/imageUtils';
+import { compressImage, getImageUrl } from '@/lib/imageUtils';
 import {
   Briefcase,
   Users,
@@ -25,6 +25,7 @@ import {
   DollarSign,
   FileText,
   Camera,
+  Maximize2,
 } from 'lucide-react';
 import VerifiedBadge from '@/components/common/VerifiedBadge';
 import ImageLightbox from '@/components/common/ImageLightbox';
@@ -51,6 +52,7 @@ export default function SingleMicroJobPage() {
   const [submitError, setSubmitError] = useState('');
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [coverPreviewOpen, setCoverPreviewOpen] = useState(false);
   const [editingRejected, setEditingRejected] = useState(false);
 
   const isEnabled = settings.microJob?.enabled !== false;
@@ -201,6 +203,28 @@ export default function SingleMicroJobPage() {
 
       {/* Main Job Details Card */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-6">
+        {/* Cover / Sample Picture (if uploaded by Employer) */}
+        {job.thumbnailUrl && (
+          <div
+            onClick={() => setCoverPreviewOpen(true)}
+            className="relative w-full max-h-[380px] aspect-video rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer group"
+          >
+            <img
+              src={getImageUrl(job.thumbnailUrl)}
+              alt={job.title}
+              className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent flex items-end justify-between p-4">
+              <span className="text-xs font-bold text-white/90 bg-slate-950/70 backdrop-blur-md px-3 py-1 rounded-xl border border-white/15">
+                {lang === 'bn' ? '📷 কাজের কভার / নমুনা ছবি (বড় করে দেখতে ক্লিক করুন)' : '📷 Job Cover / Sample Image (Click to enlarge)'}
+              </span>
+              <div className="p-2 rounded-xl bg-white/90 text-slate-900 shadow-md">
+                <Maximize2 className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header row */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
           <div className="space-y-2">
@@ -585,6 +609,17 @@ export default function SingleMicroJobPage() {
         onClose={() => setLightboxOpen(false)}
         title={lang === 'bn' ? 'আমার সাবমিট করা প্রুফ স্ক্রিনশট' : 'My Submitted Proof Screenshot'}
       />
+
+      {/* Job Cover Image Lightbox */}
+      {job?.thumbnailUrl && (
+        <ImageLightbox
+          images={[getImageUrl(job.thumbnailUrl)]}
+          initialIndex={0}
+          isOpen={coverPreviewOpen}
+          onClose={() => setCoverPreviewOpen(false)}
+          title={job.title}
+        />
+      )}
     </div>
   );
 }
