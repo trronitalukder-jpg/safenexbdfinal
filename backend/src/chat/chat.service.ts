@@ -728,7 +728,7 @@ export class ChatService {
    * Super Admin & Staff: Fetch all platform conversations with live deal and escrow telemetry
    */
   async getAllConversationsAdmin(query: {
-    filter?: 'ALL' | 'LIVE_CHAT' | 'ACTIVE_ESCROW' | 'DISPUTED' | 'REQUESTS';
+    filter?: 'ALL' | 'LIVE_CHAT' | 'ADMIN_SUPPORT' | 'ACTIVE_ESCROW' | 'DISPUTED' | 'REQUESTS';
     search?: string;
     page?: number;
     limit?: number;
