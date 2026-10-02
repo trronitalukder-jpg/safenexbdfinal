@@ -18,7 +18,7 @@ export class GuidesService implements OnModuleInit {
   async onModuleInit() {
     try {
       const count = await this.prisma.guide.count();
-      if (count < 20) {
+      if (count < 30) {
         const res = await this.seedSeoGuides();
         if (res.insertedCount > 0) {
           this.logger.log(
@@ -66,7 +66,7 @@ export class GuidesService implements OnModuleInit {
       message:
         insertedCount > 0
           ? `${insertedCount}টি নতুন এসইও গাইড সফলভাবে যুক্ত হয়েছে! (মোট গাইড: ${totalCount}টি)`
-          : `সবগুলো ২৫টি এসইও গাইড ইতিমধ্যে ডাটাবেজে যুক্ত আছে (মোট গাইড: ${totalCount}টি)।`,
+          : `সবগুলো ৩০টি এসইও গাইড ইতিমধ্যে ডাটাবেজে যুক্ত আছে (মোট গাইড: ${totalCount}টি)।`,
     };
   }
 

@@ -295,10 +295,10 @@ export default function AdminGuidesPage() {
             onClick={handleSeedSeoGuides}
             disabled={seeding || loading}
             className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white shadow-sm transition flex items-center gap-1.5"
-            title="Restore or load all 25 SEO-optimized Bengali/English guides without overwriting customized posts"
+            title="Restore or load all 30 SEO-optimized Bengali/English guides without overwriting customized posts"
           >
             <Sparkles className={`w-3.5 h-3.5 ${seeding ? 'animate-spin' : ''}`} />
-            <span>{seeding ? 'Loading SEO Posts...' : '২৫টি এসইও পোস্ট লোড/রিস্টোর করুন'}</span>
+            <span>{seeding ? 'Loading SEO Posts...' : '৩০টি এসইও পোস্ট লোড/রিস্টোর করুন'}</span>
           </button>
 
           <Link

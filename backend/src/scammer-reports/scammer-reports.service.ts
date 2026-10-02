@@ -112,9 +112,10 @@ export class ScammerReportsService {
       orConditions.push({ facebookLink: { contains: normalizedFb } });
     }
 
-    // Direct string match on phone or facebookLink
+    // Direct string match on phone, facebookLink, or scammerName
     orConditions.push({ phone: { contains: trimmedQuery } });
     orConditions.push({ facebookLink: { contains: trimmedQuery } });
+    orConditions.push({ scammerName: { contains: trimmedQuery } });
 
     const matches = await this.prisma.scammerRecord.findMany({
       where: {
@@ -126,6 +127,7 @@ export class ScammerReportsService {
         scammerName: true,
         phone: true,
         facebookLink: true,
+        facebookUid: true,
         category: true,
         description: true,
         amountLost: true,
@@ -134,10 +136,11 @@ export class ScammerReportsService {
         severity: true,
         searchHitCount: true,
         createdAt: true,
+        updatedAt: true,
         // CRITICAL: NEVER select reporterId, reporterName, reporterPhone, reporterIp
       },
       orderBy: { createdAt: 'desc' },
-      take: 10,
+      take: 20,
     });
 
     if (matches.length > 0) {
@@ -167,12 +170,105 @@ export class ScammerReportsService {
       enabled: true,
       found: false,
       query: trimmedQuery,
-      messageBn: 'এই নম্বরের/আইডির অতীতে কোনো প্রতারণার রেকর্ড আমাদের ডাটাবেজে নেই।',
+      messageBn: 'এই নম্বরের/নামের অতীতে কোনো প্রতারণার রেকর্ড আমাদের ডাটাবেজে নেই।',
       messageEn: 'No fraudulent record found in our database for this query.',
       advisoryNoticeBn:
         '⚠️ গুরুত্বপূর্ণ পরামর্শ: আমাদের ডাটাবেজে নাম না থাকার অর্থ এই ব্যক্তি ১০০% সৎ তা নিশ্চিত করে না। নতুন বা অচেনা কাউকে সরাসরি বিকাশ/নগদে টাকা পাঠাবেন না। লেনদেনে ১০০% সুরক্ষিত থাকতে সবসময় SafnexBD এসক্রো ব্যবহার করুন।',
       advisoryNoticeEn:
         'Safety Notice: A clean search does not guarantee complete trustworthiness. Never send money in advance to unverified contacts. Always use SafnexBD Escrow.',
+    };
+  }
+
+  /**
+   * Public SEO Directory: List latest approved scammer records for Google indexing & /check directory
+   */
+  async getPublicDirectory(limit = 60) {
+    const safeLimit = Math.min(Math.max(Number(limit) || 60, 1), 200);
+    return this.prisma.scammerRecord.findMany({
+      where: { status: ScammerReportStatus.APPROVED },
+      select: {
+        id: true,
+        scammerName: true,
+        phone: true,
+        facebookLink: true,
+        facebookUid: true,
+        category: true,
+        description: true,
+        amountLost: true,
+        proofImages: true,
+        scammerPhotoUrl: true,
+        severity: true,
+        searchHitCount: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: [{ searchHitCount: 'desc' }, { createdAt: 'desc' }],
+      take: safeLimit,
+    });
+  }
+
+  /**
+   * Public SEO Profile Lookup by Phone, ID, Facebook UID, or Name
+   */
+  async getPublicByIdentifier(identifier: string) {
+    const decoded = decodeURIComponent(identifier || '').trim();
+    if (!decoded) {
+      throw new NotFoundException('Scammer record not found');
+    }
+
+    const normalizedPhone = this.normalizePhone(decoded);
+    const orConditions: any[] = [
+      { id: decoded },
+      { phone: decoded },
+      { facebookUid: decoded },
+      { scammerName: { contains: decoded } },
+    ];
+
+    if (normalizedPhone && normalizedPhone.length >= 7) {
+      orConditions.push({ phone: { contains: normalizedPhone } });
+    }
+
+    const records = await this.prisma.scammerRecord.findMany({
+      where: {
+        status: ScammerReportStatus.APPROVED,
+        OR: orConditions,
+      },
+      select: {
+        id: true,
+        scammerName: true,
+        phone: true,
+        facebookLink: true,
+        facebookUid: true,
+        category: true,
+        description: true,
+        amountLost: true,
+        proofImages: true,
+        scammerPhotoUrl: true,
+        severity: true,
+        searchHitCount: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!records || records.length === 0) {
+      throw new NotFoundException('Scammer record not found');
+    }
+
+    // Increment hit count asynchronously
+    const ids = records.map((r) => r.id);
+    this.prisma.scammerRecord
+      .updateMany({
+        where: { id: { in: ids } },
+        data: { searchHitCount: { increment: 1 } },
+      })
+      .catch(() => {});
+
+    return {
+      primary: records[0],
+      allReports: records,
+      totalReports: records.length,
     };
   }
 

@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://safnexbd.com';
+  const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://safnexbd.com/api/v1';
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {
@@ -9,6 +10,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: 'daily',
       priority: 1.0,
+    },
+    {
+      url: `${baseUrl}/check`,
+      lastModified: new Date(),
+      changeFrequency: 'hourly',
+      priority: 0.95,
+    },
+    {
+      url: `${baseUrl}/guides`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.9,
     },
     {
       url: `${baseUrl}/products`,
@@ -41,12 +54,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/guides`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
       url: `${baseUrl}/dispute-policy`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
@@ -66,26 +73,49 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
+  let guideRoutes: MetadataRoute.Sitemap = [];
+  let scammerRoutes: MetadataRoute.Sitemap = [];
+
   try {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://safnexbd.com/api/v1';
     const res = await fetch(`${backendUrl}/guides`, {
       next: { revalidate: 3600 },
     });
     if (res.ok) {
       const raw = await res.json();
       const guides = Array.isArray(raw) ? raw : raw?.data?.data || raw?.data || [];
-      const guideRoutes: MetadataRoute.Sitemap = guides
+      guideRoutes = guides
         .filter((g: any) => g.slug)
         .map((g: any) => ({
           url: `${baseUrl}/guides/${g.slug}`,
           lastModified: g.updatedAt ? new Date(g.updatedAt) : new Date(),
           changeFrequency: 'weekly' as const,
-          priority: 0.7,
+          priority: 0.8,
         }));
-      return [...staticRoutes, ...guideRoutes];
     }
   } catch (_) {}
 
-  return staticRoutes;
-}
+  try {
+    const scamRes = await fetch(`${backendUrl}/scammer-reports/public-list?limit=200`, {
+      next: { revalidate: 1800 },
+    });
+    if (scamRes.ok) {
+      const raw = await scamRes.json();
+      const scammers = Array.isArray(raw) ? raw : raw?.data?.data || raw?.data || [];
+      const seenIdentifiers = new Set<string>();
+      for (const s of scammers) {
+        const identifier = encodeURIComponent((s.phone || s.id || '').trim());
+        if (identifier && !seenIdentifiers.has(identifier)) {
+          seenIdentifiers.add(identifier);
+          scammerRoutes.push({
+            url: `${baseUrl}/check/${identifier}`,
+            lastModified: s.updatedAt ? new Date(s.updatedAt) : new Date(),
+            changeFrequency: 'daily' as const,
+            priority: 0.85,
+          });
+        }
+      }
+    }
+  } catch (_) {}
 
+  return [...staticRoutes, ...guideRoutes, ...scammerRoutes];
+}

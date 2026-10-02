@@ -36,6 +36,20 @@ export class ScammerReportsController {
   }
 
   @Public()
+  @Get('public-list')
+  async getPublicList(@Query('limit') limit?: string) {
+    return this.scammerReportsService.getPublicDirectory(
+      limit ? parseInt(limit, 10) : 60,
+    );
+  }
+
+  @Public()
+  @Get('public/:identifier')
+  async getPublicByIdentifier(@Param('identifier') identifier: string) {
+    return this.scammerReportsService.getPublicByIdentifier(identifier);
+  }
+
+  @Public()
   @Get('social-proof')
   async getSocialProof() {
     return this.scammerReportsService.getSocialProofEvents();
