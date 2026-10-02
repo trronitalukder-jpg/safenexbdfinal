@@ -271,6 +271,7 @@ function MessengerChatContent() {
   const [isRulesExpanded, setIsRulesExpanded] = useState(false);
   const [templateAudienceFilter, setTemplateAudienceFilter] = useState<'ALL' | 'BUYER' | 'SELLER'>('ALL');
   const [showTemplatesBar, setShowTemplatesBar] = useState(true);
+  const [isMobileToolsExpanded, setIsMobileToolsExpanded] = useState(false);
   const textInputRef = useRef<HTMLInputElement>(null);
 
   // Wallet
@@ -2149,9 +2150,9 @@ function MessengerChatContent() {
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800/80">
+        <div className="flex items-center justify-between px-3.5 sm:px-4 py-2.5 sm:py-3 border-b border-slate-100 dark:border-slate-800/80">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Messages</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">Messages</h1>
             {conversations.length > 0 && (
               <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400">
                 {conversations.length}
@@ -2166,7 +2167,7 @@ function MessengerChatContent() {
 
           <div className="flex items-center gap-2">
             {/* User Available Balance Tag */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 dark:bg-slate-800 text-xs text-slate-600 dark:text-slate-300 font-medium">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 dark:bg-slate-800 text-xs text-slate-600 dark:text-slate-300 font-medium border border-slate-200/60 dark:border-slate-700/60">
               <Wallet className="w-3.5 h-3.5 text-emerald-500" />
               <span>৳{wallet?.availableBalance?.toLocaleString() ?? '0'}</span>
             </div>
@@ -2184,7 +2185,7 @@ function MessengerChatContent() {
         </div>
 
         {/* Search Bar (Messenger Style) */}
-        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800/60 bg-white dark:bg-slate-900">
+        <div className="px-3.5 sm:px-4 py-2.5 border-b border-slate-100 dark:border-slate-800/60 bg-white dark:bg-slate-900">
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
@@ -2299,7 +2300,7 @@ function MessengerChatContent() {
             <div>
               {conversations.length > 0 ? (
                 <div>
-                  <div className="px-4 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-50/80 dark:bg-slate-900/70 flex items-center justify-between">
+                  <div className="px-3.5 sm:px-4 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-50/80 dark:bg-slate-900/70 flex items-center justify-between">
                     <span>
                       {lang === 'bn'
                         ? `সাম্প্রতিক চ্যাট (${Math.min(visibleRecentCount, conversations.length)}/${conversations.length})`
@@ -2350,7 +2351,7 @@ function MessengerChatContent() {
                       <div
                         key={conv.conversationId}
                         onClick={() => selectConversation(conv)}
-                        className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-all group relative ${
+                        className={`flex items-center gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 cursor-pointer transition-all group relative ${
                           isSelected
                             ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-l-4 border-emerald-600 dark:border-emerald-500 shadow-sm'
                             : isUnread
@@ -2370,7 +2371,7 @@ function MessengerChatContent() {
                             <img
                               src={getImageUrl(other.avatarUrl)}
                               alt={dName}
-                              className={`w-12 h-12 rounded-full object-cover border transition-all ${
+                              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border transition-all ${
                                 isUnread
                                   ? 'border-sky-500 dark:border-sky-400 ring-2 ring-sky-400/30 shadow-sm'
                                   : 'border-slate-200 dark:border-slate-700'
@@ -2378,7 +2379,7 @@ function MessengerChatContent() {
                             />
                           ) : (
                             <div
-                              className={`w-12 h-12 rounded-full font-bold flex items-center justify-center text-base border transition-all ${
+                              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full font-bold flex items-center justify-center text-base border transition-all ${
                                 isUnread
                                   ? 'bg-sky-100 dark:bg-sky-950/80 text-sky-700 dark:text-sky-300 border-sky-400 dark:border-sky-600 ring-2 ring-sky-400/30'
                                   : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
@@ -2398,7 +2399,7 @@ function MessengerChatContent() {
 
                           {/* Online indicator */}
                           <span
-                            className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900 transition-colors ${
+                            className={`absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-2 border-white dark:border-slate-900 transition-colors ${
                               onlineUsers.has(other?.id)
                                 ? 'bg-emerald-500 ring-1 ring-emerald-400/50'
                                 : 'bg-slate-400 dark:bg-slate-600'
@@ -2409,19 +2410,22 @@ function MessengerChatContent() {
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-0.5">
-                            <div className="flex items-center gap-1.5 truncate">
+                          <div className="flex items-center justify-between gap-1.5 mb-0.5">
+                            <div className="flex items-center gap-1.5 min-w-0 truncate">
                               <h4
                                 className={`text-sm truncate transition-colors ${
                                   isSelected
                                     ? 'text-emerald-900 dark:text-emerald-200 font-bold'
                                     : isUnread
                                     ? 'text-slate-950 dark:text-white font-black tracking-tight'
-                                    : 'text-slate-800 dark:text-slate-200 font-medium'
+                                    : 'text-slate-800 dark:text-slate-200 font-semibold'
                                 }`}
                               >
                                 {dName}
                               </h4>
+                              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono bg-slate-100 dark:bg-slate-800/80 px-1.5 py-0.2 rounded shrink-0">
+                                {other?.uniqueUserId || 'TBD' + (other?.id?.slice(0, 5).toUpperCase() || '')}
+                              </span>
                               {isUnread && (
                                 <span className="px-1.5 py-0.2 rounded text-[10px] font-black uppercase bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 shrink-0">
                                   {lang === 'bn' ? 'নতুন' : 'NEW'}
@@ -2429,10 +2433,10 @@ function MessengerChatContent() {
                               )}
                             </div>
 
-                            <div className="flex items-center gap-1.5 shrink-0">
+                            <div className="flex items-center gap-1 shrink-0">
                               {timeStr && (
                                 <span
-                                  className={`text-[11px] ml-1 transition-colors ${
+                                  className={`text-[11px] transition-colors ${
                                     isUnread
                                       ? 'text-sky-600 dark:text-sky-400 font-bold'
                                       : 'text-slate-400 dark:text-slate-500'
@@ -2471,10 +2475,6 @@ function MessengerChatContent() {
                               </span>
                             )}
                           </div>
-
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
-                            ID: {other?.uniqueUserId || 'TBD' + (other?.id?.slice(0, 5).toUpperCase() || '')}
-                          </span>
                         </div>
                       </div>
                     );
@@ -2665,12 +2665,13 @@ function MessengerChatContent() {
         {activeConversation ? (
           <>
             {/* Chat Header */}
-            <div className="h-16 px-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between shrink-0 shadow-sm">
-              <div className="flex items-center gap-3 min-w-0">
+            <div className="h-14 sm:h-16 px-2.5 sm:px-4 border-b border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between gap-2 shrink-0 shadow-2xs">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                 {/* Back Button (Mobile) */}
                 <button
                   onClick={() => setMobileView('list')}
-                  className="md:hidden p-2 -ml-1 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full shrink-0"
+                  className="md:hidden p-1.5 -ml-1 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full shrink-0 active:scale-95 transition"
+                  aria-label="Back to conversations"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
@@ -2691,7 +2692,7 @@ function MessengerChatContent() {
                 {/* Counterpart Profile Trigger */}
                 <div
                   onClick={() => setShowProfileModal(activeConversation.otherUser)}
-                  className="flex items-center gap-2 sm:gap-3 cursor-pointer group hover:opacity-90 transition-opacity min-w-0"
+                  className="flex items-center gap-2 sm:gap-3 cursor-pointer group hover:opacity-90 transition-opacity min-w-0 flex-1"
                 >
                   <div className="relative shrink-0">
                     {activeConversation.otherUser?.avatarUrl ? (
@@ -2706,7 +2707,7 @@ function MessengerChatContent() {
                       </div>
                     )}
                     <span
-                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 transition-colors ${
+                      className={`absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full border-2 border-white dark:border-slate-900 transition-colors ${
                         onlineUsers.has(activeConversation.otherUser?.id)
                           ? 'bg-emerald-500 ring-1 ring-emerald-400/50'
                           : 'bg-slate-400 dark:bg-slate-600'
@@ -2715,9 +2716,9 @@ function MessengerChatContent() {
                     />
                   </div>
 
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <h2 className="font-bold text-sm text-slate-900 dark:text-white leading-tight group-hover:text-emerald-600 transition-colors truncate">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 flex-nowrap">
+                      <h2 className="font-bold text-sm text-slate-900 dark:text-white leading-tight group-hover:text-emerald-600 transition-colors truncate max-w-[130px] xs:max-w-[175px] sm:max-w-[260px] md:max-w-none">
                         {getUserDisplayName(activeConversation.otherUser)}
                       </h2>
                       {activeConversation.otherUser?.isVerified && (
@@ -2728,14 +2729,14 @@ function MessengerChatContent() {
                         if (!badge) return null;
                         return (
                           <span
-                            className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-extrabold border shrink-0 ${badge.className}`}
+                            className={`inline-flex items-center px-1.5 py-0.2 rounded-md text-[9px] sm:text-[10px] font-extrabold border shrink-0 ${badge.className}`}
                           >
                             {badge.label}
                           </span>
                         );
                       })()}
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate flex items-center gap-1.5">
+                    <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate flex items-center gap-1.5 mt-0.5">
                       <span>
                         {activeConversation.otherUser?.uniqueUserId ||
                           'TBD' + (activeConversation.otherUser?.id?.slice(0, 5).toUpperCase() || '')}
@@ -2804,7 +2805,7 @@ function MessengerChatContent() {
                             ? 'এসক্রো ডেলিভারি কাউন্টডাউন টাইমার (ঐচ্ছিক)'
                             : 'Escrow Delivery Countdown Timer (Optional)'
                         }
-                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-extrabold border transition-all cursor-pointer shrink-0 ${
+                        className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl text-xs font-extrabold border transition-all cursor-pointer shrink-0 ${
                           activeHoldTx && timerInfo
                             ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border-amber-500/40 ring-1 ring-amber-500/20'
                             : timerInfo || isDeliveryTimerEnabled
@@ -2822,17 +2823,17 @@ function MessengerChatContent() {
                           }`}
                         />
                         {activeHoldTx && timerInfo ? (
-                          <span className="font-mono text-[11px] sm:text-xs tracking-tight">
+                          <span className="font-mono text-[10px] sm:text-xs tracking-tight">
                             {timerInfo.days > 0
                               ? `${timerInfo.days}d ${timerInfo.remHrs}:${timerInfo.mins}:${timerInfo.secs}`
                               : `${timerInfo.hrs}:${timerInfo.mins}:${timerInfo.secs}`}
                           </span>
                         ) : timerInfo ? (
-                          <span className="text-[11px] sm:text-xs">
+                          <span className="text-[10px] sm:text-xs">
                             ⏱️ {lang === 'bn' ? timerInfo.labelBn : timerInfo.shortLabel}
                           </span>
                         ) : isDeliveryTimerEnabled ? (
-                          <span className="text-[11px] sm:text-xs">
+                          <span className="text-[10px] sm:text-xs">
                             ⏱️ {getSelectedDeliveryLabel(true)}
                           </span>
                         ) : (
@@ -2910,7 +2911,7 @@ function MessengerChatContent() {
                 <div className="relative">
                   <button
                     onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
-                    className="p-2 text-slate-600 dark:text-slate-300 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors flex items-center justify-center border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                    className="p-1.5 sm:p-2 text-slate-600 dark:text-slate-300 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors flex items-center justify-center border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
                     title="Menu & Options"
                     aria-label="Menu and options"
                   >
@@ -3084,13 +3085,13 @@ function MessengerChatContent() {
               </div>
             </div>
 
-            {/* Mobile Quick Tab & Deal Action Bar (1-Tap Comfort on Phones) */}
-            <div className="md:hidden flex items-center justify-between gap-1.5 px-2.5 py-1.5 bg-white/95 dark:bg-slate-900/95 border-b border-slate-200/70 dark:border-slate-800 overflow-x-auto no-scrollbar shrink-0">
-              <div className="flex items-center gap-1 shrink-0">
+            {/* Unified Mobile Quick Tab, Safety Guideline Toggle & Deal Action Bar (<768px) */}
+            <div className="md:hidden flex items-center justify-between gap-1.5 px-2 py-1.5 bg-white/95 dark:bg-slate-900/95 border-b border-slate-200/70 dark:border-slate-800 shrink-0">
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1">
                 <button
                   type="button"
                   onClick={() => setActiveHeaderTab('chat')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition whitespace-nowrap ${
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition whitespace-nowrap shrink-0 ${
                     activeHeaderTab === 'chat'
                       ? 'bg-emerald-600 text-white shadow-2xs'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
@@ -3102,7 +3103,7 @@ function MessengerChatContent() {
                 <button
                   type="button"
                   onClick={() => setActiveHeaderTab('transaction')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition whitespace-nowrap ${
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition whitespace-nowrap shrink-0 ${
                     activeHeaderTab === 'transaction'
                       ? 'bg-emerald-600 text-white shadow-2xs'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
@@ -3125,7 +3126,7 @@ function MessengerChatContent() {
                 <button
                   type="button"
                   onClick={() => setActiveHeaderTab('rules')}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition whitespace-nowrap ${
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition whitespace-nowrap shrink-0 ${
                     activeHeaderTab === 'rules'
                       ? 'bg-emerald-600 text-white shadow-2xs'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
@@ -3137,7 +3138,7 @@ function MessengerChatContent() {
                 <button
                   type="button"
                   onClick={() => setActiveHeaderTab('admin_calling')}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition whitespace-nowrap relative ${
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition whitespace-nowrap relative shrink-0 ${
                     activeHeaderTab === 'admin_calling'
                       ? 'bg-amber-600 text-white shadow-2xs'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
@@ -3149,20 +3150,41 @@ function MessengerChatContent() {
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping absolute -top-0.5 -right-0.5" />
                   )}
                 </button>
+
+                {/* Compact Safety Guideline Drawer Toggle Pill (Integrated on Mobile) */}
+                {activeHeaderTab === 'chat' && chatRulesConfig?.isEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => setIsRulesExpanded(!isRulesExpanded)}
+                    className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition whitespace-nowrap shrink-0 border ${
+                      isRulesExpanded
+                        ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/40'
+                        : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
+                    }`}
+                  >
+                    <Shield className="w-3 h-3 text-amber-500" />
+                    <span>{lang === 'bn' ? 'সুরক্ষা' : 'Safety'}</span>
+                    <ChevronDown
+                      className={`w-3 h-3 transition-transform duration-200 ${
+                        isRulesExpanded ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+                )}
               </div>
 
-              <div className="flex items-center gap-1 shrink-0 pl-1 border-l border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-1 shrink-0 pl-1.5 border-l border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowPayModal(true)}
-                  className="px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white whitespace-nowrap shadow-2xs"
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white whitespace-nowrap shadow-2xs active:scale-95 transition"
                 >
                   💸 Pay
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowRequestModal(true)}
-                  className="px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap shadow-2xs"
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap shadow-2xs active:scale-95 transition"
                 >
                   💰 Req
                 </button>
@@ -3174,16 +3196,16 @@ function MessengerChatContent() {
             ========================================================================= */}
             {activeHeaderTab === 'chat' && (
               <>
-                {/* Slim, Modern Top Safety Awareness Bar */}
+                {/* Slim, Modern Top Safety Awareness Bar (Collapsed bar on Desktop/Tablet, Expandable Drawer on All Devices) */}
                 {chatRulesConfig?.isEnabled && (
                   <div className="border-b border-slate-200/70 dark:border-slate-800/80 bg-amber-500/[0.06] dark:bg-amber-500/[0.04] shrink-0">
                     <div
                       onClick={() => setIsRulesExpanded(!isRulesExpanded)}
-                      className="px-3 sm:px-4 py-1.5 flex items-center justify-between gap-2 cursor-pointer select-none hover:bg-amber-500/10 transition-colors"
+                      className="hidden md:flex px-4 py-1.5 items-center justify-between gap-2 cursor-pointer select-none hover:bg-amber-500/10 transition-colors"
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <Shield className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                        <span className="text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">
                           {chatRulesConfig.banner?.title || 'SafnexBD অফিসিয়াল সুরক্ষা ও লেনদেন গাইডলাইন'}
                         </span>
                       </div>
@@ -3209,16 +3231,30 @@ function MessengerChatContent() {
                       </button>
                     </div>
 
-                    {/* Expandable Body */}
+                    {/* Expandable Body (Shows on both Mobile & Desktop when expanded) */}
                     {isRulesExpanded && (
-                      <div className="px-3 sm:px-4 pb-3 pt-1.5 border-t border-amber-500/15 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <div className="px-3 sm:px-4 pb-3 pt-2 border-t border-amber-500/15 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <div className="flex md:hidden items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                            <Shield className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            <span>{chatRulesConfig.banner?.title || 'SafnexBD সুরক্ষা ও লেনদেন গাইডলাইন'}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIsRulesExpanded(false)}
+                            className="text-[11px] font-bold text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-md bg-amber-500/10"
+                          >
+                            {lang === 'bn' ? 'বন্ধ করুন ✕' : 'Close ✕'}
+                          </button>
+                        </div>
+
                         {chatRulesConfig.banner?.subtitle && (
                           <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
                             {chatRulesConfig.banner.subtitle}
                           </p>
                         )}
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 max-h-[42vh] overflow-y-auto pr-0.5">
                           {(chatRulesConfig.banner?.rules || []).map((rule: any, idx: number) => (
                             <div
                               key={rule.id || idx}
@@ -3243,11 +3279,11 @@ function MessengerChatContent() {
 
                 {/* 🚨 AI Real-Time Safety Warning Banner */}
                 {safetyAlerts.length > 0 && (
-                  <div className="px-3 sm:px-4 pt-2 space-y-2 shrink-0">
+                  <div className="px-2.5 sm:px-4 pt-2 space-y-2 shrink-0">
                     {safetyAlerts.map((alert, idx) => (
                       <div
                         key={alert.id || idx}
-                        className="p-3 rounded-2xl bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-amber-500/15 border border-amber-500/30 shadow-xs flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200"
+                        className="p-2.5 sm:p-3 rounded-2xl bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-amber-500/15 border border-amber-500/30 shadow-xs flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200"
                       >
                         <div className="p-1.5 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex-shrink-0">
                           <ShieldAlert className="w-4 h-4" />
@@ -3276,25 +3312,25 @@ function MessengerChatContent() {
 
                 {/* 💡 AI Smart Deal Proposal Card */}
                 {smartDealProposal && (
-                  <div className="px-3 sm:px-4 pt-2 shrink-0">
-                    <div className="p-3 rounded-2xl bg-indigo-500/10 dark:bg-indigo-950/30 border border-indigo-500/30 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
-                      <div className="flex items-center gap-2.5">
+                  <div className="px-2.5 sm:px-4 pt-2 shrink-0">
+                    <div className="p-2.5 sm:p-3 rounded-2xl bg-indigo-500/10 dark:bg-indigo-950/30 border border-indigo-500/30 shadow-xs flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="flex items-center gap-2 min-w-0">
                         <div className="p-1.5 rounded-xl bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex-shrink-0">
                           <Sparkles className="w-4 h-4" />
                         </div>
-                        <div>
-                          <p className="text-xs font-bold text-indigo-900 dark:text-indigo-200">
-                            {lang === 'bn' ? '💡 এআই ডিল শনাক্ত করেছে:' : '💡 AI Deal Detected:'}{' '}
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-indigo-900 dark:text-indigo-200 truncate">
+                            {lang === 'bn' ? '💡 এআই ডিল:' : '💡 AI Deal:'}{' '}
                             <span className="text-indigo-600 dark:text-indigo-400">{smartDealProposal.title}</span> — ৳{smartDealProposal.amount}
                           </p>
-                          <p className="text-[11px] text-indigo-700/80 dark:text-indigo-300/80">
+                          <p className="text-[10px] sm:text-[11px] text-indigo-700/80 dark:text-indigo-300/80 truncate">
                             {lang === 'bn'
-                              ? '১-ক্লিকে এখনই অফিসিয়াল সুরক্ষিত এসক্রো পেমেন্ট তৈরি করুন'
+                              ? '১-ক্লিকে অফিসিয়াল এসক্রো পেমেন্ট তৈরি করুন'
                               : 'Create official protected escrow payment in 1-click'}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           type="button"
                           onClick={() => {
@@ -3303,9 +3339,9 @@ function MessengerChatContent() {
                             setShowPayModal(true);
                             setSmartDealProposal(null);
                           }}
-                          className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition"
+                          className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] sm:text-xs shadow-xs transition whitespace-nowrap"
                         >
-                          {lang === 'bn' ? 'এসক্রো তৈরি করুন' : 'Create Escrow'}
+                          {lang === 'bn' ? 'এসক্রো করুন' : 'Create Escrow'}
                         </button>
                         <button
                           type="button"
@@ -3319,7 +3355,7 @@ function MessengerChatContent() {
                   </div>
                 )}
 
-                {/* Escrow Delivery Countdown Timer Banner (Only when a deal has an explicit timer set) */}
+                {/* Escrow Delivery Countdown Timer Banner (Single sleek line on Mobile & Desktop) */}
                 {publicAdvancedFeatures?.escrowCountdownTimer?.enabled !== false &&
                   (() => {
                     const activeHoldTx = conversationTransactions.find(
@@ -3339,39 +3375,39 @@ function MessengerChatContent() {
                     const cleanNote = cleanDealNote(targetTx.notes || targetTx.reason);
 
                     return (
-                      <div className="px-3 sm:px-4 py-1.5 bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-sky-500/10 border-b border-amber-500/25 flex flex-wrap items-center justify-between gap-2 shrink-0">
-                        <div className="flex items-center gap-2 min-w-0">
+                      <div className="px-2.5 sm:px-4 py-1 sm:py-1.5 bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-sky-500/10 border-b border-amber-500/25 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar whitespace-nowrap shrink-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
                           <Clock className="w-3.5 h-3.5 text-amber-500 animate-pulse shrink-0" />
-                          <p className="text-xs font-extrabold text-slate-900 dark:text-white truncate">
+                          <p className="text-[11px] sm:text-xs font-extrabold text-slate-900 dark:text-white truncate">
                             {activeHoldTx
                               ? lang === 'bn'
-                                ? `⏳ ডেলিভারি কাউন্টডাউন: ৳${Number(targetTx.amount || 0).toLocaleString()}`
-                                : `⏳ Delivery Countdown: ৳${Number(targetTx.amount || 0).toLocaleString()}`
+                                ? `⏳ কাউন্টডাউন: ৳${Number(targetTx.amount || 0).toLocaleString()}`
+                                : `⏳ Countdown: ৳${Number(targetTx.amount || 0).toLocaleString()}`
                               : lang === 'bn'
-                              ? `⏱️ প্রস্তাবিত ডিল টাইমার (${timerInfo.labelBn}): ৳${Number(targetTx.amount || 0).toLocaleString()}`
+                              ? `⏱️ প্রস্তাবিত টাইমার (${timerInfo.labelBn}): ৳${Number(targetTx.amount || 0).toLocaleString()}`
                               : `⏱️ Proposed Timer (${timerInfo.shortLabel}): ৳${Number(targetTx.amount || 0).toLocaleString()}`}{' '}
                             {cleanNote && (
-                              <span className="font-normal text-slate-500 dark:text-slate-400">
+                              <span className="hidden sm:inline font-normal text-slate-500 dark:text-slate-400">
                                 ({cleanNote})
                               </span>
                             )}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-1.5 shrink-0">
                           {activeHoldTx ? (
                             timerInfo.remainingSec > 0 ? (
-                              <span className="px-2 py-0.5 rounded-lg bg-slate-900 dark:bg-slate-800 text-amber-400 font-mono text-[11px] font-black tracking-wider">
+                              <span className="px-2 py-0.5 rounded-lg bg-slate-900 dark:bg-slate-800 text-amber-400 font-mono text-[10px] sm:text-[11px] font-black tracking-wider">
                                 {timerInfo.formatted}
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 text-[11px] font-extrabold border border-rose-500/30">
-                                সময় শেষ (Ready for Review)
+                              <span className="px-2 py-0.5 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 text-[10px] sm:text-[11px] font-extrabold border border-rose-500/30">
+                                সময় শেষ (Ready)
                               </span>
                             )
                           ) : (
-                            <span className="px-2 py-0.5 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[11px] font-extrabold border border-amber-500/30">
+                            <span className="px-2 py-0.5 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] sm:text-[11px] font-extrabold border border-amber-500/30">
                               {lang === 'bn'
-                                ? `Approve করলে ${timerInfo.labelBn} কাউন্টডাউন শুরু হবে`
+                                ? `Approve করলে ${timerInfo.labelBn} শুরু হবে`
                                 : `Starts ${timerInfo.shortLabel} on Approve`}
                             </span>
                           )}
@@ -3380,7 +3416,7 @@ function MessengerChatContent() {
                     );
                   })()}
 
-                {/* Visual Deal Stepper (১. শুরু ➔ ২. পেমেন্ট লক ➔ ৩. ডেলিভারি ➔ ৪. সম্পন্ন) — Controlled by Admin dealStepperEnabled */}
+                {/* Visual Deal Stepper (১. শুরু ➔ ২. পেমেন্ট লক ➔ ৩. ডেলিভারি ➔ ৪. সম্পন্ন) — Single-line horizontal strip on Mobile */}
                 {publicAdvancedFeatures?.chatUxFeatures?.dealStepperEnabled !== false &&
                   (() => {
                     const activeDeal =
@@ -3432,19 +3468,19 @@ function MessengerChatContent() {
                     ];
 
                     return (
-                      <div className="px-3 sm:px-4 py-2 bg-slate-50/90 dark:bg-slate-900/90 border-b border-slate-200/80 dark:border-slate-800 shrink-0">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                            <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
+                      <div className="px-2.5 sm:px-4 py-1.5 bg-white/90 dark:bg-slate-900/90 border-b border-slate-200/70 dark:border-slate-800 shrink-0">
+                        <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300 shrink-0">
+                            <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono text-[10px] sm:text-[11px]">
                               ৳{Number(activeDeal.amount || 0).toLocaleString()}
                             </span>
-                            <span className="hidden sm:inline text-slate-400">•</span>
-                            <span className="hidden sm:inline text-slate-500 dark:text-slate-400">
+                            <span className="hidden md:inline text-slate-400">•</span>
+                            <span className="hidden md:inline text-slate-500 dark:text-slate-400">
                               {lang === 'bn' ? 'এসক্রো ডিল প্রগ্রেস' : 'Escrow Deal Progress'}
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none py-0.5">
+                          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                             {steps.map((s, idx) => (
                               <React.Fragment key={s.num}>
                                 <div
@@ -3453,21 +3489,21 @@ function MessengerChatContent() {
                                       ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                                       : s.active
                                       ? st === 'DISPUTED'
-                                        ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/40 ring-2 ring-amber-400/20'
-                                        : 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30 ring-2 ring-sky-400/20'
+                                        ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/40 ring-1 ring-amber-400/20'
+                                        : 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30 ring-1 ring-sky-400/20'
                                       : 'bg-slate-200/60 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-transparent'
                                   }`}
                                 >
                                   {s.num < currentStep || currentStep === 4 ? (
                                     <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
                                   ) : s.active ? (
-                                    <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse shrink-0" />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse shrink-0" />
                                   ) : null}
                                   <span>{lang === 'bn' ? s.labelBn : s.labelEn}</span>
                                 </div>
                                 {idx < steps.length - 1 && (
                                   <span
-                                    className={`text-[10px] font-black ${
+                                    className={`text-[9px] sm:text-[10px] font-black ${
                                       s.num < currentStep
                                         ? 'text-emerald-500'
                                         : 'text-slate-300 dark:text-slate-700'
@@ -3487,7 +3523,7 @@ function MessengerChatContent() {
                 {/* Chat Feed */}
                 <div
                   ref={chatFeedRef}
-                  className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-3 sm:py-4 space-y-3 sm:space-y-4"
+                  className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2.5 sm:px-4 py-2.5 sm:py-4 space-y-2.5 sm:space-y-4 bg-slate-100/60 dark:bg-slate-950"
                 >
               {loadingMessages ? (
                 <div className="flex items-center justify-center py-20 text-slate-400 text-sm gap-2">
@@ -3538,12 +3574,12 @@ function MessengerChatContent() {
                         const timerInfo = getDealTimerInfo(syncedTx || { ...meta, createdAt: msg.createdAt });
 
                         return (
-                          <div key={msg.id} className="flex justify-center my-3">
-                            <div className="w-full max-w-md bg-white dark:bg-slate-900 border-2 border-emerald-500/30 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+                          <div key={msg.id} className="flex justify-center my-2.5 sm:my-3">
+                            <div className="w-full max-w-md bg-white dark:bg-slate-900 border-2 border-emerald-500/30 rounded-2xl p-3.5 sm:p-5 shadow-md sm:shadow-lg relative overflow-hidden">
                               {/* Top Bar */}
-                              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
-                                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
-                                  <span className="text-lg">💸</span>
+                              <div className="flex items-center justify-between pb-2.5 sm:pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
+                                <div className="flex items-center gap-1.5 sm:gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs sm:text-sm">
+                                  <span className="text-base sm:text-lg">💸</span>
                                   <span>SafnexBD Escrow Pay</span>
                                 </div>
 
@@ -3572,14 +3608,14 @@ function MessengerChatContent() {
                               </div>
 
                               {/* Amount Display */}
-                              <div className="text-center py-2">
-                                <div className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                              <div className="text-center py-1.5 sm:py-2">
+                                <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                                   ৳{amount?.toLocaleString()}
                                 </div>
 
                                 {/* Headline Requested Copy */}
                                 {status === 'REQUESTED' ? (
-                                  <div className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 mt-2 bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-200/50 dark:border-emerald-800/40">
+                                  <div className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-400 mt-2 bg-emerald-50 dark:bg-emerald-950/40 p-2 sm:p-2.5 rounded-xl border border-emerald-200/50 dark:border-emerald-800/40">
                                     {isReceiver ? (
                                       <span>
                                         <strong>{senderDisplayName}</strong> আপনাকে <strong>৳{amount?.toLocaleString()}</strong> গ্রহন রিকোয়েস্ট করেছে
@@ -3633,7 +3669,7 @@ function MessengerChatContent() {
                               )}
 
                                 {/* Sender Details & Notes Box */}
-                              <div className="mt-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs space-y-2 border border-slate-100 dark:border-slate-800">
+                              <div className="mt-2 p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-xs space-y-1.5 sm:space-y-2 border border-slate-100 dark:border-slate-800">
                                 <div className="flex items-center justify-between text-slate-500 font-mono text-[11px]">
                                   <span>প্রেরক: <strong>{senderDisplayName}</strong></span>
                                   <span>ID: <strong>{senderUniqueId}</strong></span>
@@ -3650,7 +3686,7 @@ function MessengerChatContent() {
                               </div>
 
                               {/* Tracking ID with Copy */}
-                              <div className="flex items-center justify-between mt-3 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-mono text-slate-500">
+                              <div className="flex items-center justify-between mt-2.5 sm:mt-3 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-mono text-slate-500">
                                 <span>TXN: {trackingNumber}</span>
                                 <button
                                   onClick={() => copyToClipboard(trackingNumber)}
@@ -3666,7 +3702,7 @@ function MessengerChatContent() {
 
                               {/* PHASE 1: STATUS === 'REQUESTED' */}
                               {status === 'REQUESTED' && (
-                                <div className="mt-4">
+                                <div className="mt-3 sm:mt-4">
                                   {isReceiver ? (
                                     <div className="grid grid-cols-2 gap-2">
                                       <button
@@ -3706,7 +3742,7 @@ function MessengerChatContent() {
 
                               {/* PHASE 2: STATUS === 'HOLD' */}
                               {status === 'HOLD' && (
-                                <div className="mt-4 space-y-2.5">
+                                <div className="mt-3 sm:mt-4 space-y-2.5">
                                   {isSender ? (
                                     <>
                                       <div className="grid grid-cols-2 gap-2">
@@ -3781,7 +3817,7 @@ function MessengerChatContent() {
 
                               {/* PHASE 3: STATUS === 'DISPUTED' */}
                               {status === 'DISPUTED' && (
-                                <div className="mt-4 space-y-2">
+                                <div className="mt-3 sm:mt-4 space-y-2">
                                   {isSender && (
                                     <button
                                       onClick={() => handleWithdrawDispute(meta.transactionId)}
@@ -3824,12 +3860,12 @@ function MessengerChatContent() {
                         const timerInfo = getDealTimerInfo(syncedTx || { ...meta, createdAt: msg.createdAt });
 
                         return (
-                          <div key={msg.id} className="flex justify-center my-3">
-                            <div className="w-full max-w-md bg-white dark:bg-slate-900 border-2 border-blue-500/30 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+                          <div key={msg.id} className="flex justify-center my-2.5 sm:my-3">
+                            <div className="w-full max-w-md bg-white dark:bg-slate-900 border-2 border-blue-500/30 rounded-2xl p-3.5 sm:p-5 shadow-md sm:shadow-lg relative overflow-hidden">
                               {/* Top Bar */}
-                              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
-                                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-sm">
-                                  <span className="text-lg">💰</span>
+                              <div className="flex items-center justify-between pb-2.5 sm:pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
+                                <div className="flex items-center gap-1.5 sm:gap-2 text-blue-600 dark:text-blue-400 font-bold text-xs sm:text-sm">
+                                  <span className="text-base sm:text-lg">💰</span>
                                   <span>SafnexBD Money Request</span>
                                 </div>
 
@@ -3857,8 +3893,8 @@ function MessengerChatContent() {
                                 )}
                               </div>
 
-                              <div className="text-center py-2">
-                                <div className="text-3xl font-extrabold text-slate-900 dark:text-white">
+                              <div className="text-center py-1.5 sm:py-2">
+                                <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
                                   ৳{amount?.toLocaleString()}
                                 </div>
 
@@ -4548,56 +4584,37 @@ function MessengerChatContent() {
                 </div>
               )}
 
-              {/* Quick Message Templates Chips Bar (Controlled by Admin quickReplyChipsEnabled) */}
+              {/* Quick Message Templates Chips Bar (Single Sleek Row on Mobile & Desktop — Controlled by Admin quickReplyChipsEnabled) */}
               {!isConvLocked &&
                 publicAdvancedFeatures?.chatUxFeatures?.quickReplyChipsEnabled !== false &&
                 showTemplatesBar &&
                 Array.isArray(chatRulesConfig?.templates) &&
                 chatRulesConfig.templates.length > 0 && (
-                  <div className="mb-2 pb-1.5 border-b border-slate-100 dark:border-slate-800/80 space-y-1.5 animate-in fade-in slide-in-from-bottom-1 duration-150">
-                    {/* Filter Tabs & Close */}
-                    <div className="flex items-center justify-between gap-2 px-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] sm:text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
-                          <Sparkles className="w-3 h-3" />
-                          <span>{lang === 'bn' ? 'কুইক রিপ্লাই চিপস:' : 'Quick Reply Chips:'}</span>
-                        </span>
-
-                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
-                          {(['ALL', 'BUYER', 'SELLER'] as const).map((filter) => (
-                            <button
-                              key={filter}
-                              type="button"
-                              onClick={() => setTemplateAudienceFilter(filter)}
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition ${
-                                templateAudienceFilter === filter
-                                  ? 'bg-amber-500 text-slate-950 shadow-xs'
-                                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                              }`}
-                            >
-                              {filter === 'ALL'
-                                ? (lang === 'bn' ? 'সব' : 'All')
-                                : filter === 'BUYER'
-                                ? (lang === 'bn' ? 'বায়ার' : 'Buyer')
-                                : (lang === 'bn' ? 'সেলার' : 'Seller')}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Minimize / Hide Button */}
-                      <button
-                        type="button"
-                        onClick={() => setShowTemplatesBar(false)}
-                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition"
-                        title={lang === 'bn' ? 'কুইক মেসেজ লুকান' : 'Hide Quick Replies'}
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+                  <div className="mb-1.5 pb-1.5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-1.5 animate-in fade-in slide-in-from-bottom-1 duration-150">
+                    {/* Left: Compact Audience Filter Tabs (সব / বায়ার / সেলার) */}
+                    <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60 shrink-0">
+                      {(['ALL', 'BUYER', 'SELLER'] as const).map((filter) => (
+                        <button
+                          key={filter}
+                          type="button"
+                          onClick={() => setTemplateAudienceFilter(filter)}
+                          className={`text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-md transition whitespace-nowrap ${
+                            templateAudienceFilter === filter
+                              ? 'bg-amber-500 text-slate-950 shadow-2xs'
+                              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                          }`}
+                        >
+                          {filter === 'ALL'
+                            ? (lang === 'bn' ? 'সব' : 'All')
+                            : filter === 'BUYER'
+                            ? (lang === 'bn' ? 'বায়ার' : 'Buyer')
+                            : (lang === 'bn' ? 'সেলার' : 'Seller')}
+                        </button>
+                      ))}
                     </div>
 
-                    {/* Chips Horizontal Carousel */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none no-scrollbar">
+                    {/* Middle: Chips Horizontal Carousel */}
+                    <div className="flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar py-0.5">
                       {chatRulesConfig.templates
                         .filter(
                           (t: any) =>
@@ -4613,7 +4630,7 @@ function MessengerChatContent() {
                               setMessageInput((prev) => (prev ? `${prev} ${t.text}` : t.text));
                               textInputRef.current?.focus();
                             }}
-                            className="px-2.5 py-1 sm:px-3 sm:py-1 rounded-full bg-slate-100 hover:bg-amber-50 dark:bg-slate-800 dark:hover:bg-amber-950/40 text-slate-700 dark:text-slate-200 hover:text-amber-800 dark:hover:text-amber-300 border border-slate-200/80 dark:border-slate-700/80 hover:border-amber-400/50 text-xs font-medium whitespace-nowrap flex items-center gap-1.5 transition shrink-0 active:scale-95 shadow-2xs cursor-pointer"
+                            className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-amber-50 dark:bg-slate-800 dark:hover:bg-amber-950/40 text-slate-700 dark:text-slate-200 hover:text-amber-800 dark:hover:text-amber-300 border border-slate-200/80 dark:border-slate-700/80 hover:border-amber-400/50 text-[11px] sm:text-xs font-medium whitespace-nowrap flex items-center gap-1 transition shrink-0 active:scale-95 shadow-2xs cursor-pointer"
                             title={t.text}
                           >
                             <span>{t.icon || '💬'}</span>
@@ -4621,6 +4638,16 @@ function MessengerChatContent() {
                           </button>
                         ))}
                     </div>
+
+                    {/* Right: Minimize / Hide Button */}
+                    <button
+                      type="button"
+                      onClick={() => setShowTemplatesBar(false)}
+                      className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition shrink-0"
+                      title={lang === 'bn' ? 'কুইক মেসেজ লুকান' : 'Hide Quick Replies'}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 )}
 
@@ -4673,58 +4700,81 @@ function MessengerChatContent() {
                 </div>
               ) : (
                 <div className="flex items-center gap-1 sm:gap-1.5 w-full max-w-full min-w-0">
-                  {/* ＋ Button */}
+                  {/* ＋ Button (Always visible for 1-tap Pay, Request, Timer, Photo, File) */}
                   <button
                     type="button"
                     onClick={() => setShowPlusMenu(!showPlusMenu)}
-                    className={`p-2 sm:p-2.5 rounded-full transition-colors shrink-0 ${
+                    className={`p-2 rounded-full transition-colors shrink-0 ${
                       showPlusMenu
                         ? 'bg-emerald-600 text-white'
-                        : 'text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        : 'text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 bg-slate-100/70 dark:bg-slate-800/60 sm:bg-transparent'
                     }`}
+                    title={lang === 'bn' ? 'অ্যাটাচমেন্ট ও পেমেন্ট মেনু' : 'Attachments & Payment Menu'}
                   >
                     <Plus className="w-5 h-5" />
                   </button>
 
-                  {/* Emoji Button */}
-                  <button
-                    type="button"
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="p-1.5 sm:p-2 text-slate-500 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors shrink-0"
-                  >
-                    <Smile className="w-5 h-5" />
-                  </button>
-
-                  {/* Quick Replies Toggle Button (Inline in Composer) */}
-                  {publicAdvancedFeatures?.chatUxFeatures?.quickReplyChipsEnabled !== false &&
-                    Array.isArray(chatRulesConfig?.templates) &&
-                    chatRulesConfig.templates.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setShowTemplatesBar(!showTemplatesBar)}
-                        title={lang === 'bn' ? 'কুইক মেসেজ চিপস' : 'Quick Replies'}
-                        className={`p-1.5 sm:p-2 rounded-full transition-colors shrink-0 ${
-                          showTemplatesBar
-                            ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
-                            : 'text-slate-500 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'
-                        }`}
-                      >
-                        <Sparkles className="w-5 h-5" />
-                      </button>
-                    )}
-
-                  {/* Voice Note Button (Only shown when enabled in Admin Settings) */}
-                  {publicAdvancedFeatures?.chatMediaFeatures?.voiceMessageEnabled === true && (
+                  {/* Mobile Expand Tools Button (Shown on phones when typing so input box gets maximum space) */}
+                  {messageInput.trim().length > 0 && !isMobileToolsExpanded && (
                     <button
                       type="button"
-                      onClick={startVoiceRecording}
-                      disabled={uploadingAttachment}
-                      title={lang === 'bn' ? 'ভয়েস মেসেজ রেকর্ড করুন' : 'Record Voice Note'}
-                      className="p-1.5 sm:p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-full transition-colors disabled:opacity-40 shrink-0"
+                      onClick={() => setIsMobileToolsExpanded(true)}
+                      className="sm:hidden p-1.5 rounded-full text-slate-400 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition shrink-0"
+                      title={lang === 'bn' ? 'ইমোজি ও ভয়েস অপশন দেখুন' : 'Show Emoji & Voice tools'}
                     >
-                      <Mic className="w-5 h-5" />
+                      <ChevronRight className="w-4 h-4" />
                     </button>
                   )}
+
+                  {/* Secondary Composer Tools (Always visible on Desktop, or on Mobile when not typing / expanded) */}
+                  <div
+                    className={`${
+                      messageInput.trim().length > 0 && !isMobileToolsExpanded
+                        ? 'hidden sm:flex'
+                        : 'flex'
+                    } items-center gap-0.5 sm:gap-1 shrink-0`}
+                  >
+                    {/* Emoji Button */}
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="p-1.5 sm:p-2 text-slate-500 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors shrink-0"
+                      title="Emoji"
+                    >
+                      <Smile className="w-5 h-5" />
+                    </button>
+
+                    {/* Quick Replies Toggle Button (Inline in Composer) */}
+                    {publicAdvancedFeatures?.chatUxFeatures?.quickReplyChipsEnabled !== false &&
+                      Array.isArray(chatRulesConfig?.templates) &&
+                      chatRulesConfig.templates.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowTemplatesBar(!showTemplatesBar)}
+                          title={lang === 'bn' ? 'কুইক মেসেজ চিপস' : 'Quick Replies'}
+                          className={`p-1.5 sm:p-2 rounded-full transition-colors shrink-0 ${
+                            showTemplatesBar
+                              ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                              : 'text-slate-500 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          <Sparkles className="w-5 h-5" />
+                        </button>
+                      )}
+
+                    {/* Voice Note Button (Only shown when enabled in Admin Settings) */}
+                    {publicAdvancedFeatures?.chatMediaFeatures?.voiceMessageEnabled === true && (
+                      <button
+                        type="button"
+                        onClick={startVoiceRecording}
+                        disabled={uploadingAttachment}
+                        title={lang === 'bn' ? 'ভয়েস মেসেজ রেকর্ড করুন' : 'Record Voice Note'}
+                        className="p-1.5 sm:p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-full transition-colors disabled:opacity-40 shrink-0"
+                      >
+                        <Mic className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
 
                   {/* Hidden File Inputs */}
                   <input
@@ -4746,7 +4796,10 @@ function MessengerChatContent() {
                     ref={textInputRef}
                     type="text"
                     value={messageInput}
-                    onChange={handleInputChange}
+                    onChange={(e) => {
+                      if (isMobileToolsExpanded) setIsMobileToolsExpanded(false);
+                      handleInputChange(e);
+                    }}
                     onPaste={handlePasteImage}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
@@ -4761,7 +4814,7 @@ function MessengerChatContent() {
                           : 'Type a message...'
                         : 'Type a message...'
                     }
-                    className="flex-1 min-w-0 w-full py-2 sm:py-2.5 px-3 sm:px-4 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm rounded-full placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white dark:focus:bg-slate-800/90 border border-transparent focus:border-emerald-500/30 transition-all"
+                    className="flex-1 min-w-0 w-full py-2 sm:py-2.5 px-3.5 sm:px-4 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm rounded-full placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white dark:focus:bg-slate-800/90 border border-transparent focus:border-emerald-500/30 transition-all"
                   />
 
                   {/* Send Button */}
@@ -4770,7 +4823,7 @@ function MessengerChatContent() {
                     onClick={sendMessage}
                     disabled={!messageInput.trim() && !selectedFile}
                     aria-label="Send message"
-                    className="p-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white transition-all shrink-0 shadow-sm"
+                    className="p-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white transition-all shrink-0 shadow-sm active:scale-95"
                   >
                     <Send className="w-4 h-4" />
                   </button>
