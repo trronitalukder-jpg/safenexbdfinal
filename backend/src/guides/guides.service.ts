@@ -1,14 +1,74 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateGuideDto, UpdateGuideDto } from './dto/guide.dto';
+import { SEO_GUIDES_DATA } from './seo-guides.data';
 
 @Injectable()
-export class GuidesService {
+export class GuidesService implements OnModuleInit {
+  private readonly logger = new Logger(GuidesService.name);
+
   constructor(private prisma: PrismaService) {}
+
+  async onModuleInit() {
+    try {
+      const count = await this.prisma.guide.count();
+      if (count < 20) {
+        const res = await this.seedSeoGuides();
+        if (res.insertedCount > 0) {
+          this.logger.log(
+            `Auto-seeded ${res.insertedCount} SEO guides into database (total: ${res.totalCount}).`,
+          );
+        }
+      }
+    } catch (err) {
+      this.logger.warn('Auto-seed SEO guides skipped or failed on init:', err);
+    }
+  }
+
+  /**
+   * Admin / Init: Seed the 25 SEO-optimized guides without overwriting existing customized guides
+   */
+  async seedSeoGuides() {
+    let insertedCount = 0;
+
+    for (const item of SEO_GUIDES_DATA) {
+      const existing = await this.prisma.guide.findUnique({
+        where: { slug: item.slug },
+      });
+
+      if (!existing) {
+        await this.prisma.guide.create({
+          data: {
+            title: item.title,
+            slug: item.slug,
+            coverImage: item.coverImage || null,
+            youtubeUrl: item.youtubeUrl || null,
+            description: item.description,
+            sortOrder: item.sortOrder,
+            isActive: true,
+          },
+        });
+        insertedCount++;
+      }
+    }
+
+    const totalCount = await this.prisma.guide.count();
+    return {
+      success: true,
+      insertedCount,
+      totalCount,
+      message:
+        insertedCount > 0
+          ? `${insertedCount}টি নতুন এসইও গাইড সফলভাবে যুক্ত হয়েছে! (মোট গাইড: ${totalCount}টি)`
+          : `সবগুলো ২৫টি এসইও গাইড ইতিমধ্যে ডাটাবেজে যুক্ত আছে (মোট গাইড: ${totalCount}টি)।`,
+    };
+  }
 
   private slugify(text: string): string {
     return text

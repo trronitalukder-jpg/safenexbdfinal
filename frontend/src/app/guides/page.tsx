@@ -195,12 +195,12 @@ export default function PublicGuidesPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredGuides.map((guide) => {
+            {filteredGuides.map((guide, idx) => {
               const hasVideo = Boolean(guide.youtubeUrl);
               const ytThumb = getYouTubeThumbnailUrl(guide.youtubeUrl);
               const thumbUrl = guide.coverImage
                 ? getImageUrl(guide.coverImage)
-                : ytThumb || '/images/hero-escrow.png';
+                : ytThumb || '';
               const cleanExcerpt = stripHtml(guide.description);
 
               return (
@@ -210,19 +210,26 @@ export default function PublicGuidesPage() {
                   className="group rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs hover:shadow-xl hover:border-sky-400 dark:hover:border-sky-500/50 transition-all duration-200 flex flex-col"
                 >
                   {/* Media Banner */}
-                  <div className="relative aspect-video w-full bg-slate-950 overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={thumbUrl}
-                      alt={guide.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
-                    />
+                  <div className="relative aspect-video w-full bg-gradient-to-br from-slate-900 via-sky-950 to-indigo-950 overflow-hidden flex items-center justify-center">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-sky-400/30 pointer-events-none select-none">
+                      <ShieldCheck className="w-12 h-12 mb-1" />
+                      <span className="text-[10px] font-bold tracking-widest uppercase">SafnexBD Guide #{idx + 1}</span>
+                    </div>
+                    {thumbUrl && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={thumbUrl}
+                        alt={guide.title}
+                        loading="lazy"
+                        className="relative z-10 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    )}
 
                     {/* Overlay badge */}
-                    <div className="absolute top-3 left-3">
+                    <div className="absolute top-3 left-3 z-20">
                       {hasVideo ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-600/90 text-white text-[11px] font-bold shadow-md backdrop-blur-xs">
                           <Video className="w-3 h-3" />
@@ -238,7 +245,7 @@ export default function PublicGuidesPage() {
 
                     {/* Center play icon for videos */}
                     {hasVideo && (
-                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 flex items-center justify-center transition">
+                      <div className="absolute inset-0 z-20 bg-black/30 group-hover:bg-black/40 flex items-center justify-center transition">
                         <div className="w-12 h-12 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                           <div className="w-0 h-0 border-y-6 border-y-transparent border-l-10 border-l-white ml-1" />
                         </div>

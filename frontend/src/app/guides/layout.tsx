@@ -1,46 +1,37 @@
 import type { Metadata } from 'next';
-import React from 'react';
-
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://safnexbd.com';
 
 export const metadata: Metadata = {
-  title: 'সেফ ট্রেডিং ও এসক্রো গাইডস | SafnexBD Official Guides',
+  title: 'সেফনেক্সবিডি নির্দেশিকা, এসক্রো গাইড ও অনলাইন ইনকাম টিউটোরিয়াল | SafnexBD Guides',
   description:
-    'অনলাইনে প্রতারণা ছাড়া নিরাপদে ফেসবুক আইডি, পেজ, গেমিং অ্যাকাউন্ট ও ডিজিটাল প্রোডাক্ট কেনাবেচার নিয়মাবলী ও ভিডিও টিউটোরিয়াল।',
+    'বাংলাদেশে নিরাপদ এসক্রো লেনদেন (Escrow Service BD), মাইক্রো-জব অনলাইন ইনকাম, স্ক্যামার নম্বর চেক, ডিজিটাল প্রোডাক্ট, ফেসবুক পেজ ও ইউটিউব চ্যানেল কেনাবেচা এবং মানি এক্সচেঞ্জের সম্পূর্ণ গাইড ও টিউটোরিয়াল।',
   keywords: [
-    'safnexbd guides',
-    'safe trading bangladesh',
-    'escrow guide bangladesh',
-    'অনলাইন লেনদেন নিরাপত্তা',
-    'ফেসবুক পেজ কেনা বেচা',
-    'এসক্রো সেবা বাংলাদেশ',
-    'আইডি কেনাবেচা নিয়ম',
+    'SafnexBD Guides',
+    'Escrow Service Bangladesh',
+    'এসক্রো সার্ভিস বাংলাদেশ',
+    'অনলাইন ইনকাম বিকাশ পেমেন্ট',
+    'Micro job site in Bangladesh',
+    'Scammer number check BD',
+    'Facebook page buy sell BD',
+    'YouTube channel buy sell Bangladesh',
+    'Digital product marketplace BD',
+    'Dollar buy sell bKash Nagad',
   ],
   alternates: {
-    canonical: `${baseUrl}/guides`,
+    canonical: 'https://safnexbd.com/guides',
   },
   openGraph: {
-    title: 'সেফ ট্রেডিং ও এসক্রো গাইডস | SafnexBD Official Guides',
+    title: 'সেফনেক্সবিডি নির্দেশিকা ও এসক্রো গাইড | SafnexBD Official Guides',
     description:
-      'অনলাইনে প্রতারণা ছাড়া নিরাপদে ফেসবুক আইডি, পেজ, গেমিং অ্যাকাউন্ট ও ডিজিটাল প্রোডাক্ট কেনাবেচার নিয়মাবলী ও ভিডিও টিউটোরিয়াল।',
-    url: `${baseUrl}/guides`,
+      'কিভাবে প্রতারণা ছাড়া নিরাপদে অনলাইনে কেনাবেচা করবেন, মাইক্রো-জব করে আয় করবেন এবং ১০০% ভেরিফায়েড এসক্রো সুরক্ষা ব্যবহার করবেন তার বিস্তারিত গাইড।',
+    url: 'https://safnexbd.com/guides',
     siteName: 'SafnexBD',
     type: 'website',
-    images: [
-      {
-        url: `${baseUrl}/icon-512.png`,
-        width: 512,
-        height: 512,
-        alt: 'SafnexBD Safe Trading Guides',
-      },
-    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'সেফ ট্রেডিং ও এসক্রো গাইডস | SafnexBD Official Guides',
+    title: 'সেফনেক্সবিডি নির্দেশিকা ও এসক্রো গাইড | SafnexBD Guides',
     description:
-      'অনলাইনে প্রতারণা ছাড়া নিরাপদে ফেসবুক আইডি, পেজ, গেমিং অ্যাকাউন্ট ও ডিজিটাল প্রোডাক্ট কেনাবেচার নিয়মাবলী ও টিউটোরিয়াল।',
-    images: [`${baseUrl}/icon-512.png`],
+      'বাংলাদেশে নিরাপদ এসক্রো লেনদেন, মাইক্রো-জব ইনকাম ও ডিজিটাল প্রোডাক্ট কেনাবেচার অফিসিয়াল নির্দেশিকা।',
   },
 };
 

@@ -43,6 +43,13 @@ export class GuidesController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPER_ADMIN', 'ADMIN', 'CONTENT_ADMIN')
+  @Post('admin/guides/seed-seo')
+  async seedSeoGuides() {
+    return this.guidesService.seedSeoGuides();
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'CONTENT_ADMIN')
   @Post('admin/guides')
   async create(@Body() dto: CreateGuideDto) {
     return this.guidesService.create(dto);
