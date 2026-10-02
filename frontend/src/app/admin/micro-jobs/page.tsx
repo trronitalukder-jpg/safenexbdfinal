@@ -303,6 +303,38 @@ export default function AdminMicroJobsPage() {
     }
   };
 
+  const [togglingFeatureKey, setTogglingFeatureKey] = useState<string | null>(null);
+
+  const handleToggleMicroJobFeature = async (
+    featureKey:
+      | 'coverPictureEnabled'
+      | 'taskLinkEnabled'
+      | 'workerTopUpEnabled'
+      | 'employerApprovalRateEnabled',
+  ) => {
+    const currentVal = (settings.microJob as any)?.[featureKey] !== false;
+    const nextVal = !currentVal;
+    setTogglingFeatureKey(featureKey);
+    try {
+      const fullSettingsRes = await api.get('/settings/admin');
+      const fullSettings = unwrap(fullSettingsRes) || {};
+      const updatedMicroJob = {
+        ...(fullSettings.microJob || {}),
+        [featureKey]: nextVal,
+      };
+      await api.post('/settings/admin', {
+        ...fullSettings,
+        microJob: updatedMicroJob,
+      });
+      if (refreshSettings) await refreshSettings();
+    } catch (err: any) {
+      console.error(`Failed to toggle ${featureKey}:`, err);
+      alert(err?.response?.data?.message || 'ফিচার সেটিংস আপডেট করা যায়নি');
+    } finally {
+      setTogglingFeatureKey(null);
+    }
+  };
+
   // Trigger auto-approve cron
   const handleTriggerAutoApprove = async () => {
     setTriggeringCron(true);
@@ -713,6 +745,112 @@ export default function AdminMicroJobsPage() {
               </>
             )}
           </button>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 2C. MICRO-JOB POWER FEATURES ON/OFF CONTROL PANEL                         */}
+      {/* ========================================================================= */}
+      <div className="p-4 sm:p-5 rounded-3xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 space-y-4 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <h2 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+              <span>🎛️ মাইক্রো-জব পাওয়ার ফিচার কন্ট্রোল প্যানেল (Public Feature ON/OFF Switches)</span>
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              যেকোনো ফিচার OFF করলে পাবলিক জব পেজ এবং ইউজার ড্যাশবোর্ড থেকে সেটি সাথে সাথে অদৃশ্য হয়ে যাবে (কোনো প্রভাব থাকবে না)।
+            </p>
+          </div>
+          <Link
+            href="/admin/settings?tab=micro_job"
+            className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 shrink-0"
+          >
+            <span>সব সেটিংস দেখুন</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
+          {[
+            {
+              key: 'coverPictureEnabled' as const,
+              icon: '🖼️',
+              title: 'কভার পিকচার ও প্রোডাক্ট কার্ড (Cover Picture)',
+              desc: 'OFF করলে জব কার্ডে ছবির ব্যানার ও কভার আপলোড অপশন হাইড থাকবে।',
+            },
+            {
+              key: 'taskLinkEnabled' as const,
+              icon: '🔗',
+              title: 'ডিরেক্ট কাজের লিংক বাটন (Direct Task Link)',
+              desc: 'OFF করলে জব ফর্মে লিংক ইনপুট ও জব পেজে "সরাসরি কাজের লিংকে যান" বাটন হাইড থাকবে।',
+            },
+            {
+              key: 'workerTopUpEnabled' as const,
+              icon: '➕',
+              title: 'কর্মী সংখ্যা বৃদ্ধি (+Workers Top-Up)',
+              desc: 'OFF করলে চলমান বা শেষ হওয়া কাজে নতুন কর্মী স্লট বাড়ানোর বাটন বন্ধ থাকবে।',
+            },
+            {
+              key: 'employerApprovalRateEnabled' as const,
+              icon: '✅',
+              title: 'নিয়োগকর্তার অ্যাপ্রুভাল রেট (% Approval Badge)',
+              desc: 'OFF করলে পাবলিক জব কার্ড ও ডিটেইলস পেজে নিয়োগকর্তার % ব্যাজ দেখাবে না।',
+            },
+          ].map((item) => {
+            const isOn = (settings.microJob as any)?.[item.key] !== false;
+            const isBusy = togglingFeatureKey === item.key;
+            return (
+              <div
+                key={item.key}
+                className={`p-3.5 rounded-2xl border transition flex flex-col justify-between gap-3 ${
+                  isOn
+                    ? 'bg-emerald-500/[0.04] dark:bg-emerald-950/20 border-emerald-500/25'
+                    : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/80 opacity-80'
+                }`}
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-base">{item.icon}</span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                        isOn
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                          : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                      }`}
+                    >
+                      {isOn ? 'ON (সক্রিয়)' : 'OFF (বন্ধ)'}
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-extrabold text-slate-900 dark:text-white leading-snug pt-1">
+                    {item.title}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                    {item.desc}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={isBusy}
+                  onClick={() => handleToggleMicroJobFeature(item.key)}
+                  className={`w-full py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-2xs ${
+                    isOn
+                      ? 'bg-slate-900 dark:bg-slate-800 hover:bg-rose-600 text-white'
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                  } disabled:opacity-50`}
+                >
+                  {isBusy ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : isOn ? (
+                    <ToggleRight className="w-4 h-4 text-emerald-400" />
+                  ) : (
+                    <ToggleLeft className="w-4 h-4" />
+                  )}
+                  <span>{isOn ? 'বন্ধ করুন (Turn OFF)' : 'চালু করুন (Turn ON)'}</span>
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
 

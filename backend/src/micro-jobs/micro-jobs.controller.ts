@@ -178,6 +178,19 @@ export class MicroJobsController {
   }
 
   /**
+   * Employer: Top-up (add more worker slots) to an existing job
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/top-up')
+  async topUpWorkers(
+    @Param('id') jobId: string,
+    @CurrentUser('id') employerId: string,
+    @Body('additionalWorkers') additionalWorkers: number,
+  ) {
+    return this.microJobsService.topUpWorkers(jobId, employerId, Number(additionalWorkers));
+  }
+
+  /**
    * Employer: Permanently delete job (refunds remaining slots if active/paused)
    */
   @UseGuards(JwtAuthGuard)

@@ -419,8 +419,13 @@ export default function AdminSettingsPage() {
       autoApproveHours: 48,
       platformFeePercent: 5,
       minJobReward: 1,
+      featuredJobFee: 20,
       requireKycToPost: false,
       requireKycToWork: false,
+      coverPictureEnabled: true,
+      taskLinkEnabled: true,
+      workerTopUpEnabled: true,
+      employerApprovalRateEnabled: true,
     },
     advancedFeatures: {
       microJobAutoApproval: { enabled: true, autoApproveHours: 48 },
@@ -435,6 +440,10 @@ export default function AdminSettingsPage() {
         voiceMessageEnabled: true,
         maxVoiceSeconds: 60,
         ctrlVPasteEnabled: true,
+      },
+      chatUxFeatures: {
+        dealStepperEnabled: true,
+        quickReplyChipsEnabled: true,
       },
       escrowCountdownTimer: { enabled: true, defaultDeliveryHours: 24 },
       antiFraudShield: { enabled: true, flagSameIpUsers: true, maxAccountsPerIp: 2 },
@@ -488,6 +497,7 @@ export default function AdminSettingsPage() {
             microJobAutoApproval: { ...prev.advancedFeatures.microJobAutoApproval, ...(adv.microJobAutoApproval || {}) },
             sellerLevelBadges: { ...prev.advancedFeatures.sellerLevelBadges, ...(adv.sellerLevelBadges || {}) },
             chatMediaFeatures: { ...prev.advancedFeatures.chatMediaFeatures, ...(adv.chatMediaFeatures || {}) },
+            chatUxFeatures: { ...prev.advancedFeatures.chatUxFeatures, ...(adv.chatUxFeatures || {}) },
             escrowCountdownTimer: { ...prev.advancedFeatures.escrowCountdownTimer, ...(adv.escrowCountdownTimer || {}) },
             antiFraudShield: { ...prev.advancedFeatures.antiFraudShield, ...(adv.antiFraudShield || {}) },
             telegramAdminAlerts: { ...prev.advancedFeatures.telegramAdminAlerts, ...(adv.telegramAdminAlerts || {}) },
@@ -6659,6 +6669,77 @@ export default function AdminSettingsPage() {
                 </button>
               </div>
             </div>
+
+            {/* Public Page Power Feature ON/OFF Switches */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
+              <div>
+                <h4 className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <span>🎛️ পাবলিক পেজ ও ইউজার ফিচার সুইচ (Public Feature ON/OFF Controls)</span>
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  যেকোনো সুইচ OFF করলে পাবলিক জব পেজ এবং ইউজার ড্যাশবোর্ডে সেই ফিচারের কোনো প্রভাব থাকবে না।
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {[
+                  {
+                    key: 'coverPictureEnabled',
+                    title: '🖼️ কভার পিকচার ও প্রোডাক্ট কার্ড ভিউ (Cover Picture)',
+                    desc: 'জব পোস্টে ছবি আপলোড ও পাবলিক পেজে ছবিসহ কার্ড ব্যানার প্রদর্শন',
+                  },
+                  {
+                    key: 'taskLinkEnabled',
+                    title: '🔗 সরাসরি কাজের লিংক বাটন (Direct Task Link)',
+                    desc: 'জব পোস্টে কাজের লিংক দেওয়া ও জব পেজে "🔗 সরাসরি কাজের লিংকে যান" বাটন',
+                  },
+                  {
+                    key: 'workerTopUpEnabled',
+                    title: '➕ চলমান কাজে কর্মী বৃদ্ধি (+Workers Top-Up)',
+                    desc: 'নতুন জব পোস্ট না করেই চলমান বা শেষ হওয়া কাজে ১-ক্লিকে কর্মী স্লট বাড়ানো',
+                  },
+                  {
+                    key: 'employerApprovalRateEnabled',
+                    title: '✅ নিয়োগকর্তার অ্যাপ্রুভাল রেট ব্যাজ (% Approval Rate)',
+                    desc: 'পাবলিক জব কার্ডে নিয়োগকর্তার কাজ অনুমোদনের শতকরা হার প্রদর্শন',
+                  },
+                ].map((f) => {
+                  const isOn = settings.microJob?.[f.key] !== false;
+                  return (
+                    <div
+                      key={f.key}
+                      className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700"
+                    >
+                      <div className="space-y-0.5 pr-3">
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{f.title}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{f.desc}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSettings((prev: any) => ({
+                            ...prev,
+                            microJob: {
+                              ...prev.microJob,
+                              [f.key]: prev.microJob?.[f.key] === false ? true : false,
+                            },
+                          }))
+                        }
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${
+                          isOn ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            isOn ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* Bottom Save Button for Micro Job Tab */}
@@ -6935,23 +7016,101 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
-            {/* 3. Chat Voice Message & Ctrl+V Screenshot Paste (Item 5) */}
+            {/* 3. Chat Voice Message, Ctrl+V Paste & Live Chat UX (Deal Stepper + Quick Reply Chips) */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
               <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="text-base">🎙️</span>
                     <h3 className="text-sm font-black text-slate-900 dark:text-white">
-                      ৩. চ্যাট ভয়েস মেসেজ ও Ctrl+V স্ক্রিনশট পেস্ট (Chat Media Features)
+                      ৩. লাইভ চ্যাট মিডিয়া ও এসক্রো ইউএক্স (Chat Media, Deal Stepper & Quick Chips)
                     </h3>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    চ্যাটবক্সে সরাসরি ভয়েস নোট রেকর্ড এবং ক্লিপবোর্ড থেকে স্ক্রিনশট পেস্ট করার সুবিধা।
+                    ভয়েস নোট, Ctrl+V পেস্ট, ৪-ধাপের ডিল প্রগ্রেস স্টেপার এবং ১-ক্লিক কুইক রিপ্লাই চিপস নিয়ন্ত্রণ।
                   </p>
                 </div>
               </div>
 
               <div className="space-y-3">
+                {/* Visual Deal Stepper ON/OFF */}
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <div>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      📊 ভিজ্যুয়াল ডিল প্রগ্রেস স্টেপার (১. শুরু ➔ ২. পেমেন্ট লক ➔ ৩. ডেলিভারি ➔ ৪. সম্পন্ন)
+                    </p>
+                    <p className="text-[11px] text-slate-500">OFF করলে চ্যাট পেজের উপরে ৪-ধাপের প্রগ্রেস স্টেপার বার সম্পূর্ণ হাইড থাকবে</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        advancedFeatures: {
+                          ...prev.advancedFeatures,
+                          chatUxFeatures: {
+                            ...prev.advancedFeatures?.chatUxFeatures,
+                            dealStepperEnabled:
+                              prev.advancedFeatures?.chatUxFeatures?.dealStepperEnabled === false ? true : false,
+                          },
+                        },
+                      }))
+                    }
+                    className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors shrink-0 ${
+                      settings.advancedFeatures?.chatUxFeatures?.dealStepperEnabled !== false
+                        ? 'bg-emerald-500'
+                        : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        settings.advancedFeatures?.chatUxFeatures?.dealStepperEnabled !== false
+                          ? 'translate-x-7'
+                          : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Quick Reply Chips ON/OFF */}
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <div>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      💬 ১-ক্লিক কুইক রিপ্লাই চিপস (Quick Reply Chips Bar)
+                    </p>
+                    <p className="text-[11px] text-slate-500">OFF করলে চ্যাট ইনপুটের উপরে ১-ক্লিক রেডি মেসেজ বাটনগুলো সম্পূর্ণ হাইড থাকবে</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        advancedFeatures: {
+                          ...prev.advancedFeatures,
+                          chatUxFeatures: {
+                            ...prev.advancedFeatures?.chatUxFeatures,
+                            quickReplyChipsEnabled:
+                              prev.advancedFeatures?.chatUxFeatures?.quickReplyChipsEnabled === false ? true : false,
+                          },
+                        },
+                      }))
+                    }
+                    className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors shrink-0 ${
+                      settings.advancedFeatures?.chatUxFeatures?.quickReplyChipsEnabled !== false
+                        ? 'bg-emerald-500'
+                        : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        settings.advancedFeatures?.chatUxFeatures?.quickReplyChipsEnabled !== false
+                          ? 'translate-x-7'
+                          : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
                 <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
                   <div>
                     <p className="text-xs font-bold text-slate-800 dark:text-slate-200">

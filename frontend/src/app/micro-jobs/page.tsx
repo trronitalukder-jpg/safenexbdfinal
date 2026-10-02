@@ -40,6 +40,8 @@ export default function MicroJobsPublicPage() {
   );
 
   const isEnabled = settings.microJob?.enabled !== false;
+  const isCoverEnabled = settings.microJob?.coverPictureEnabled !== false;
+  const isApprovalRateEnabled = settings.microJob?.employerApprovalRateEnabled !== false;
 
   useEffect(() => {
     api
@@ -412,95 +414,138 @@ export default function MicroJobsPublicPage() {
                     }`}
                   >
                     <div>
-                      {/* Product-Card Top Cover Image / Banner */}
-                      <Link
-                        href={`/micro-jobs/${job.id}`}
-                        className="relative block w-full aspect-video bg-slate-100 dark:bg-slate-800 overflow-hidden"
-                      >
-                        {job.thumbnailUrl ? (
-                          <img
-                            src={getImageUrl(job.thumbnailUrl)}
-                            alt={job.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div
-                            className={`w-full h-full bg-gradient-to-br ${fallbackGradient} flex flex-col items-center justify-center p-4 text-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500`}
-                          >
-                            <div className="absolute -right-6 -bottom-6 w-28 h-28 rounded-full bg-white/10 blur-xl" />
-                            <div className="absolute -left-6 -top-6 w-24 h-24 rounded-full bg-amber-400/15 blur-xl" />
-                            <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white mb-2 shadow-sm">
-                              <Briefcase className="w-5 h-5" />
+                      {isCoverEnabled ? (
+                        /* Product-Card Top Cover Image / Banner */
+                        <Link
+                          href={`/micro-jobs/${job.id}`}
+                          className="relative block w-full aspect-video bg-slate-100 dark:bg-slate-800 overflow-hidden"
+                        >
+                          {job.thumbnailUrl ? (
+                            <img
+                              src={getImageUrl(job.thumbnailUrl)}
+                              alt={job.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                          ) : (
+                            <div
+                              className={`w-full h-full bg-gradient-to-br ${fallbackGradient} flex flex-col items-center justify-center p-4 text-center relative overflow-hidden group-hover:scale-105 transition-transform duration-500`}
+                            >
+                              <div className="absolute -right-6 -bottom-6 w-28 h-28 rounded-full bg-white/10 blur-xl" />
+                              <div className="absolute -left-6 -top-6 w-24 h-24 rounded-full bg-amber-400/15 blur-xl" />
+                              <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white mb-2 shadow-sm">
+                                <Briefcase className="w-5 h-5" />
+                              </div>
+                              <span className="text-xs font-extrabold text-white/95 tracking-wide line-clamp-1 max-w-[85%]">
+                                {catName}
+                              </span>
+                              <span className="text-[10px] text-white/70 font-medium mt-0.5">
+                                Verified Micro Task
+                              </span>
                             </div>
-                            <span className="text-xs font-extrabold text-white/95 tracking-wide line-clamp-1 max-w-[85%]">
+                          )}
+
+                          {/* Subtle dark vignette for badge readability */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-slate-950/35 pointer-events-none" />
+
+                          {/* Top-Left Floating Badges: Category + Featured */}
+                          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 max-w-[68%]">
+                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-slate-950/75 text-white backdrop-blur-md border border-white/15 truncate shadow-xs">
                               {catName}
                             </span>
-                            <span className="text-[10px] text-white/70 font-medium mt-0.5">
-                              Verified Micro Task
+                            {job.isPinned && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md shrink-0">
+                                🔥 FEATURED
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Top-Right Floating Price / Reward Tag */}
+                          <div className="absolute top-2.5 right-2.5">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-black bg-emerald-500 text-slate-950 shadow-lg border border-emerald-300/60">
+                              ৳{Number(job.rewardPerWorker).toFixed(2)}
                             </span>
                           </div>
-                        )}
 
-                        {/* Subtle dark vignette for badge readability */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-slate-950/35 pointer-events-none" />
-
-                        {/* Top-Left Floating Badges: Category + Featured */}
-                        <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 max-w-[68%]">
-                          <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-slate-950/75 text-white backdrop-blur-md border border-white/15 truncate shadow-xs">
-                            {catName}
-                          </span>
-                          {job.isPinned && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md shrink-0">
-                              🔥 FEATURED
-                            </span>
+                          {/* Bottom-Left Auto-Approve Badge on Image */}
+                          {(publicAdvFeatures?.microJobAutoApproval?.enabled ??
+                            (settings as any)?.advancedFeatures?.microJobAutoApproval?.enabled) === true && (
+                            <div className="absolute bottom-2.5 left-2.5">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-950/75 text-amber-300 backdrop-blur-md border border-white/10">
+                                ⏱️{' '}
+                                {publicAdvFeatures?.microJobAutoApproval?.autoApproveHours ||
+                                  (settings as any)?.advancedFeatures?.microJobAutoApproval?.autoApproveHours ||
+                                  48}
+                                h Auto-Approve
+                              </span>
+                            </div>
                           )}
-                        </div>
-
-                        {/* Top-Right Floating Price / Reward Tag */}
-                        <div className="absolute top-2.5 right-2.5">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-black bg-emerald-500 text-slate-950 shadow-lg border border-emerald-300/60">
+                        </Link>
+                      ) : (
+                        /* Classic Compact Header when Cover Picture is disabled by Admin */
+                        <div className="p-4 pb-0 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                              {catName}
+                            </span>
+                            {job.isPinned && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950">
+                                🔥 FEATURED
+                              </span>
+                            )}
+                          </div>
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                             ৳{Number(job.rewardPerWorker).toFixed(2)}
                           </span>
                         </div>
-
-                        {/* Bottom-Left Auto-Approve Badge on Image */}
-                        {(publicAdvFeatures?.microJobAutoApproval?.enabled ??
-                          (settings as any)?.advancedFeatures?.microJobAutoApproval?.enabled) === true && (
-                          <div className="absolute bottom-2.5 left-2.5">
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-950/75 text-amber-300 backdrop-blur-md border border-white/10">
-                              ⏱️{' '}
-                              {publicAdvFeatures?.microJobAutoApproval?.autoApproveHours ||
-                                (settings as any)?.advancedFeatures?.microJobAutoApproval?.autoApproveHours ||
-                                48}
-                              h Auto-Approve
-                            </span>
-                          </div>
-                        )}
-                      </Link>
+                      )}
 
                       {/* Card Body */}
                       <div className="p-4 pb-2 space-y-2.5">
-                        {/* Employer Info */}
-                        <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                          {job.employer?.avatarUrl ? (
-                            <img
-                              src={getImageUrl(job.employer.avatarUrl)}
-                              alt={job.employer?.firstName || 'Employer'}
-                              className="w-5 h-5 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                        {/* Employer Info + Approval Rate Badge */}
+                        <div className="flex items-center justify-between gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {job.employer?.avatarUrl ? (
+                              <img
+                                src={getImageUrl(job.employer.avatarUrl)}
+                                alt={job.employer?.firstName || 'Employer'}
+                                className="w-5 h-5 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-5 h-5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-[10px] shrink-0">
+                                {job.employer?.firstName?.[0] || 'U'}
+                              </div>
+                            )}
+                            <span className="truncate font-medium text-[11px]">
+                              {job.employer?.firstName} {job.employer?.lastName}
+                            </span>
+                            <VerifiedBadge
+                              isVerified={job.employer?.isVerified}
+                              status={job.employer?.verificationStatus}
+                              size="xs"
                             />
-                          ) : (
-                            <div className="w-5 h-5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-[10px]">
-                              {job.employer?.firstName?.[0] || 'U'}
-                            </div>
-                          )}
-                          <span className="truncate font-medium text-[11px]">
-                            {job.employer?.firstName} {job.employer?.lastName}
-                          </span>
-                          <VerifiedBadge
-                            isVerified={job.employer?.isVerified}
-                            status={job.employer?.verificationStatus}
-                            size="xs"
-                          />
+                          </div>
+
+                          {isApprovalRateEnabled &&
+                            job.employerApprovalRate !== null &&
+                            job.employerApprovalRate !== undefined && (
+                              <span
+                                title={
+                                  lang === 'bn'
+                                    ? 'নিয়োগকর্তার পূর্ববর্তী কাজ অনুমোদনের হার'
+                                    : 'Employer Task Approval Rate'
+                                }
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 border ${
+                                  Number(job.employerApprovalRate) >= 80
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                    : Number(job.employerApprovalRate) >= 50
+                                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                                }`}
+                              >
+                                <CheckCircle2 className="w-2.5 h-2.5" />
+                                <span>{job.employerApprovalRate}% Approved</span>
+                              </span>
+                            )}
                         </div>
 
                         {/* Job Title */}

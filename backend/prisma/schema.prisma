@@ -914,6 +914,7 @@ model Transaction {
   dispute              Dispute?
 
   @@index([trackingNumber])
+  @@index([conversationId, createdAt])
   @@index([senderId])
   @@index([senderId, status, createdAt])
   @@index([receiverId])
@@ -1433,6 +1434,7 @@ model MicroJob {
   title              String               @db.VarChar(200)
   description        String               @db.Text
   thumbnailUrl       String?              @db.VarChar(500)
+  taskUrl            String?              @db.VarChar(1000)
   steps              Json
   proofRequirements  Json
   rewardPerWorker    Decimal              @db.Decimal(18, 4)
@@ -1455,8 +1457,11 @@ model MicroJob {
   submissions        MicroJobSubmission[]
 
   @@index([employerId])
+  @@index([employerId, status, createdAt])
   @@index([categoryId])
+  @@index([categoryId, status, createdAt])
   @@index([status])
+  @@index([status, isPinned, createdAt])
   @@index([isPinned])
   @@map("micro_jobs")
 }

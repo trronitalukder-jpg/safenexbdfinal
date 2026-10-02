@@ -162,6 +162,10 @@ export const DEFAULT_SETTINGS = {
     requireKycToPost: false,
     requireKycToWork: false,
     featuredJobFee: 20,
+    coverPictureEnabled: true,
+    taskLinkEnabled: true,
+    workerTopUpEnabled: true,
+    employerApprovalRateEnabled: true,
   },
   advancedFeatures: {
     microJobAutoApproval: {
@@ -179,6 +183,10 @@ export const DEFAULT_SETTINGS = {
       voiceMessageEnabled: true,
       maxVoiceSeconds: 60,
       ctrlVPasteEnabled: true,
+    },
+    chatUxFeatures: {
+      dealStepperEnabled: true,
+      quickReplyChipsEnabled: true,
     },
     escrowCountdownTimer: {
       enabled: true,
@@ -363,6 +371,10 @@ export class SettingsService {
         ...def.chatMediaFeatures,
         ...(raw.chatMediaFeatures || {}),
       },
+      chatUxFeatures: {
+        ...def.chatUxFeatures,
+        ...(raw.chatUxFeatures || {}),
+      },
       escrowCountdownTimer: {
         ...def.escrowCountdownTimer,
         ...(raw.escrowCountdownTimer || {}),
@@ -516,6 +528,10 @@ export class SettingsService {
                 voiceMessageEnabled: false,
                 ctrlVPasteEnabled: pasteEnabled,
               },
+      chatUxFeatures: {
+        dealStepperEnabled: Boolean(adv.chatUxFeatures?.dealStepperEnabled !== false),
+        quickReplyChipsEnabled: Boolean(adv.chatUxFeatures?.quickReplyChipsEnabled !== false),
+      },
       escrowCountdownTimer:
         adv.escrowCountdownTimer?.enabled !== false
           ? {
@@ -572,6 +588,10 @@ export class SettingsService {
         requireKycToPost: Boolean(all.microJob?.requireKycToPost),
         requireKycToWork: Boolean(all.microJob?.requireKycToWork),
         featuredJobFee: Number(all.microJob?.featuredJobFee ?? 20),
+        coverPictureEnabled: Boolean(all.microJob?.coverPictureEnabled !== false),
+        taskLinkEnabled: Boolean(all.microJob?.taskLinkEnabled !== false),
+        workerTopUpEnabled: Boolean(all.microJob?.workerTopUpEnabled !== false),
+        employerApprovalRateEnabled: Boolean(all.microJob?.employerApprovalRateEnabled !== false),
       },
       advancedFeatures: publicAdvancedFeatures,
     };

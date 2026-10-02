@@ -47,6 +47,9 @@ export default function MicroJobsDashboardPage() {
   const { user, refreshMe } = useAuthStore();
 
   const isEnabled = settings.microJob?.enabled !== false;
+  const isCoverEnabled = settings.microJob?.coverPictureEnabled !== false;
+  const isTaskLinkEnabled = settings.microJob?.taskLinkEnabled !== false;
+  const isWorkerTopUpEnabled = settings.microJob?.workerTopUpEnabled !== false;
 
   // Active Tab
   const initialTab = (searchParams.get('tab') as 'my_jobs' | 'create' | 'my_tasks') || 'my_jobs';
@@ -83,6 +86,7 @@ export default function MicroJobsDashboardPage() {
     title: '',
     description: '',
     thumbnailUrl: '',
+    taskUrl: '',
     steps: [''],
     proofRequirements: [''],
     rewardPerWorker: settings.microJob?.minJobReward || 2,
@@ -96,6 +100,11 @@ export default function MicroJobsDashboardPage() {
   const [createSuccess, setCreateSuccess] = useState(false);
   const [createdJobModal, setCreatedJobModal] = useState<any | null>(null);
 
+  // Top-Up Workers Modal State
+  const [topUpJob, setTopUpJob] = useState<any | null>(null);
+  const [topUpWorkersCount, setTopUpWorkersCount] = useState<number>(10);
+  const [submittingTopUp, setSubmittingTopUp] = useState(false);
+
   // Cancel Job State
   const [cancellingJobId, setCancellingJobId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -107,6 +116,7 @@ export default function MicroJobsDashboardPage() {
     title: '',
     description: '',
     thumbnailUrl: '',
+    taskUrl: '',
     steps: [''],
     proofRequirements: [''],
   });
@@ -304,6 +314,7 @@ export default function MicroJobsDashboardPage() {
       title: job.title || '',
       description: job.description || '',
       thumbnailUrl: job.thumbnailUrl || '',
+      taskUrl: job.taskUrl || '',
       steps: Array.isArray(job.steps) && job.steps.length > 0 ? job.steps : [''],
       proofRequirements:
         Array.isArray(job.proofRequirements) && job.proofRequirements.length > 0
@@ -375,7 +386,8 @@ export default function MicroJobsDashboardPage() {
         categoryId: editJobForm.categoryId,
         title: editJobForm.title.trim(),
         description: editJobForm.description.trim(),
-        thumbnailUrl: editJobForm.thumbnailUrl.trim() || null,
+        thumbnailUrl: isCoverEnabled ? editJobForm.thumbnailUrl.trim() || null : undefined,
+        taskUrl: isTaskLinkEnabled ? editJobForm.taskUrl.trim() || null : undefined,
         steps: editJobForm.steps.filter((s) => s.trim() !== ''),
         proofRequirements: editJobForm.proofRequirements.filter((p) => p.trim() !== ''),
       });
@@ -390,6 +402,35 @@ export default function MicroJobsDashboardPage() {
       alert(err?.response?.data?.message || 'পুনরায় সাবমিট করা সম্ভব হয়নি');
     } finally {
       setResubmittingJob(false);
+    }
+  };
+
+  const handleTopUpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!topUpJob) return;
+    const addCount = Math.floor(Number(topUpWorkersCount || 0));
+    if (addCount < 1) {
+      alert(lang === 'bn' ? 'কমপক্ষে ১ জন কর্মী সংখ্যা দিন' : 'Please enter at least 1 worker');
+      return;
+    }
+
+    setSubmittingTopUp(true);
+    try {
+      await api.post(`/micro-jobs/${topUpJob.id}/top-up`, {
+        additionalWorkers: addCount,
+      });
+      alert(
+        lang === 'bn'
+          ? `সফলভাবে +${addCount} জন নতুন কর্মী স্লট যুক্ত হয়েছে!`
+          : `Successfully added +${addCount} worker slots!`,
+      );
+      setTopUpJob(null);
+      if (refreshMe) refreshMe();
+      fetchMyPostedJobs();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'কর্মী সংখ্যা বাড়ানো সম্ভব হয়নি');
+    } finally {
+      setSubmittingTopUp(false);
     }
   };
 
@@ -516,7 +557,8 @@ export default function MicroJobsDashboardPage() {
         categoryId: createForm.categoryId,
         title: createForm.title.trim(),
         description: createForm.description.trim(),
-        thumbnailUrl: createForm.thumbnailUrl.trim() || undefined,
+        thumbnailUrl: isCoverEnabled ? createForm.thumbnailUrl.trim() || undefined : undefined,
+        taskUrl: isTaskLinkEnabled ? createForm.taskUrl.trim() || undefined : undefined,
         steps: createForm.steps.filter((s) => s.trim() !== ''),
         proofRequirements: createForm.proofRequirements.filter((p) => p.trim() !== ''),
         rewardPerWorker: workerReward,
@@ -537,6 +579,7 @@ export default function MicroJobsDashboardPage() {
         title: '',
         description: '',
         thumbnailUrl: '',
+        taskUrl: '',
         steps: [''],
         proofRequirements: [''],
         rewardPerWorker: settings.microJob?.minJobReward || 2,
@@ -699,7 +742,7 @@ export default function MicroJobsDashboardPage() {
                     className="flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-amber-400 transition overflow-hidden"
                   >
                     <div>
-                      {job.thumbnailUrl && (
+                      {isCoverEnabled && job.thumbnailUrl && (
                         <div
                           onClick={() => setZoomedImage(getImageUrl(job.thumbnailUrl))}
                           className="relative w-full aspect-video bg-slate-100 dark:bg-slate-800 overflow-hidden cursor-pointer group/img border-b border-slate-100 dark:border-slate-800"
@@ -800,7 +843,7 @@ export default function MicroJobsDashboardPage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="p-5 pt-4 border-t border-slate-100 dark:border-slate-800 mt-4 flex items-center gap-2">
+                    <div className="p-5 pt-4 border-t border-slate-100 dark:border-slate-800 mt-4 flex items-center gap-2 flex-wrap">
                       <button
                         type="button"
                         onClick={() => handleOpenSubmissions(job)}
@@ -809,6 +852,29 @@ export default function MicroJobsDashboardPage() {
                         <Eye className="w-3.5 h-3.5" />
                         <span>প্রমাণ দেখুন {pending > 0 && `(${pending})`}</span>
                       </button>
+
+                      {/* Top-Up / Add More Workers Button */}
+                      {isWorkerTopUpEnabled &&
+                        (job.status === 'ACTIVE' ||
+                          job.status === 'COMPLETED' ||
+                          job.status === 'PAUSED') && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTopUpJob(job);
+                              setTopUpWorkersCount(10);
+                            }}
+                            title={
+                              lang === 'bn'
+                                ? 'চলমান কাজে আরও কর্মী সংখ্যা যোগ করুন (Add Workers)'
+                                : 'Add more worker slots to this job'
+                            }
+                            className="px-2.5 py-2 rounded-xl bg-sky-500/10 hover:bg-sky-500 text-sky-600 dark:text-sky-400 hover:text-white border border-sky-500/20 font-bold text-xs transition flex items-center gap-1"
+                          >
+                            <PlusCircle className="w-3.5 h-3.5" />
+                            <span>{lang === 'bn' ? '+কর্মী' : '+Workers'}</span>
+                          </button>
+                        )}
 
                       <Link
                         href={`/micro-jobs/${job.id}`}
@@ -940,88 +1006,120 @@ export default function MicroJobsDashboardPage() {
             />
           </div>
 
-          {/* Job Cover / Thumbnail Picture (Optional) */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
+          {/* Direct Task Link (Optional - Controlled by Admin) */}
+          {isTaskLinkEnabled && (
+            <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <UploadCloud className="w-4 h-4 text-amber-500" />
-                <span>{lang === 'bn' ? 'কাজের কভার ছবি / স্যাম্পল পিকচার (ঐচ্ছিক)' : 'Job Cover Picture / Sample Image (Optional)'}</span>
+                <ExternalLink className="w-3.5 h-3.5 text-amber-500" />
+                <span>
+                  {lang === 'bn'
+                    ? 'কাজের সরাসরি লিংক / টার্গেট URL (ঐচ্ছিক)'
+                    : 'Direct Task Link / Target URL (Optional)'}
+                </span>
               </label>
-              {createForm.thumbnailUrl && (
-                <button
-                  type="button"
-                  onClick={() => setCreateForm((prev) => ({ ...prev, thumbnailUrl: '' }))}
-                  className="text-[11px] font-bold text-rose-500 hover:text-rose-600 flex items-center gap-1"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  <span>{lang === 'bn' ? 'ছবি মুছুন' : 'Remove Image'}</span>
-                </button>
-              )}
+              <input
+                type="url"
+                placeholder={
+                  lang === 'bn'
+                    ? 'যেমন: https://youtube.com/watch?v=... অথবা https://facebook.com/...'
+                    : 'e.g. https://youtube.com/watch?v=... or https://example.com'
+                }
+                value={createForm.taskUrl}
+                onChange={(e) => setCreateForm({ ...createForm, taskUrl: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              <p className="text-[11px] text-slate-400">
+                {lang === 'bn'
+                  ? 'এখানে লিংক দিলে কর্মীরা কাজের পেজে "🔗 সরাসরি কাজের লিংকে যান" বাটনে ১ ক্লিকেই যেতে পারবে।'
+                  : 'Workers will see a 1-click "Open Task Link" button on the job details page.'}
+              </p>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              {lang === 'bn'
-                ? 'কাজের থাম্বনেইল বা নমুনা স্ক্রিনশট আপলোড করলে পাবলিক পেজে আপনার কাজটি আকর্ষণীয় প্রোডাক্ট কার্ডের মতো দেখাবে।'
-                : 'Upload a cover banner or sample screenshot to display your job like an attractive product card on the public page.'}
-            </p>
+          )}
 
-            {createForm.thumbnailUrl ? (
-              <div className="relative w-full sm:w-80 aspect-video rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 group">
-                <img
-                  src={getImageUrl(createForm.thumbnailUrl)}
-                  alt="Job Cover Preview"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setZoomedImage(getImageUrl(createForm.thumbnailUrl))}
-                    className="px-3 py-1.5 rounded-xl bg-white/90 text-slate-900 font-bold text-xs flex items-center gap-1 shadow-sm"
-                  >
-                    <Maximize2 className="w-3.5 h-3.5" />
-                    <span>{lang === 'bn' ? 'বড় করে দেখুন' : 'Preview'}</span>
-                  </button>
+          {/* Job Cover / Thumbnail Picture (Optional - Controlled by Admin) */}
+          {isCoverEnabled && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <UploadCloud className="w-4 h-4 text-amber-500" />
+                  <span>{lang === 'bn' ? 'কাজের কভার ছবি / স্যাম্পল পিকচার (ঐচ্ছিক)' : 'Job Cover Picture / Sample Image (Optional)'}</span>
+                </label>
+                {createForm.thumbnailUrl && (
                   <button
                     type="button"
                     onClick={() => setCreateForm((prev) => ({ ...prev, thumbnailUrl: '' }))}
-                    className="px-3 py-1.5 rounded-xl bg-rose-500 text-white font-bold text-xs flex items-center gap-1 shadow-sm"
+                    className="text-[11px] font-bold text-rose-500 hover:text-rose-600 flex items-center gap-1"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>{lang === 'bn' ? 'মুছুন' : 'Remove'}</span>
+                    <Trash2 className="w-3 h-3" />
+                    <span>{lang === 'bn' ? 'ছবি মুছুন' : 'Remove Image'}</span>
                   </button>
-                </div>
-              </div>
-            ) : (
-              <label className="flex flex-col items-center justify-center w-full sm:w-96 h-36 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40 hover:border-amber-500 hover:bg-amber-500/5 transition cursor-pointer p-4 text-center">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleJobThumbnailUpload}
-                  disabled={uploadingJobThumbnail}
-                  className="hidden"
-                />
-                {uploadingJobThumbnail ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <RefreshCw className="w-6 h-6 text-amber-500 animate-spin" />
-                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
-                      {lang === 'bn' ? 'ছবি আপলোড হচ্ছে...' : 'Uploading image...'}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-1.5">
-                    <div className="w-10 h-10 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center">
-                      <UploadCloud className="w-5 h-5" />
-                    </div>
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                      {lang === 'bn' ? 'কভার ছবি নির্বাচন করতে এখানে ক্লিক করুন' : 'Click to upload Job Cover Picture'}
-                    </span>
-                    <span className="text-[10px] text-slate-400">
-                      JPG, PNG, WEBP (16:9 Landscape recommended)
-                    </span>
-                  </div>
                 )}
-              </label>
-            )}
-          </div>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {lang === 'bn'
+                  ? 'কাজের থাম্বনেইল বা নমুনা স্ক্রিনশট আপলোড করলে পাবলিক পেজে আপনার কাজটি আকর্ষণীয় প্রোডাক্ট কার্ডের মতো দেখাবে।'
+                  : 'Upload a cover banner or sample screenshot to display your job like an attractive product card on the public page.'}
+              </p>
+
+              {createForm.thumbnailUrl ? (
+                <div className="relative w-full sm:w-80 aspect-video rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 group">
+                  <img
+                    src={getImageUrl(createForm.thumbnailUrl)}
+                    alt="Job Cover Preview"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setZoomedImage(getImageUrl(createForm.thumbnailUrl))}
+                      className="px-3 py-1.5 rounded-xl bg-white/90 text-slate-900 font-bold text-xs flex items-center gap-1 shadow-sm"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'বড় করে দেখুন' : 'Preview'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCreateForm((prev) => ({ ...prev, thumbnailUrl: '' }))}
+                      className="px-3 py-1.5 rounded-xl bg-rose-500 text-white font-bold text-xs flex items-center gap-1 shadow-sm"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'মুছুন' : 'Remove'}</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full sm:w-96 h-36 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40 hover:border-amber-500 hover:bg-amber-500/5 transition cursor-pointer p-4 text-center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleJobThumbnailUpload}
+                    disabled={uploadingJobThumbnail}
+                    className="hidden"
+                  />
+                  {uploadingJobThumbnail ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <RefreshCw className="w-6 h-6 text-amber-500 animate-spin" />
+                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
+                        {lang === 'bn' ? 'ছবি আপলোড হচ্ছে...' : 'Uploading image...'}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="w-10 h-10 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                        <UploadCloud className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                        {lang === 'bn' ? 'কভার ছবি নির্বাচন করতে এখানে ক্লিক করুন' : 'Click to upload Job Cover Picture'}
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        JPG, PNG, WEBP (16:9 Landscape recommended)
+                      </span>
+                    </div>
+                  )}
+                </label>
+              )}
+            </div>
+          )}
 
           {/* Step-by-Step Instructions */}
           <div className="space-y-2.5">
@@ -1614,45 +1712,63 @@ export default function MicroJobsDashboardPage() {
                 />
               </div>
 
-              {/* Cover Picture in Edit Modal */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <UploadCloud className="w-3.5 h-3.5 text-amber-500" />
-                    <span>কাজের কভার ছবি / থাম্বনেইল (ঐচ্ছিক)</span>
+              {/* Direct Task Link in Edit Modal */}
+              {isTaskLinkEnabled && (
+                <div>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    🔗 কাজের সরাসরি লিংক / টার্গেট URL (ঐচ্ছিক)
                   </label>
-                  {editJobForm.thumbnailUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setEditJobForm((prev) => ({ ...prev, thumbnailUrl: '' }))}
-                      className="text-[11px] font-bold text-rose-500 hover:text-rose-600"
-                    >
-                      ছবি মুছুন
-                    </button>
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={editJobForm.taskUrl}
+                    onChange={(e) => setEditJobForm({ ...editJobForm, taskUrl: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                  />
+                </div>
+              )}
+
+              {/* Cover Picture in Edit Modal */}
+              {isCoverEnabled && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <UploadCloud className="w-3.5 h-3.5 text-amber-500" />
+                      <span>কাজের কভার ছবি / থাম্বনেইল (ঐচ্ছিক)</span>
+                    </label>
+                    {editJobForm.thumbnailUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setEditJobForm((prev) => ({ ...prev, thumbnailUrl: '' }))}
+                        className="text-[11px] font-bold text-rose-500 hover:text-rose-600"
+                      >
+                        ছবি মুছুন
+                      </button>
+                    )}
+                  </div>
+                  {editJobForm.thumbnailUrl ? (
+                    <div className="relative w-full sm:w-64 aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
+                      <img
+                        src={getImageUrl(editJobForm.thumbnailUrl)}
+                        alt="Cover Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <label className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 hover:border-amber-500 cursor-pointer text-xs font-bold text-slate-600 dark:text-slate-300">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleEditJobThumbnailUpload}
+                        disabled={uploadingEditJobThumbnail}
+                        className="hidden"
+                      />
+                      <UploadCloud className="w-4 h-4 text-amber-500" />
+                      <span>{uploadingEditJobThumbnail ? 'আপলোড হচ্ছে...' : 'কভার ছবি আপলোড করুন'}</span>
+                    </label>
                   )}
                 </div>
-                {editJobForm.thumbnailUrl ? (
-                  <div className="relative w-full sm:w-64 aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
-                    <img
-                      src={getImageUrl(editJobForm.thumbnailUrl)}
-                      alt="Cover Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <label className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 hover:border-amber-500 cursor-pointer text-xs font-bold text-slate-600 dark:text-slate-300">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleEditJobThumbnailUpload}
-                      disabled={uploadingEditJobThumbnail}
-                      className="hidden"
-                    />
-                    <UploadCloud className="w-4 h-4 text-amber-500" />
-                    <span>{uploadingEditJobThumbnail ? 'আপলোড হচ্ছে...' : 'কভার ছবি আপলোড করুন'}</span>
-                  </label>
-                )}
-              </div>
+              )}
 
               {/* Steps */}
               <div className="space-y-2">
@@ -1960,6 +2076,128 @@ export default function MicroJobsDashboardPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TOP-UP WORKERS (ADD MORE SLOTS) MODAL                                     */}
+      {/* ========================================================================= */}
+      {isWorkerTopUpEnabled && topUpJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <form
+            onSubmit={handleTopUpSubmit}
+            className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 space-y-5 shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-sky-500/10 text-sky-500">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+                    {lang === 'bn' ? '➕ কাজে আরও কর্মী যোগ করুন (Top-Up)' : '➕ Add More Worker Slots'}
+                  </h3>
+                  <p className="text-[11px] text-slate-400 truncate max-w-[240px]">
+                    {topUpJob.title}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTopUpJob(null)}
+                className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200/70 dark:border-slate-800">
+                <span>বর্তমান কর্মী কোটা:</span>
+                <span className="font-bold text-slate-900 dark:text-white">
+                  {topUpJob.approvedCount || 0} / {topUpJob.totalWorkersNeeded} জন
+                </span>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
+                  {lang === 'bn' ? 'নতুন কতজন কর্মী যোগ করতে চান? *' : 'Additional Workers to Add *'}
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={10000}
+                  required
+                  value={topUpWorkersCount}
+                  onChange={(e) => setTopUpWorkersCount(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-black text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+                <div className="flex items-center gap-2 mt-2">
+                  {[10, 25, 50, 100].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setTopUpWorkersCount(preset)}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold border transition ${
+                        topUpWorkersCount === preset
+                          ? 'bg-sky-500 text-white border-sky-500'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-sky-400'
+                      }`}
+                    >
+                      +{preset} জন
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {(() => {
+                const rate = Number(topUpJob.rewardPerWorker || 0);
+                const count = Math.max(1, Number(topUpWorkersCount || 1));
+                const feePercent = Number(settings.microJob?.platformFeePercent ?? 5);
+                const extraBudget = rate * count;
+                const extraFee = (extraBudget * feePercent) / 100;
+                const extraTotal = extraBudget + extraFee;
+                return (
+                  <div className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-1.5 text-xs">
+                    <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                      <span>কর্মীদের পারিশ্রমিক ({count} × ৳{rate.toFixed(2)}):</span>
+                      <span className="font-bold">৳{extraBudget.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                      <span>প্ল্যাটফর্ম ফি ({feePercent}%):</span>
+                      <span className="font-bold">৳{extraFee.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-900 dark:text-white font-black pt-1.5 border-t border-amber-500/20 text-sm">
+                      <span>মোট কাটবে:</span>
+                      <span className="text-emerald-600 dark:text-emerald-400">৳{extraTotal.toFixed(2)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="flex items-center gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setTopUpJob(null)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs"
+              >
+                বাতিল
+              </button>
+              <button
+                type="submit"
+                disabled={submittingTopUp}
+                className="flex-1 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 disabled:opacity-50 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                {submittingTopUp ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <PlusCircle className="w-4 h-4" />
+                )}
+                <span>{submittingTopUp ? 'যুক্ত হচ্ছে...' : 'কনফার্ম ও পেমেন্ট করুন'}</span>
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

@@ -109,6 +109,10 @@ export interface WebsiteMicroJobSettings {
   requireKycToPost: boolean;
   requireKycToWork: boolean;
   featuredJobFee?: number;
+  coverPictureEnabled?: boolean;
+  taskLinkEnabled?: boolean;
+  workerTopUpEnabled?: boolean;
+  employerApprovalRateEnabled?: boolean;
 }
 
 export interface WebsiteSettings {
@@ -119,6 +123,7 @@ export interface WebsiteSettings {
   footer: WebsiteFooterSettings;
   system: WebsiteSystemSettings;
   microJob: WebsiteMicroJobSettings;
+  advancedFeatures?: any;
 }
 
 export const DEFAULT_PUBLIC_SETTINGS: WebsiteSettings = {
@@ -219,6 +224,16 @@ export const DEFAULT_PUBLIC_SETTINGS: WebsiteSettings = {
     requireKycToPost: false,
     requireKycToWork: false,
     featuredJobFee: 20,
+    coverPictureEnabled: true,
+    taskLinkEnabled: true,
+    workerTopUpEnabled: true,
+    employerApprovalRateEnabled: true,
+  },
+  advancedFeatures: {
+    chatUxFeatures: {
+      dealStepperEnabled: true,
+      quickReplyChipsEnabled: true,
+    },
   },
 };
 
@@ -251,6 +266,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             footer: { ...DEFAULT_PUBLIC_SETTINGS.footer, ...(parsed.footer || {}) },
             system: { ...DEFAULT_PUBLIC_SETTINGS.system, ...(parsed.system || {}) },
             microJob: { ...DEFAULT_PUBLIC_SETTINGS.microJob, ...(parsed.microJob || {}) },
+            advancedFeatures: {
+              ...DEFAULT_PUBLIC_SETTINGS.advancedFeatures,
+              ...(parsed.advancedFeatures || {}),
+            },
           };
         }
       } catch {}
@@ -279,6 +298,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             footer: { ...prev.footer, ...(data.footer || {}) },
             system: { ...prev.system, ...(data.system || {}) },
             microJob: { ...prev.microJob, ...(data.microJob || {}) },
+            advancedFeatures: { ...prev.advancedFeatures, ...(data.advancedFeatures || {}) },
           };
           if (typeof window !== 'undefined') {
             try {

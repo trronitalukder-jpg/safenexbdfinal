@@ -169,7 +169,9 @@ export class MicroJobsService {
           categoryId: dto.categoryId,
           title: dto.title.trim(),
           description: dto.description.trim(),
-          thumbnailUrl: dto.thumbnailUrl?.trim() || null,
+          thumbnailUrl:
+            settings.coverPictureEnabled !== false ? dto.thumbnailUrl?.trim() || null : null,
+          taskUrl: settings.taskLinkEnabled !== false ? dto.taskUrl?.trim() || null : null,
           steps: dto.steps || [],
           proofRequirements: dto.proofRequirements || [],
           rewardPerWorker: dto.rewardPerWorker,
@@ -228,6 +230,11 @@ export class MicroJobsService {
   }) {
     this.processAutoApprovalsIfEnabled().catch(() => {});
 
+    const settings = await this.settingsService.getMicroJobSettings();
+    const coverEnabled = settings.coverPictureEnabled !== false;
+    const taskLinkEnabled = settings.taskLinkEnabled !== false;
+    const approvalRateEnabled = settings.employerApprovalRateEnabled !== false;
+
     const page = Math.max(1, Number(query.page || 1));
     const limit = Math.min(50, Math.max(1, Number(query.limit || 20)));
     const skip = (page - 1) * limit;
@@ -251,7 +258,7 @@ export class MicroJobsService {
     if (query.sort === 'reward_high') orderBy = [{ isPinned: 'desc' }, { rewardPerWorker: 'desc' }];
     if (query.sort === 'reward_low') orderBy = [{ isPinned: 'desc' }, { rewardPerWorker: 'asc' }];
 
-    const [items, total] = await Promise.all([
+    const [rawItems, total] = await Promise.all([
       this.prisma.microJob.findMany({
         where,
         skip,
@@ -276,6 +283,56 @@ export class MicroJobsService {
       this.prisma.microJob.count({ where }),
     ]);
 
+    // Calculate Employer Approval Rate (%) if enabled by Admin
+    const approvalRateMap = new Map<string, number>();
+    if (approvalRateEnabled && rawItems.length > 0) {
+      const employerIds = Array.from(new Set(rawItems.map((j) => j.employerId)));
+      const [approvedSums, rejectedSubs] = await Promise.all([
+        this.prisma.microJob.groupBy({
+          by: ['employerId'],
+          where: { employerId: { in: employerIds } },
+          _sum: { approvedCount: true },
+        }),
+        this.prisma.microJobSubmission.findMany({
+          where: {
+            status: 'REJECTED',
+            job: { employerId: { in: employerIds } },
+          },
+          select: {
+            job: { select: { employerId: true } },
+          },
+        }),
+      ]);
+
+      const approvedByEmp = new Map<string, number>();
+      approvedSums.forEach((row) => {
+        approvedByEmp.set(row.employerId, Number(row._sum.approvedCount || 0));
+      });
+
+      const rejectedByEmp = new Map<string, number>();
+      rejectedSubs.forEach((sub) => {
+        const empId = sub.job.employerId;
+        rejectedByEmp.set(empId, (rejectedByEmp.get(empId) || 0) + 1);
+      });
+
+      employerIds.forEach((empId) => {
+        const appCount = approvedByEmp.get(empId) || 0;
+        const rejCount = rejectedByEmp.get(empId) || 0;
+        const totalReviewed = appCount + rejCount;
+        const rate = totalReviewed > 0 ? Math.round((appCount / totalReviewed) * 100) : 100;
+        approvalRateMap.set(empId, rate);
+      });
+    }
+
+    const items = rawItems.map((job) => ({
+      ...job,
+      thumbnailUrl: coverEnabled ? job.thumbnailUrl : null,
+      taskUrl: taskLinkEnabled ? job.taskUrl : null,
+      employerApprovalRate: approvalRateEnabled
+        ? (approvalRateMap.get(job.employerId) ?? 100)
+        : null,
+    }));
+
     return {
       items,
       total,
@@ -289,23 +346,26 @@ export class MicroJobsService {
    * Single job details by ID
    */
   async getJobById(jobId: string, currentUserId?: string) {
-    const job = await this.prisma.microJob.findUnique({
-      where: { id: jobId },
-      include: {
-        category: true,
-        employer: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            uniqueUserId: true,
-            avatarUrl: true,
-            isVerified: true,
-            createdAt: true,
+    const [job, settings] = await Promise.all([
+      this.prisma.microJob.findUnique({
+        where: { id: jobId },
+        include: {
+          category: true,
+          employer: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              uniqueUserId: true,
+              avatarUrl: true,
+              isVerified: true,
+              createdAt: true,
+            },
           },
         },
-      },
-    });
+      }),
+      this.settingsService.getMicroJobSettings(),
+    ]);
 
     if (!job) {
       throw new NotFoundException('কাজটি খুঁজে পাওয়া যায়নি');
@@ -323,10 +383,34 @@ export class MicroJobsService {
       });
     }
 
+    const isMyJob = currentUserId === job.employerId;
+    const coverEnabled = settings.coverPictureEnabled !== false;
+    const taskLinkEnabled = settings.taskLinkEnabled !== false;
+    const approvalRateEnabled = settings.employerApprovalRateEnabled !== false;
+
+    let employerApprovalRate: number | null = null;
+    if (approvalRateEnabled) {
+      const [approvedAgg, rejectedCount] = await Promise.all([
+        this.prisma.microJob.aggregate({
+          where: { employerId: job.employerId },
+          _sum: { approvedCount: true },
+        }),
+        this.prisma.microJobSubmission.count({
+          where: { status: 'REJECTED', job: { employerId: job.employerId } },
+        }),
+      ]);
+      const appCount = Number(approvedAgg._sum.approvedCount || 0);
+      const totalReviewed = appCount + rejectedCount;
+      employerApprovalRate = totalReviewed > 0 ? Math.round((appCount / totalReviewed) * 100) : 100;
+    }
+
     return {
       ...job,
+      thumbnailUrl: isMyJob || coverEnabled ? job.thumbnailUrl : null,
+      taskUrl: isMyJob || taskLinkEnabled ? job.taskUrl : null,
+      employerApprovalRate,
       mySubmission,
-      isMyJob: currentUserId === job.employerId,
+      isMyJob,
     };
   }
 
@@ -1003,13 +1087,17 @@ export class MicroJobsService {
       description?: string;
       categoryId?: string;
       thumbnailUrl?: string | null;
+      taskUrl?: string | null;
       steps?: string[];
       proofRequirements?: string[];
     },
   ) {
-    const job = await this.prisma.microJob.findUnique({
-      where: { id: jobId },
-    });
+    const [job, settings] = await Promise.all([
+      this.prisma.microJob.findUnique({
+        where: { id: jobId },
+      }),
+      this.settingsService.getMicroJobSettings(),
+    ]);
 
     if (!job) {
       throw new NotFoundException('কাজটি খুঁজে পাওয়া যায়নি');
@@ -1031,8 +1119,11 @@ export class MicroJobsService {
     if (dto.title?.trim()) updateData.title = dto.title.trim();
     if (dto.description?.trim()) updateData.description = dto.description.trim();
     if (dto.categoryId) updateData.categoryId = dto.categoryId;
-    if (dto.thumbnailUrl !== undefined) {
+    if (dto.thumbnailUrl !== undefined && settings.coverPictureEnabled !== false) {
       updateData.thumbnailUrl = dto.thumbnailUrl?.trim() || null;
+    }
+    if (dto.taskUrl !== undefined && settings.taskLinkEnabled !== false) {
+      updateData.taskUrl = dto.taskUrl?.trim() || null;
     }
     if (Array.isArray(dto.steps)) updateData.steps = dto.steps.filter((s) => s && s.trim());
     if (Array.isArray(dto.proofRequirements)) {
@@ -1046,6 +1137,107 @@ export class MicroJobsService {
         category: true,
       },
     });
+  }
+
+  /**
+   * Employer adds more worker slots (Top-Up) to an existing job
+   */
+  async topUpWorkers(jobId: string, employerId: string, additionalWorkers: number) {
+    const settings = await this.settingsService.getMicroJobSettings();
+    if (settings.enabled === false) {
+      throw new ForbiddenException('মাইক্রো জব সার্ভিসটি বর্তমানে বন্ধ আছে');
+    }
+    if (settings.workerTopUpEnabled === false) {
+      throw new ForbiddenException('কর্মী সংখ্যা বাড়ানোর (Top-Up) ফিচারটি বর্তমানে বন্ধ আছে');
+    }
+
+    const addCount = Math.floor(Number(additionalWorkers || 0));
+    if (!Number.isFinite(addCount) || addCount < 1 || addCount > 10000) {
+      throw new BadRequestException('নূন্যতম ১ জন থেকে সর্বোচ্চ ১০,০০০ জন কর্মী যোগ করা যাবে');
+    }
+
+    const job = await this.prisma.microJob.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      throw new NotFoundException('কাজটি খুঁজে পাওয়া যায়নি');
+    }
+
+    if (job.employerId !== employerId) {
+      throw new ForbiddenException('এই কাজের কর্মী সংখ্যা বাড়ানোর অনুমতি আপনার নেই');
+    }
+
+    if (job.status !== 'ACTIVE' && job.status !== 'COMPLETED' && job.status !== 'PAUSED') {
+      throw new BadRequestException(
+        'শুধুমাত্র চলমান (Active), পজ (Paused) অথবা সম্পন্ন (Completed) কাজে কর্মী সংখ্যা বাড়ানো যাবে',
+      );
+    }
+
+    const rewardPerWorker = Number(job.rewardPerWorker);
+    const extraBudget = rewardPerWorker * addCount;
+    const platformFeePercent = Number(settings.platformFeePercent ?? 5);
+    const extraFee = (extraBudget * platformFeePercent) / 100;
+    const totalExtraCost = extraBudget + extraFee;
+
+    const updatedJob = await this.prisma.$transaction(async (tx) => {
+      const wallet = await tx.wallet.findUnique({
+        where: { userId: employerId },
+      });
+
+      if (!wallet) {
+        throw new BadRequestException('আপনার ওয়ালেট পাওয়া যায়নি');
+      }
+
+      const availableBalance = Number(wallet.availableBalance);
+      if (availableBalance < totalExtraCost) {
+        throw new BadRequestException(
+          `আপনার ওয়ালেটে পর্যাপ্ত ব্যালেন্স নেই। অতিরিক্ত ${addCount} জন কর্মীর জন্য মোট প্রয়োজন: ৳${totalExtraCost.toFixed(2)} | বর্তমান ব্যালেন্স: ৳${availableBalance.toFixed(2)}`,
+        );
+      }
+
+      const balanceBefore = availableBalance;
+      const balanceAfter = balanceBefore - totalExtraCost;
+
+      await tx.wallet.update({
+        where: { id: wallet.id },
+        data: {
+          availableBalance: balanceAfter,
+          version: { increment: 1 },
+        },
+      });
+
+      await tx.walletLedger.create({
+        data: {
+          walletId: wallet.id,
+          userId: employerId,
+          type: 'MICROJOB_ESCROW',
+          amount: totalExtraCost,
+          commission: extraFee,
+          balanceBefore,
+          balanceAfter,
+          holdBefore: Number(wallet.holdBalance),
+          holdAfter: Number(wallet.holdBalance),
+          notes: `Micro Job Top-Up: ${job.title} (+${addCount} workers x ৳${rewardPerWorker} + ৳${extraFee.toFixed(2)} fee)`,
+          status: 'COMPLETED',
+        },
+      });
+
+      return tx.microJob.update({
+        where: { id: jobId },
+        data: {
+          totalWorkersNeeded: { increment: addCount },
+          totalBudget: { increment: extraBudget },
+          platformFee: { increment: extraFee },
+          status: job.status === 'COMPLETED' ? 'ACTIVE' : job.status,
+        },
+        include: {
+          category: true,
+        },
+      });
+    });
+
+    return updatedJob;
   }
 
   /**

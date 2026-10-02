@@ -42,4 +42,8 @@ export class CreateMicroJobDto {
   @IsOptional()
   @IsString()
   thumbnailUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  taskUrl?: string;
 }

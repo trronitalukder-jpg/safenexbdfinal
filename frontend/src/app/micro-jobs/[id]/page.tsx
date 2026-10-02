@@ -56,6 +56,9 @@ export default function SingleMicroJobPage() {
   const [editingRejected, setEditingRejected] = useState(false);
 
   const isEnabled = settings.microJob?.enabled !== false;
+  const isCoverEnabled = settings.microJob?.coverPictureEnabled !== false;
+  const isTaskLinkEnabled = settings.microJob?.taskLinkEnabled !== false;
+  const isApprovalRateEnabled = settings.microJob?.employerApprovalRateEnabled !== false;
 
   useEffect(() => {
     if (!isEnabled || !jobId) return;
@@ -203,8 +206,8 @@ export default function SingleMicroJobPage() {
 
       {/* Main Job Details Card */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-sm space-y-6">
-        {/* Cover / Sample Picture (if uploaded by Employer) */}
-        {job.thumbnailUrl && (
+        {/* Cover / Sample Picture (if uploaded by Employer & enabled by Admin) */}
+        {isCoverEnabled && job.thumbnailUrl && (
           <div
             onClick={() => setCoverPreviewOpen(true)}
             className="relative w-full max-h-[380px] aspect-video rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer group"
@@ -279,7 +282,7 @@ export default function SingleMicroJobPage() {
         </div>
 
         {/* Employer Info */}
-        <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 text-xs">
+        <div className="flex flex-wrap items-center gap-3 p-3.5 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 text-xs">
           <div className="w-8 h-8 rounded-full bg-sky-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
             {job.employer?.firstName?.[0] || 'U'}
           </div>
@@ -289,7 +292,23 @@ export default function SingleMicroJobPage() {
             </p>
             <p className="text-[11px] text-slate-400 font-mono">@{job.employer?.uniqueUserId}</p>
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2 flex-wrap">
+            {isApprovalRateEnabled &&
+              job.employerApprovalRate !== null &&
+              job.employerApprovalRate !== undefined && (
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                    Number(job.employerApprovalRate) >= 80
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                      : Number(job.employerApprovalRate) >= 50
+                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>{job.employerApprovalRate}% Approval Rate</span>
+                </span>
+              )}
             <VerifiedBadge
               isVerified={job.employer?.isVerified}
               status={job.employer?.verificationStatus}
@@ -298,6 +317,30 @@ export default function SingleMicroJobPage() {
             />
           </div>
         </div>
+
+        {/* Direct Task Link Button (if provided by Employer & enabled by Admin) */}
+        {isTaskLinkEnabled && job.taskUrl && (
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-sky-500/10 to-emerald-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-0.5 min-w-0">
+              <p className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                <ExternalLink className="w-4 h-4 text-amber-500 shrink-0" />
+                <span>{lang === 'bn' ? 'কাজের টার্গেট লিংক (Direct Task Link)' : 'Direct Target Task Link'}</span>
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate font-mono">
+                {job.taskUrl}
+              </p>
+            </div>
+            <a
+              href={job.taskUrl.startsWith('http') ? job.taskUrl : `https://${job.taskUrl}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 transition shrink-0 active:scale-95"
+            >
+              <span>{lang === 'bn' ? '🔗 সরাসরি কাজের লিংকে যান' : '🔗 Open Task Link'}</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        )}
 
         {/* Description */}
         <div className="space-y-2">

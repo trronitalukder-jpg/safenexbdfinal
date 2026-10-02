@@ -270,7 +270,7 @@ function MessengerChatContent() {
   });
   const [isRulesExpanded, setIsRulesExpanded] = useState(false);
   const [templateAudienceFilter, setTemplateAudienceFilter] = useState<'ALL' | 'BUYER' | 'SELLER'>('ALL');
-  const [showTemplatesBar, setShowTemplatesBar] = useState(false);
+  const [showTemplatesBar, setShowTemplatesBar] = useState(true);
   const textInputRef = useRef<HTMLInputElement>(null);
 
   // Wallet
@@ -329,6 +329,7 @@ function MessengerChatContent() {
   const [publicAdvancedFeatures, setPublicAdvancedFeatures] = useState<any>({
     escrowCountdownTimer: { enabled: true, defaultDeliveryHours: 24 },
     chatMediaFeatures: { voiceMessageEnabled: true, maxVoiceSeconds: 60, ctrlVPasteEnabled: true },
+    chatUxFeatures: { dealStepperEnabled: true, quickReplyChipsEnabled: true },
     sellerLevelBadges: {
       enabled: true,
       risingTalentMinDeals: 1,
@@ -3379,6 +3380,110 @@ function MessengerChatContent() {
                     );
                   })()}
 
+                {/* Visual Deal Stepper (১. শুরু ➔ ২. পেমেন্ট লক ➔ ৩. ডেলিভারি ➔ ৪. সম্পন্ন) — Controlled by Admin dealStepperEnabled */}
+                {publicAdvancedFeatures?.chatUxFeatures?.dealStepperEnabled !== false &&
+                  (() => {
+                    const activeDeal =
+                      conversationTransactions.find((t: any) => t.status === 'HOLD' || t.status === 'DISPUTED') ||
+                      conversationTransactions.find((t: any) => t.status === 'REQUESTED') ||
+                      conversationTransactions.find(
+                        (t: any) => t.status === 'COMPLETED' || t.status === 'RELEASED',
+                      );
+                    if (!activeDeal) return null;
+
+                    const st = activeDeal.status;
+                    // Step index: 1 = Requested, 2 = Locked (HOLD), 3 = Delivery in progress (HOLD/DISPUTED), 4 = Completed (RELEASED/COMPLETED)
+                    const currentStep: number =
+                      st === 'COMPLETED' || st === 'RELEASED'
+                        ? 4
+                        : st === 'HOLD' || st === 'DISPUTED'
+                        ? 3
+                        : 1;
+
+                    const steps = [
+                      {
+                        num: 1,
+                        labelBn: '১. শুরু',
+                        labelEn: '1. Requested',
+                        done: currentStep >= 1,
+                        active: currentStep === 1,
+                      },
+                      {
+                        num: 2,
+                        labelBn: '২. পেমেন্ট লক',
+                        labelEn: '2. Escrow Lock',
+                        done: currentStep >= 2,
+                        active: currentStep === 2,
+                      },
+                      {
+                        num: 3,
+                        labelBn: st === 'DISPUTED' ? '৩. ডিসপ্যুট রিভিউ' : '৩. ডেলিভারি',
+                        labelEn: st === 'DISPUTED' ? '3. In Dispute' : '3. Delivery',
+                        done: currentStep >= 3,
+                        active: currentStep === 3,
+                      },
+                      {
+                        num: 4,
+                        labelBn: '৪. সম্পন্ন',
+                        labelEn: '4. Completed',
+                        done: currentStep >= 4,
+                        active: currentStep === 4,
+                      },
+                    ];
+
+                    return (
+                      <div className="px-3 sm:px-4 py-2 bg-slate-50/90 dark:bg-slate-900/90 border-b border-slate-200/80 dark:border-slate-800 shrink-0">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
+                              ৳{Number(activeDeal.amount || 0).toLocaleString()}
+                            </span>
+                            <span className="hidden sm:inline text-slate-400">•</span>
+                            <span className="hidden sm:inline text-slate-500 dark:text-slate-400">
+                              {lang === 'bn' ? 'এসক্রো ডিল প্রগ্রেস' : 'Escrow Deal Progress'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none py-0.5">
+                            {steps.map((s, idx) => (
+                              <React.Fragment key={s.num}>
+                                <div
+                                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold whitespace-nowrap transition-all border ${
+                                    s.num < currentStep || currentStep === 4
+                                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                                      : s.active
+                                      ? st === 'DISPUTED'
+                                        ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/40 ring-2 ring-amber-400/20'
+                                        : 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30 ring-2 ring-sky-400/20'
+                                      : 'bg-slate-200/60 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-transparent'
+                                  }`}
+                                >
+                                  {s.num < currentStep || currentStep === 4 ? (
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+                                  ) : s.active ? (
+                                    <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse shrink-0" />
+                                  ) : null}
+                                  <span>{lang === 'bn' ? s.labelBn : s.labelEn}</span>
+                                </div>
+                                {idx < steps.length - 1 && (
+                                  <span
+                                    className={`text-[10px] font-black ${
+                                      s.num < currentStep
+                                        ? 'text-emerald-500'
+                                        : 'text-slate-300 dark:text-slate-700'
+                                    }`}
+                                  >
+                                    ➔
+                                  </span>
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                 {/* Chat Feed */}
                 <div
                   ref={chatFeedRef}
@@ -4443,8 +4548,9 @@ function MessengerChatContent() {
                 </div>
               )}
 
-              {/* Quick Message Templates Chips Bar (Only rendered when expanded) */}
+              {/* Quick Message Templates Chips Bar (Controlled by Admin quickReplyChipsEnabled) */}
               {!isConvLocked &&
+                publicAdvancedFeatures?.chatUxFeatures?.quickReplyChipsEnabled !== false &&
                 showTemplatesBar &&
                 Array.isArray(chatRulesConfig?.templates) &&
                 chatRulesConfig.templates.length > 0 && (
@@ -4454,7 +4560,7 @@ function MessengerChatContent() {
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-[10px] sm:text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
                           <Sparkles className="w-3 h-3" />
-                          <span>{lang === 'bn' ? 'কুইক মেসেজ:' : 'Quick Replies:'}</span>
+                          <span>{lang === 'bn' ? 'কুইক রিপ্লাই চিপস:' : 'Quick Reply Chips:'}</span>
                         </span>
 
                         <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
@@ -4590,20 +4696,22 @@ function MessengerChatContent() {
                   </button>
 
                   {/* Quick Replies Toggle Button (Inline in Composer) */}
-                  {Array.isArray(chatRulesConfig?.templates) && chatRulesConfig.templates.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowTemplatesBar(!showTemplatesBar)}
-                      title={lang === 'bn' ? 'কুইক মেসেজ চিপস' : 'Quick Replies'}
-                      className={`p-1.5 sm:p-2 rounded-full transition-colors shrink-0 ${
-                        showTemplatesBar
-                          ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
-                          : 'text-slate-500 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'
-                      }`}
-                    >
-                      <Sparkles className="w-5 h-5" />
-                    </button>
-                  )}
+                  {publicAdvancedFeatures?.chatUxFeatures?.quickReplyChipsEnabled !== false &&
+                    Array.isArray(chatRulesConfig?.templates) &&
+                    chatRulesConfig.templates.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowTemplatesBar(!showTemplatesBar)}
+                        title={lang === 'bn' ? 'কুইক মেসেজ চিপস' : 'Quick Replies'}
+                        className={`p-1.5 sm:p-2 rounded-full transition-colors shrink-0 ${
+                          showTemplatesBar
+                            ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                            : 'text-slate-500 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        <Sparkles className="w-5 h-5" />
+                      </button>
+                    )}
 
                   {/* Voice Note Button (Only shown when enabled in Admin Settings) */}
                   {publicAdvancedFeatures?.chatMediaFeatures?.voiceMessageEnabled === true && (
